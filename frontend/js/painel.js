@@ -766,7 +766,41 @@ function lineSVG(pts, o){
 }
 
 var resRange = 'ult12';
+/* Textos do dashboard que mudam conforme o tipo de conta. */
+var TEXTOS = {
+  pf: {
+    pilulaPos:'Sobrou dinheiro', pilulaNeg:'Faltou dinheiro',
+    margemTitulo:'Quanto sobra', margemMais:'Quanto sobrou em cada mês',
+    margemNota:'É o resultado dividido pelas entradas. Quanto maior, mais folga no orçamento para imprevistos.',
+    fixosTitulo:'Contas fixas por mês', fixosTituloSemana:'Contas fixas na semana', fixosMais:'O que forma as contas fixas',
+    fixosCardNota:function(n){ return 'Equivalem a cerca de '+n+' dias de renda. Reduzir uma conta fixa melhora o resultado de todos os meses seguintes.'; },
+    fixvarTitulo:'Contas fixas e gastos do dia a dia', fixosRotulo:'Contas fixas', varRotulo:'Gastos do dia a dia',
+    fixosDesc:'Pagas todo mês, mesmo sem usar', varDesc:'Mudam conforme o seu consumo',
+    fixosNota:'São pagas todo mês, mesmo sem usar.',
+    varNota:'Mudam conforme o seu consumo. Compare com a sua renda para ver se estão crescendo no mesmo ritmo.',
+    diasEntradas:function(n, fixedM){ return 'Suas contas fixas ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de renda. Ou seja, o salário dos primeiros '+n+' dias do mês vai só para as contas fixas.'; },
+    caixaTitulo:'Saldo acumulado',
+    mostraDiaSemana:false, negocio:false
+  },
+  empresa: {
+    pilulaPos:'Lucro no período', pilulaNeg:'Prejuízo no período',
+    margemTitulo:'Margem', margemMais:'Margem de cada mês',
+    margemNota:'Margem = resultado dividido pelas entradas. Quanto maior, mais folga no caixa para imprevistos.',
+    fixosTitulo:'Custos fixos por mês', fixosTituloSemana:'Custos fixos na semana', fixosMais:'O que forma os custos fixos',
+    fixosCardNota:function(n){ return 'Equivalem a cerca de '+n+' dias de entradas. Reduzir um custo fixo melhora o resultado de todos os meses seguintes.'; },
+    fixvarTitulo:'Custos fixos e variáveis', fixosRotulo:'Custos fixos', varRotulo:'Custos variáveis',
+    fixosDesc:'Pagos todo mês, vendendo ou não', varDesc:'Acompanham o movimento',
+    fixosNota:'São pagos todo mês, com ou sem movimento. É o mínimo que o negócio precisa faturar.',
+    varNota:'Sobem e descem com o movimento. Compare com as entradas para ver se estão crescendo no mesmo ritmo.',
+    diasEntradas:function(n, fixedM){ return 'Os custos fixos ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de entradas. Ou seja, o que entra nos primeiros '+n+' dias do mês serve só para pagar os custos fixos.'; },
+    caixaTitulo:'Caixa acumulado',
+    mostraDiaSemana:true, negocio:true
+  }
+};
+function textos(){ return TEXTOS[curPerfil()]; }
+
 function renderDashboard(){
+  var X = textos();
   var tx = cur(); if (!tx.length) tx = state.tx; if (!tx.length) return;
   var isWeek = state.p.w!=='all';
   var first = tx[0].date, last = tx[tx.length-1].date;
@@ -827,17 +861,22 @@ function renderDashboard(){
   });
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
   var feeTx = tx.filter(function(t){ return t.value<0 && catOf(t)===feesName(); });
+  /* a categoria com mais saídas, sem contar "Outros" (cartão "Onde mais gasta") */
+  var topCat = Object.keys(byCat).filter(function(c){ return c!==OTHER; }).sort(function(a,b){ return byCat[b]-byCat[a]; })[0] || null;
 
   /* KPIs */
   var k = [
-    {l: isWeek ? 'Resultado da semana' : nM===1 ? 'Resultado do mês' : 'Resultado médio por mês', v:brl.format(res/nM), s:(nM===1?'1 mês no extrato':nM+' meses no extrato'), pill: res>=0 ? ['pos','Lucro no período'] : ['neg','Prejuízo no período'],
+    {l: isWeek ? 'Resultado da semana' : nM===1 ? 'Resultado do mês' : 'Resultado médio por mês', v:brl.format(res/nM), s:(nM===1?'1 mês no extrato':nM+' meses no extrato'), pill: res>=0 ? ['pos',X.pilulaPos] : ['neg',X.pilulaNeg],
       m: moreHTML('Resultado de cada mês', months.map(function(o){return [o.name, brl.format(o.res)];}), 'É tudo o que entrou menos tudo o que saiu, dividido pelo número de meses do extrato.')},
-    {l:'Margem', v:pct.format(margin), s:'De cada R$ 100 que entram, '+(margin>=0?'sobram ':'faltam ')+brl.format(Math.abs(margin*100)),
-      m: moreHTML('Margem de cada mês', months.map(function(o){return [o.name, pct.format(o.ins?o.res/o.ins:0)];}), 'Margem = resultado dividido pelas entradas. Quanto maior, mais folga no caixaio tem para imprevistos.')},
-    {l: isWeek ? 'Custos fixos na semana' : 'Custos fixos por mês', v:brl.format(fixedM), s:pct.format(T.outs?fixed/T.outs:0)+' das saídas',
-      m: moreHTML('O que forma os custos fixos', FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)+'/mês'];}), 'Equivalem a cerca de '+Math.round(dailyIns ? fixedM/dailyIns : 0)+' dias de entradas. Reduzir um custo fixo melhora o resultado de todos os meses seguintes.')},
-    {l:'Taxas de cartão e apps', v:pct.format(T.ins?fees/T.ins:0), s:brl.format(fees/nM)+(isWeek?' na semana':' por mês')+', sobre as entradas',
+    {l:X.margemTitulo, v:pct.format(margin), s:'De cada R$ 100 que entram, '+(margin>=0?'sobram ':'faltam ')+brl.format(Math.abs(margin*100)),
+      m: moreHTML(X.margemMais, months.map(function(o){return [o.name, pct.format(o.ins?o.res/o.ins:0)];}), X.margemNota)},
+    {l: isWeek ? X.fixosTituloSemana : X.fixosTitulo, v:brl.format(fixedM), s:pct.format(T.outs?fixed/T.outs:0)+' das saídas',
+      m: moreHTML(X.fixosMais, FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)+'/mês'];}), X.fixosCardNota(Math.round(dailyIns ? fixedM/dailyIns : 0)))},
+    X.negocio ? {l:'Taxas de cartão e apps', v:pct.format(T.ins?fees/T.ins:0), s:brl.format(fees/nM)+(isWeek?' na semana':' por mês')+', sobre as entradas',
       m: moreHTML('De onde vêm as taxas', topOrigins(feeTx, 5, nM).map(function(o){return [o.l, brl.format(o.v)+'/mês'];}), 'Percentual calculado sobre tudo o que entrou na conta no período.')}
+    : topCat ? {l:'Onde mais gasta', v:brl.format(byCat[topCat]/nM), s:topCat+' · '+pct.format(T.outs?byCat[topCat]/T.outs:0)+' das saídas',
+      m: moreHTML('O que mais pesa em '+topCat, topOrigins(tx.filter(function(t){ return t.value<0 && catOf(t)===topCat; }), 5, nM).map(function(o){return [o.l, brl.format(o.v)+(isWeek?'':'/mês')];}), 'A categoria com mais saídas no período, sem contar "'+OTHER+'".')}
+    : {l:'Onde mais gasta', v:'—', s:'Nenhuma saída classificada', m: moreHTML('Onde mais gasta', [], 'Classifique as saídas na página Categorias para ver onde o dinheiro mais vai.')}
   ];
   $('dKpis').innerHTML = k.map(function(x){
     return '<div class="kpi hoverable" data-tip="'+esc('<b>'+esc(x.l)+'</b>')+'" data-more="'+esc(x.m)+'"><span class="label">'+esc(x.l)+'</span><span class="value num">'+esc(x.v)+'</span>'+
@@ -866,17 +905,18 @@ function renderDashboard(){
   }), {valueLabels: chartM.length<=8, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, big:true, aria:'Resultado por mês'});
 
   /* fixos x variáveis */
+  $('dFixT').textContent = X.fixvarTitulo;
   var fp = T.outs ? fixed/T.outs*100 : 0;
   var fixList = FIXED.filter(function(c){return byCat[c];}).map(function(c){ return '<li><span>'+esc(c)+'</span><span class="num">'+brl.format(byCat[c]/nM)+'</span></li>'; }).join('');
   var varCats = Object.keys(byCat).filter(function(c){return FIXED.indexOf(c)===-1;}).sort(function(a,b){return byCat[b]-byCat[a];});
   var varList = varCats.map(function(c){ return '<li><span>'+esc(c)+'</span><span class="num">'+brl.format(byCat[c]/nM)+'</span></li>'; }).join('');
   $('dFix').innerHTML =
     '<div class="stack" role="img" aria-label="Fixos '+pct.format(fp/100)+', variáveis '+pct.format(1-fp/100)+'">'+
-      '<span style="width:'+fp.toFixed(1)+'%;background:var(--s1)" data-tip="<b>Custos fixos</b><br>'+brl.format(fixedM)+' por mês" data-more="'+esc(moreHTML('Custos fixos por mês', FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)];}), 'São pagos todo mês, com ou sem movimento. É o mínimo que o negócio precisa faturar.'))+'"></span>'+
-      '<span style="width:'+(100-fp).toFixed(1)+'%;background:var(--s2)" data-tip="<b>Custos variáveis</b><br>'+brl.format(varM)+' por mês" data-more="'+esc(moreHTML('Custos variáveis por mês', varCats.slice(0,5).map(function(c){return [c, brl.format(byCat[c]/nM)];}), 'Sobem e descem com o movimento. Compare com as entradas para ver se estão crescendo no mesmo ritmo.'))+'"></span></div>'+
+      '<span style="width:'+fp.toFixed(1)+'%;background:var(--s1)" data-tip="<b>'+X.fixosRotulo+'</b><br>'+brl.format(fixedM)+' por mês" data-more="'+esc(moreHTML(X.fixosRotulo+' por mês', FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)];}), X.fixosNota))+'"></span>'+
+      '<span style="width:'+(100-fp).toFixed(1)+'%;background:var(--s2)" data-tip="<b>'+X.varRotulo+'</b><br>'+brl.format(varM)+' por mês" data-more="'+esc(moreHTML(X.varRotulo+' por mês', varCats.slice(0,5).map(function(c){return [c, brl.format(byCat[c]/nM)];}), X.varNota))+'"></span></div>'+
     '<div class="fv-cols">'+
-      '<div><p class="fv-h"><i class="sw" style="background:var(--s1)"></i>Fixos <b class="num">'+brl.format(fixedM)+'</b> · '+pct.format(fp/100)+'</p><p class="fv-d">Pagos todo mês, vendendo ou não</p><ul class="fv-list">'+fixList+'</ul></div>'+
-      '<div><p class="fv-h"><i class="sw" style="background:var(--s2)"></i>Variáveis <b class="num">'+brl.format(varM)+'</b> · '+pct.format(1-fp/100)+'</p><p class="fv-d">Acompanham o movimento</p><ul class="fv-list">'+varList+'</ul></div>'+
+      '<div><p class="fv-h"><i class="sw" style="background:var(--s1)"></i>Fixos <b class="num">'+brl.format(fixedM)+'</b> · '+pct.format(fp/100)+'</p><p class="fv-d">'+X.fixosDesc+'</p><ul class="fv-list">'+fixList+'</ul></div>'+
+      '<div><p class="fv-h"><i class="sw" style="background:var(--s2)"></i>Variáveis <b class="num">'+brl.format(varM)+'</b> · '+pct.format(1-fp/100)+'</p><p class="fv-d">'+X.varDesc+'</p><ul class="fv-list">'+varList+'</ul></div>'+
     '</div>';
 
   /* caixa acumulado */
@@ -893,9 +933,11 @@ function renderDashboard(){
   }
   var marks = [{i:pts.length-1, text:'Hoje no extrato: '+fmtK(acc)}];
   if (minI>0 && minI<pts.length-1) marks.push({i:minI, text:'Menor ponto: '+fmtK(pts[minI].y)+' em '+shortDate(pts[minI].date), below:true});
-  $('dCum').innerHTML = lineSVG(pts, {aria:'Caixa acumulado ao longo do extrato', marks:marks});
+  $('dCumT').textContent = X.caixaTitulo;
+  $('dCum').innerHTML = lineSVG(pts, {aria:X.caixaTitulo+' ao longo do extrato', marks:marks});
 
-  /* dia da semana */
+  /* dia da semana (escondido em Pessoa física: o salário cai uma vez por mês) */
+  $('dWeekCard').hidden = !X.mostraDiaSemana;
   var bestD = 0, worstD = 0;
   dowAvg.forEach(function(v,i){ if (v>dowAvg[bestD]) bestD = i; if (v<dowAvg[worstD]) worstD = i; });
   $('dWeek').innerHTML = barSVG(dowAvg.map(function(v,i){
@@ -962,16 +1004,21 @@ function renderDashboard(){
   /* conclusões */
   var L = [];
   L.push({w: margin<0.05, t:'De cada R$ 100 que entram, '+(margin>=0?'sobram ':'faltam ')+brl.format(Math.abs(margin*100))+'. '+(margin<0.05?'É uma margem apertada: qualquer imprevisto pode virar prejuízo.':'')});
-  if (dailyIns>0 && !isWeek) { var dd2 = fixedM/dailyIns; L.push({w:false, t:'Os custos fixos ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+Math.round(dd2)+' dias de entradas. Ou seja, o que entra nos primeiros '+Math.round(dd2)+' dias do mês serve só para pagar os custos fixos.'}); }
+  if (dailyIns>0 && !isWeek) { var dd2 = fixedM/dailyIns; L.push({w:false, t:X.diasEntradas(Math.round(dd2), fixedM)}); }
   if (!isWeek) L.push({w:true, t:'As saídas se concentram nos dias '+top3.map(function(i){return i+1;}).sort(function(a,b){return a-b;}).join(', ').replace(/, (\d+)$/,' e $1')+': juntos, somam em média '+brl.format(top3sum)+' por mês ('+pct.format(T.outs?top3sum/(T.outs/nM):0)+' das saídas). Deixe dinheiro reservado para essas datas.'});
-  if (dowAvg[bestD]>0) L.push({w:false, t:DOW[bestD]+' é o dia em que mais entra dinheiro na conta (média de '+brl.format(dowAvg[bestD])+')'+(dowAvg[worstD]>0 ? ', e '+DOW[worstD].toLowerCase()+' é o mais fraco ('+brl.format(dowAvg[worstD])+').' : ', e '+DOW[worstD].toLowerCase()+' não tem entradas.')+' Lembre que repasses de cartão e aplicativos costumam cair dias depois da venda.'});
+  if (X.negocio && dowAvg[bestD]>0) L.push({w:false, t:DOW[bestD]+' é o dia em que mais entra dinheiro na conta (média de '+brl.format(dowAvg[bestD])+')'+(dowAvg[worstD]>0 ? ', e '+DOW[worstD].toLowerCase()+' é o mais fraco ('+brl.format(dowAvg[worstD])+').' : ', e '+DOW[worstD].toLowerCase()+' não tem entradas.')+' Lembre que repasses de cartão e aplicativos costumam cair dias depois da venda.'});
   if (nM>=2){
     var best = months.slice().sort(function(a,b){return b.res-a.res;})[0], worst = months.slice().sort(function(a,b){return a.res-b.res;})[0];
     L.push({w:false, t:'O melhor mês foi '+best.name+' (resultado de '+brl.format(best.res)+') e o mais fraco, '+worst.name+' ('+brl.format(worst.res)+').'});
   }
   var rise = chg.filter(function(r){return r.d>0 && r.p!==null && r.p>0.1;})[0];
   if (rise) L.push({w:true, t:'A categoria '+rise.c+' subiu '+pct.format(rise.p)+' em '+cmpB.name+' ('+brl.format(rise.d)+' a mais que em '+cmpA.name+'). Vale entender o motivo antes que vire o novo normal.'});
-  if (T.ins && fees/T.ins>0.03) L.push({w:true, t:'Taxas de cartão, antecipação e aplicativos levam '+pct.format(fees/T.ins)+' de tudo o que entra ('+brl.format(fees/nM)+' por mês). Negociar a taxa da maquininha é dinheiro direto no resultado.'});
+  if (X.negocio && T.ins && fees/T.ins>0.03) L.push({w:true, t:'Taxas de cartão, antecipação e aplicativos levam '+pct.format(fees/T.ins)+' de tudo o que entra ('+brl.format(fees/nM)+' por mês). Negociar a taxa da maquininha é dinheiro direto no resultado.'});
+  if (!X.negocio){
+    var deliv = byCat[catByCode('delivery')] || 0, tarif = byCat[catByCode('tarifas')] || 0;
+    if (T.outs && deliv/T.outs>0.10) L.push({w:true, t:'Delivery levou '+brl.format(deliv/nM)+' por mês ('+pct.format(deliv/T.outs)+' dos gastos). Cozinhar mais vezes por semana é uma das economias mais rápidas.'});
+    if (tarif>0) L.push({w:false, t:'Você pagou '+brl.format(tarif/nM*12)+' por ano em tarifas do banco. Muitas contas digitais não cobram tarifa.'});
+  }
   $('dIns').innerHTML = L.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
 }
 
