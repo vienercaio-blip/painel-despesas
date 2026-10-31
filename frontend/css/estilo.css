@@ -331,6 +331,8 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .mg-info{font-size:13px;color:var(--ink-2);margin:8px 0 0}
 .mg-warn{background:var(--note-bg);color:var(--note-ink);border-radius:10px;padding:12px 14px;margin-bottom:10px}
 .mg-warn p{margin:0 0 8px;font-size:14px}
+.tipo-warn{margin:12px 0 0}
+.tipo-warn p{margin:0}
 .mv.pos{color:var(--good)} .mv.neg{color:var(--bad)}
 .delta{font-weight:500}
 .soon{font-size:12px;color:var(--ink-3)}
