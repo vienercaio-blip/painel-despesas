@@ -84,9 +84,13 @@ function norm(s){return ' '+String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').to
 function fmtDate(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
 function shortDate(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
 
+/* Entrada = dinheiro que entrou. Estorno, devolução e reembolso têm valor
+   positivo, mas contam como saída negativa: descontam da categoria da despesa. */
+function ehEntrada(t){ return t.value>0 && !t.estorno; }
+function ehSaida(t){ return !ehEntrada(t); }
 function catOf(tx){
   if (state.overrides[tx.id]) return state.overrides[tx.id];
-  if (tx.value<0 && state.rules && state.rules[tx.origin]) return state.rules[tx.origin].cat;
+  if (ehSaida(tx) && state.rules && state.rules[tx.origin]) return state.rules[tx.origin].cat;
   return tx.auto;
 }
 function ruleMsg(t){ var m = $('ruleMsg'); m.textContent = t; m.hidden = false; }
@@ -104,7 +108,7 @@ function renderRules(){
   $('cntRegras').textContent = keys.length ? keys.length : '';
   $('rulesList').innerHTML = keys.map(function(k){
     var r = state.rules[k];
-    var n = state.tx.filter(function(t){return t.value<0 && t.origin===k;}).length;
+    var n = state.tx.filter(function(t){return ehSaida(t) && t.origin===k;}).length;
     return '<li class="sv"><div class="svi"><strong>'+esc(r.label)+'</strong>'+
       '<span>Sempre <b>'+esc(r.cat)+'</b> · '+(n ? n+(n===1?' lançamento':' lançamentos')+' neste extrato' : 'nenhum lançamento neste extrato')+(r.at?' · criada em '+fmtDate(new Date(r.at)):'')+'</span></div>'+
       '<div class="sva"><button type="button" class="btn" data-rdel="'+esc(k)+'">Excluir</button></div></li>';
@@ -150,7 +154,7 @@ function splitLine(line, d){
 }
 /* lançamento como vem da API -> formato usado nas telas */
 function doServidor(l){
-  return { date:keyDate(l.data), desc:l.descricao, value:l.valor, auto:l.categoria_auto, kw:l.palavra, origin:l.origem, dbId:l.id||null };
+  return { date:keyDate(l.data), desc:l.descricao, value:l.valor, estorno:!!l.estorno, auto:l.categoria_auto, kw:l.palavra, origin:l.origem, dbId:l.id||null };
 }
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
@@ -159,7 +163,7 @@ function load(list, source, name){
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
-    return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, auto:t.value<0 ? t.auto : null, kw:t.value<0 ? t.kw : null, origin:t.origin};
+    return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, estorno:!!t.estorno, auto:ehSaida(t) ? t.auto : null, kw:ehSaida(t) ? t.kw : null, origin:t.origin};
   });
   state.overrides = {}; state.source = source; state.fileName = name||''; state.cat = null; state.p = {y:'all', m:'all', w:'all'};
   refreshFixed();  /* custos fixos do perfil deste extrato (antes ficava sempre o de pessoa física) */
@@ -254,7 +258,7 @@ function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(er
 /* ---------- rendering ---------- */
 function sums(list){
   var ins = 0, outs = 0;
-  list.forEach(function(t){ if (t.value>0) ins += t.value; else outs -= t.value; });
+  list.forEach(function(t){ if (ehEntrada(t)) ins += t.value; else outs -= t.value; });
   return {ins:ins, outs:outs};
 }
 function deltaTxt(now, before, label){
@@ -466,7 +470,7 @@ function render(){
   if (!tx.length){ state.p = {y:'all', m:'all', w:'all'}; tx = all; }
   var ins = 0, outs = 0, byCat = {}, biggest = null;
   tx.forEach(function(t){
-    if (t.value>0) ins += t.value;
+    if (ehEntrada(t)) ins += t.value;
     else { var a=-t.value; outs += a; var c=catOf(t); byCat[c]=(byCat[c]||0)+a; if(!biggest||a>-biggest.value) biggest=t; }
   });
   var res = ins - outs;
@@ -484,7 +488,7 @@ function render(){
 
   renderPeriod(tx);
 
-  var nIn = tx.filter(function(t){return t.value>0;}).length, nOut = tx.length-nIn;
+  var nIn = tx.filter(function(t){return ehEntrada(t);}).length, nOut = tx.length-nIn;
   $('kIn').textContent = brl.format(ins);  $('kInSub').innerHTML = nIn+' lançamentos'+(prev?deltaTxt(ins, prev.ins, prev.label):'');
   $('kOut').textContent = brl.format(outs); $('kOutSub').innerHTML = nOut+' lançamentos'+(prev?deltaTxt(outs, prev.outs, prev.label):'');
   $('kRes').textContent = brl.format(res);
@@ -583,19 +587,19 @@ window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira()
 
 function renderCategorias(){
   var base = state.tx, outs = 0, byC = {};
-  base.forEach(function(t){ if (t.value<0){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; } });
+  base.forEach(function(t){ if (ehSaida(t)){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; } });
   var S = { outs: outs, cats: Object.keys(byC).map(function(k){return {name:k, v:byC[k]};}).sort(function(a,b){
     if (a.name===OTHER) return 1; if (b.name===OTHER) return -1; return b.v-a.v; }) };
   if (!state.cat || !byC[state.cat]) state.cat = S.cats.length ? S.cats[0].name : null;
   var span = base.length ? 'Todo o extrato, de '+fmtDate(base[0].date)+' a '+fmtDate(base[base.length-1].date) : '';
   $('catList').innerHTML = S.cats.map(function(c){
-    var n = base.filter(function(t){return t.value<0 && catOf(t)===c.name;}).length;
+    var n = base.filter(function(t){return ehSaida(t) && catOf(t)===c.name;}).length;
     return '<button type="button" class="cat-item" data-cat="'+esc(c.name)+'" aria-current="'+(c.name===state.cat)+'">'+
       '<span class="n">'+esc(c.name)+'</span><span class="m"><span class="num">'+brl0.format(c.v)+'</span><br>'+n+(n===1?' lançamento':' lançamentos')+'</span></button>';
   }).join('') || '<p class="empty">Nenhuma despesa no extrato.</p>';
 
   var name = state.cat;
-  var list = base.filter(function(t){return t.value<0 && catOf(t)===name;});
+  var list = base.filter(function(t){return ehSaida(t) && catOf(t)===name;});
   if (!name || !list.length){ $('cdName').textContent='Nenhuma categoria'; $('cdFacts').innerHTML=''; $('origins').innerHTML=''; $('cdRows').innerHTML=''; return; }
   var total = list.reduce(function(s,t){return s-t.value;},0);
   $('cntLanc').textContent = list.length;
@@ -620,14 +624,15 @@ function renderCategorias(){
   $('origins').innerHTML = origins.map(function(o){
     return '<li class="origin"><div class="who"><strong>'+esc(o.label)+'</strong>'+
       '<span class="meta"><span class="num">'+brl.format(o.v)+'</span> · '+o.n+(o.n===1?' pagamento':' pagamentos')+' · último em '+fmtDate(o.last)+' · '+pct.format(o.v/total)+' da categoria</span>'+
-      '<span class="track"><span class="bar" style="width:'+(o.v/maxO*100).toFixed(1)+'%"></span></span></div>'+
+      '<span class="track"><span class="bar" style="width:'+Math.max(0, maxO>0 ? o.v/maxO*100 : 0).toFixed(1)+'%"></span></span></div>'+
       '<label>Mover todos para <select data-origin="'+esc(o.key)+'" aria-label="Mover todos os pagamentos de '+esc(o.label)+'">'+opts(name)+'</select></label></li>';
   }).join('');
 
   $('cdRows').innerHTML = list.map(function(t){
-    var why = state.overrides[t.id] ? '<span class="why manual">Só neste extrato</span>'
+    var why = (t.estorno ? '<span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span> ' : '')+
+      (state.overrides[t.id] ? '<span class="why manual">Só neste extrato</span>'
       : state.rules[t.origin] ? '<span class="why manual">Sua regra</span>'
-      : t.kw ? '<span class="why">palavra "'+esc(t.kw)+'"</span>' : '<span class="why none">Nenhuma regra</span>';
+      : t.kw ? '<span class="why">palavra "'+esc(t.kw)+'"</span>' : '<span class="why none">Nenhuma regra</span>');
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+why+'</td>'+
       '<td class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+opts(catOf(t))+'</select></td>'+
       '<td class="r num">'+brl.format(t.value)+'</td></tr>';
@@ -640,12 +645,12 @@ function refreshFixed(){ FIXED = allDefs().filter(function(d){ return d.type==='
 /* refaz a categoria automática dos lançamentos (no servidor) depois de mudar categorias */
 function reclassify(){
   var uniq = [];
-  state.tx.forEach(function(t){ if (t.value<0 && uniq.indexOf(t.desc)===-1) uniq.push(t.desc); });
+  state.tx.forEach(function(t){ if (ehSaida(t) && uniq.indexOf(t.desc)===-1) uniq.push(t.desc); });
   if (!uniq.length) return Promise.resolve();
   return API.categorizar(curPerfil(), uniq).then(function(r){
     var porDesc = {};
     uniq.forEach(function(d,i){ porDesc[d] = r.resultados[i]; });
-    state.tx.forEach(function(t){ if (t.value<0){ var a = porDesc[t.desc]; t.auto = a.categoria; t.kw = a.palavra; } });
+    state.tx.forEach(function(t){ if (ehSaida(t)){ var a = porDesc[t.desc]; t.auto = a.categoria; t.kw = a.palavra; } });
   });
 }
 function categoriaLocal(c){ return { id:c.id, name:c.nome, type:c.tipo, kws:c.palavras||[], at:c.criada_em }; }
@@ -654,7 +659,7 @@ function renderCustom(){
   $('customEmpty').hidden = true;
   $('cntCustom').textContent = defs.length+1;
   var row = function(d){
-    var n = state.tx.filter(function(t){ return t.value<0 && catOf(t)===d.name; }).length;
+    var n = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===d.name; }).length;
     if (state.editingCat===d.id){
       return '<li class="sv editing"><form class="ncform ec-form" data-id="'+esc(d.id)+'" novalidate>'+
         '<div class="nfield"><label for="ecName">Nome da categoria</label><input id="ecName" maxlength="40" autocomplete="off" value="'+esc(d.name)+'"></div>'+
@@ -674,7 +679,7 @@ function renderCustom(){
       (d.builtin ? (d.edited ? '<button type="button" class="btn" data-creset="'+esc(d.id)+'">Restaurar padrão</button>' : '')
                  : '<button type="button" class="btn" data-cdel="'+esc(d.id)+'">Excluir</button>')+'</div></li>';
   };
-  var nO = state.tx.filter(function(t){ return t.value<0 && catOf(t)===OTHER; }).length;
+  var nO = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===OTHER; }).length;
   var q = norm(state.catQ||'').trim();
   var match = function(name, kws){ return !q || norm(name).indexOf(q)!==-1 || kws.some(function(k){ return norm(k).indexOf(q)!==-1; }); };
   var shown = defs.filter(function(d){ return d.id===state.editingCat || match(d.name, d.kws); });
@@ -687,7 +692,7 @@ function renderCustom(){
 function previewKws(){
   var kws = parseKws($('ncKw').value);
   if (!kws.length || !state.tx.length){ $('ncPreview').textContent = ''; return; }
-  var hits = state.tx.filter(function(t){ if (t.value>=0) return false; var d = norm(t.desc); return kws.some(function(k){ return d.indexOf(' '+k)!==-1; }); });
+  var hits = state.tx.filter(function(t){ if (ehEntrada(t)) return false; var d = norm(t.desc); return kws.some(function(k){ return d.indexOf(' '+k)!==-1; }); });
   $('ncPreview').textContent = hits.length ? hits.length+(hits.length===1?' lançamento':' lançamentos')+' deste extrato entraria'+(hits.length===1?'':'m')+' nesta categoria, por exemplo "'+hits[0].desc+'".' : 'Nenhum lançamento deste extrato tem essas palavras.';
 }
 var DOW = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
@@ -824,7 +829,7 @@ function renderDashboard(){
       var k = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
       if (!M[k]){ M[k] = {k:k, y:t.date.getFullYear(), m:t.date.getMonth(), ins:0, outs:0, cat:{}}; mk.push(k); }
       var o = M[k];
-      if (t.value>0) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
+      if (ehEntrada(t)) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
     });
     mk.sort();
     return mk.map(function(k){ var o = M[k]; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
@@ -835,7 +840,7 @@ function renderDashboard(){
 
   /* fixos e variáveis */
   var fixed = 0, byCat = {};
-  tx.forEach(function(t){ if (t.value<0){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
+  tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
   var variable = T.outs - fixed, fixedM = fixed/nM, varM = variable/nM;
   var fees = byCat[feesName()] || 0;
 
@@ -845,7 +850,7 @@ function renderDashboard(){
   for (var i=0;i<nDays;i++){ var d = new Date(first); d.setDate(d.getDate()+i); dowCount[(d.getDay()+6)%7]++; }
   var domOut = []; for (var j=0;j<31;j++) domOut.push(0);
   tx.forEach(function(t){
-    if (t.value>0) dowIns[(t.date.getDay()+6)%7] += t.value;
+    if (ehEntrada(t)) dowIns[(t.date.getDay()+6)%7] += t.value;
     else domOut[t.date.getDate()-1] -= t.value;
   });
   var dowAvg = dowIns.map(function(v,i){ return dowCount[i] ? v/dowCount[i] : 0; });
@@ -853,7 +858,7 @@ function renderDashboard(){
   var dailyIns = T.ins/nDays;
   function topOrigins(list, n, div){
     var g = {};
-    list.forEach(function(t){ var k = t.origin; if (!g[k]) g[k] = {l:t.desc, v:0, c:0}; g[k].v += Math.abs(t.value); g[k].c++; });
+    list.forEach(function(t){ var k = t.origin; if (!g[k]) g[k] = {l:t.desc, v:0, c:0}; g[k].v += ehSaida(t) ? -t.value : t.value; g[k].c++;  /* estorno desconta */ });
     return Object.keys(g).map(function(k){return g[k];}).sort(function(a,b){return b.v-a.v;}).slice(0,n)
       .map(function(o){ return {l:o.l, v:o.v/(div||1), c:o.c}; });
   }
@@ -868,10 +873,10 @@ function renderDashboard(){
     var mkk = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
     (monthTx[mkk] = monthTx[mkk] || []).push(t);
     var dk = isoD(t.date); (dayTx[dk] = dayTx[dk] || []).push(t);
-    if (t.value>0) dowTx[(t.date.getDay()+6)%7].push(t); else domTx[t.date.getDate()-1].push(t);
+    if (ehEntrada(t)) dowTx[(t.date.getDay()+6)%7].push(t); else domTx[t.date.getDate()-1].push(t);
   });
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
-  var feeTx = tx.filter(function(t){ return t.value<0 && catOf(t)===feesName(); });
+  var feeTx = tx.filter(function(t){ return ehSaida(t) && catOf(t)===feesName(); });
   /* a categoria com mais saídas, sem contar "Outros" (cartão "Onde mais gasta") */
   var topCat = Object.keys(byCat).filter(function(c){ return c!==OTHER; }).sort(function(a,b){ return byCat[b]-byCat[a]; })[0] || null;
 
@@ -886,7 +891,7 @@ function renderDashboard(){
     X.negocio ? {l:'Taxas de cartão e apps', v:pct.format(T.ins?fees/T.ins:0), s:brl.format(fees/nM)+(isWeek?' na semana':' por mês')+', sobre as entradas',
       m: moreHTML('De onde vêm as taxas', topOrigins(feeTx, 5, nM).map(function(o){return [o.l, brl.format(o.v)+'/mês'];}), 'Percentual calculado sobre tudo o que entrou na conta no período.')}
     : topCat ? {l:'Onde mais gasta', v:brl.format(byCat[topCat]/nM), s:topCat+' · '+pct.format(T.outs?byCat[topCat]/T.outs:0)+' das saídas',
-      m: moreHTML('O que mais pesa em '+topCat, topOrigins(tx.filter(function(t){ return t.value<0 && catOf(t)===topCat; }), 5, nM).map(function(o){return [o.l, brl.format(o.v)+(isWeek?'':'/mês')];}), 'A categoria com mais saídas no período, sem contar "'+OTHER+'".')}
+      m: moreHTML('O que mais pesa em '+topCat, topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===topCat; }), 5, nM).map(function(o){return [o.l, brl.format(o.v)+(isWeek?'':'/mês')];}), 'A categoria com mais saídas no período, sem contar "'+OTHER+'".')}
     : {l:'Onde mais gasta', v:'—', s:'Nenhuma saída classificada', m: moreHTML('Onde mais gasta', [], 'Classifique as saídas na aba Organizar para ver onde o dinheiro mais vai.')}
   ];
   $('dKpis').innerHTML = k.map(function(x){
@@ -989,8 +994,8 @@ function renderDashboard(){
       var up = r.d>0;
       var txt = r.p===null ? 'nova' : (up?'+':'')+pct.format(r.p);
       var ga = {}, gb = {};
-      (monthTx[A.k]||[]).forEach(function(t){ if (t.value<0 && catOf(t)===r.c){ (ga[t.origin] = ga[t.origin] || {l:t.desc, v:0}).v -= t.value; } });
-      (monthTx[B.k]||[]).forEach(function(t){ if (t.value<0 && catOf(t)===r.c){ (gb[t.origin] = gb[t.origin] || {l:t.desc, v:0}).v -= t.value; } });
+      (monthTx[A.k]||[]).forEach(function(t){ if (ehSaida(t) && catOf(t)===r.c){ (ga[t.origin] = ga[t.origin] || {l:t.desc, v:0}).v -= t.value; } });
+      (monthTx[B.k]||[]).forEach(function(t){ if (ehSaida(t) && catOf(t)===r.c){ (gb[t.origin] = gb[t.origin] || {l:t.desc, v:0}).v -= t.value; } });
       var ks = {}; Object.keys(ga).concat(Object.keys(gb)).forEach(function(x){ ks[x]=1; });
       var drv = Object.keys(ks).map(function(x){ var a = ga[x] ? ga[x].v : 0, b = gb[x] ? gb[x].v : 0; return {l:(gb[x]||ga[x]).l, d:b-a}; })
         .filter(function(x){return Math.abs(x.d)>=0.01;}).sort(function(x,y){return Math.abs(y.d)-Math.abs(x.d);}).slice(0,4);
@@ -1489,7 +1494,7 @@ function renderFlow(tx, mode){
     else if (mode==='month') g = add(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0'), MESES[d.getMonth()].slice(0,3)+'/'+String(d.getFullYear()).slice(2));
     else if (mode==='week'){ var k = weekKey(d); g = add(k, 'sem. '+shortDate(keyDate(k))); }
     else g = add(weekKey(d)+'-'+((d.getDay()+6)%7), '');
-    if (t.value>0) g.inn += t.value; else g.out -= t.value;
+    if (ehEntrada(t)) g.inn += t.value; else g.out -= t.value;
   });
   order.sort();
   var data = order.map(function(k){return groups[k];});
@@ -1539,7 +1544,7 @@ function renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev){
   if (fees && ins) L.push({w: fees/ins>0.05, t:'Taxas de cartão, antecipação e aplicativos levaram '+brl.format(fees)+', o equivalente a '+pct.format(fees/ins)+' do que entrou. Compare as taxas da sua maquininha e evite antecipar recebíveis quando puder.'});
   var oth = byCat[OTHER];
   if (oth){
-    var n = tx.filter(function(t){return t.value<0 && catOf(t)===OTHER;}).length;
+    var n = tx.filter(function(t){return ehSaida(t) && catOf(t)===OTHER;}).length;
     L.push({w:true, t:n+(n===1?' despesa ficou':' despesas ficaram')+' sem categoria ('+brl.format(oth)+'). Classifique na aba Organizar para o painel ficar mais preciso.'});
   }
   if (biggest) L.push({w:false, t:'O maior pagamento individual foi "'+biggest.desc+'", de '+brl.format(-biggest.value)+', em '+fmtDate(biggest.date)+'.'});
@@ -1552,10 +1557,10 @@ function renderTable(){
   var opts = '<option value="all">Todas</option><option value="__in">Entradas</option>'+catsCom(fc==='all'||fc==='__in' ? null : fc).map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>';}).join('');
   $('fCat').innerHTML = opts; $('fCat').value = fc;
   var list = cur().filter(function(t){
-    if (fc==='__in' && t.value<0) return false;
-    if (fc!=='all' && fc!=='__in' && (t.value>0 || catOf(t)!==fc)) return false;
-    if (state.filter==='out' && t.value>0) return false;
-    if (state.filter==='in' && t.value<0) return false;
+    if (fc==='__in' && ehSaida(t)) return false;
+    if (fc!=='all' && fc!=='__in' && (ehEntrada(t) || catOf(t)!==fc)) return false;
+    if (state.filter==='out' && ehEntrada(t)) return false;
+    if (state.filter==='in' && ehSaida(t)) return false;
     return !q || norm(t.desc).indexOf(q)!==-1;
   });
   /* editar a categoria aqui só depois de ligar "Editar categorias" */
@@ -1575,10 +1580,11 @@ function renderTable(){
   $('txPrev').hidden = $('txNext').hidden = nPag<=1;
   $('txPrev').disabled = state.txPag===0; $('txNext').disabled = state.txPag>=nPag-1;
   $('rows').innerHTML = shown.map(function(t){
-    var c = t.value>0 ? null : catOf(t);
-    var catCell = t.value>0 ? '<span class="in">Entrada</span>' :
+    var c = ehEntrada(t) ? null : catOf(t);
+    var catCell = ehEntrada(t) ? '<span class="in">Entrada</span>' :
       ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>' :
       '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
+    if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>';
   var tot = list.reduce(function(s,t){return s+t.value;},0);
@@ -1682,7 +1688,7 @@ function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id], to = s.value;
   /* mesma origem = mesma descrição, ignorando números (datas, códigos) */
-  var mesma = state.tx.filter(function(x){ return x.value<0 && x.origin===t.origin; });
+  var mesma = state.tx.filter(function(x){ return ehSaida(x) && x.origin===t.origin; });
   var n = mesma.length;
   askX({ kind:'reclass', title:'Mudar a categoria de quais lançamentos?',
     text:'Você mudou "'+t.desc+'" para '+to+'.'+(n>1 ? ' Neste extrato há '+n+' lançamentos dessa mesma origem.' : '')+' Se escolher os próximos extratos, sempre que essa origem aparecer ela já vem como '+to+'.',
@@ -1713,7 +1719,7 @@ $('origins').addEventListener('change', function(e){
     onYes:function(){ setRule(key, label, to).then(render, function(e){ falhou(e); render(); }); },
     onNo:function(){ this.onAlt(); },
     onAlt:function(){  /* aqui "só neste extrato" já é todos dessa origem */
-      state.tx.forEach(function(t){ if (t.value<0 && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
+      state.tx.forEach(function(t){ if (ehSaida(t) && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
       ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato.'); render();
     },
     onCancel:render });
@@ -1747,7 +1753,7 @@ function doCreate(name, type, kws){
     refreshFixed();
     return reclassify();
   }).then(function(){
-    var n = state.tx.filter(function(t){ return t.value<0 && catOf(t)===name; }).length;
+    var n = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===name; }).length;
     $('ncName').value = ''; $('ncKw').value = ''; $('ncTypeVar').checked = true; $('ncPreview').textContent = '';
     ruleMsg('Categoria "'+name+'" criada.'+(kws.length ? ' '+n+(n===1?' lançamento foi classificado':' lançamentos foram classificados')+' nela pelas palavras-chave.' : ' Use "Mover para" ou a tabela de lançamentos para colocar despesas nela.'));
     render();
@@ -1820,7 +1826,7 @@ $('customList').addEventListener('click', function(e){
   var d = e.target.closest('[data-cdel]'); if (!d) return;
   var cd = state.custom.filter(function(c){ return c.id===d.dataset.cdel; })[0]; if (!cd) return;
   var name = cd.name;
-  var nL = state.tx.filter(function(t){ return t.value<0 && catOf(t)===name; }).length;
+  var nL = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===name; }).length;
   var nR = Object.keys(state.rules).filter(function(k){ return state.rules[k].cat===name; }).length;
   askX({ kind:'excluir-categoria', danger:true, title:'Excluir a categoria "'+name+'"?',
     text:(nL ? nL+(nL===1?' lançamento volta':' lançamentos voltam')+' para a classificação automática. ' : '')+(nR ? nR+(nR===1?' regra ligada a ela também será excluída. ':' regras ligadas a ela também serão excluídas. ') : '')+'Isso não pode ser desfeito.',

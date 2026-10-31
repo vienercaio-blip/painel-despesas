@@ -51,3 +51,32 @@ def test_edicao_por_codigo():
     d = {x["codigo"]: x for x in definicoes_padrao("pf", {"pf:mercado": {"nome": "Feira", "tipo": "variavel", "palavras": None}})}
     assert d["mercado"]["nome"] == "Feira" and d["mercado"]["id"] == "b:mercado" and d["mercado"]["editada"]
     assert d["dividas"]["tipo"] == "fixo" and d["lazer"]["tipo"] == "variavel"
+
+
+def _preparar(perfil, descricao, valor):
+    from categorizacao import preparar_lancamentos
+    lanc = [{"data": "2026-01-10", "descricao": descricao, "valor": valor}]
+    return preparar_lancamentos(lanc, Categorizador(perfil, [], {}))[0]
+
+
+@pytest.mark.parametrize("descricao, categoria", [
+    ("ESTORNO COMPRA SHOPEE", "Compras online"),
+    ("ESTORNO TARIFA PACOTE SERVICOS", "Tarifas bancárias"),
+    ("REEMBOLSO UNIMED CONSULTA", "Saúde"),
+    ("DEVOLUCAO PIX MAGAZINE LUIZA", "Compras online"),
+    ("ESTORNO DEBITO 99812", "Outros (revisar)"),  # sem categoria: o cliente classifica
+])
+def test_estorno_desconta_da_categoria_da_despesa(descricao, categoria):
+    item = _preparar("pf", descricao, 80.0)
+    assert item["estorno"] is True and item["categoria_auto"] == categoria
+
+
+@pytest.mark.parametrize("descricao", ["CRED SALARIO ALFA SERVICOS LTDA", "PIX RECEBIDO 123 JOAO", "CASHBACK CARTAO CREDITO"])
+def test_entrada_comum_nao_e_estorno(descricao):
+    item = _preparar("pf", descricao, 80.0)
+    assert item["estorno"] is False and item["categoria_auto"] is None
+
+
+def test_saida_com_palavra_estorno_continua_saida():
+    item = _preparar("pf", "TARIFA ESTORNO DEVOLVIDO", -5.0)
+    assert item["estorno"] is False and item["categoria_auto"] == "Tarifas bancárias"

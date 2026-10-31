@@ -196,14 +196,26 @@ def carregar_edicoes(banco, usuario_id):
     return edicoes
 
 
+# Entrada com uma destas palavras é dinheiro de volta de uma despesa (estorno,
+# devolução, reembolso): em vez de contar como renda, desconta da categoria.
+PALAVRAS_ESTORNO = ["estorno", "estornad", "devolucao", "reembolso", "chargeback"]
+
+
+def eh_estorno(descricao, valor):
+    t = normalizar(descricao)
+    return valor > 0 and any(" " + p in t for p in PALAVRAS_ESTORNO)
+
+
 def preparar_lancamentos(lancamentos, categorizador):
     """Acrescenta a cada lançamento a categoria automática, a palavra que
-    decidiu a categoria e a chave de origem. Entradas (valor positivo)
-    não recebem categoria."""
+    decidiu a categoria e a chave de origem. Entradas (valor positivo) não
+    recebem categoria, exceto os estornos, que vão para a categoria da
+    despesa (ou "Outros (revisar)", para o cliente classificar)."""
     saida = []
     for lanc in lancamentos:
         item = dict(lanc)
-        if item["valor"] < 0:
+        item["estorno"] = eh_estorno(item["descricao"], item["valor"])
+        if item["valor"] < 0 or item["estorno"]:
             cat, palavra = categorizador.categorizar(item["descricao"])
         else:
             cat, palavra = None, None

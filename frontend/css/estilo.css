@@ -435,3 +435,4 @@ td .in{color:var(--good);font-weight:500}
 .conta-tipo{font-size:12px;color:var(--ink-3);opacity:.85}
 .sair-form{margin:0}
 .btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+.why.estorno{background:var(--accent-soft);color:var(--ink)}
