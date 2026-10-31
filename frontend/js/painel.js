@@ -1743,7 +1743,6 @@ $('rPeriod').addEventListener('change', function(){ resRange = this.value; rende
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
 function applyCfg(){
-  $('perfilAtual').textContent = perfilLabel(chosenPerfil());
   document.documentElement.classList.toggle('texto-grande', !!cfg.textoGrande);
   document.documentElement.classList.toggle('sem-esteira', cfg.esteira===false);
 }
@@ -1757,12 +1756,7 @@ function openCfg(){
   $('cfgBg').style.display = 'flex'; $('cfgClose').focus();
 }
 function closeCfg(){ $('cfgBg').style.display = 'none'; $('cfgBtn').focus(); }
-$('cfgBtn').addEventListener('click', openCfg);
-$('perfilTrocar').addEventListener('click', function(){
-  openCfg();
-  var r = document.querySelector('input[name="cfgPerfil"]:checked'); if (r) r.focus();
-});
-$('cfgClose').addEventListener('click', closeCfg);
+$('cfgBtn').addEventListener('click', openCfg);$('cfgClose').addEventListener('click', closeCfg);
 $('cfgBg').addEventListener('click', function(e){ if (e.target===$('cfgBg')) closeCfg(); });
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && $('cfgBg').style.display!=='none') closeCfg(); });
 document.querySelectorAll('input[name="cfgPerfil"]').forEach(function(r){ r.addEventListener('change', function(){ cfg.perfil = this.value; saveCfg(); applyCfg(); }); });
