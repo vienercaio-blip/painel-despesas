@@ -567,9 +567,19 @@ function renderPeriod(tx){
   }).join('');
   /* esteira: repete a lista para o loop ser contínuo */
   $('pMonths').innerHTML = mh + mh.replace(/<button type="button" class="mchip"/g, '<button type="button" tabindex="-1" aria-hidden="true" class="mchip"');
-  var half = $('pMonths').scrollWidth/2;
-  $('pMonths').style.setProperty('--dur', Math.max(213, half/1.5).toFixed(1)+'s');
+  ajustarEsteira();
 }
+/* a esteira só se move quando os meses não cabem na tela; se couberem, fica
+   parada e sem a cópia repetida (senão apareceria "Ago Set Out Ago Set Out") */
+function ajustarEsteira(){
+  var faixa = $('pMonths'), caixa = faixa.parentNode;
+  if (!caixa.clientWidth) return;  /* escondida: mede quando aparecer */
+  caixa.classList.remove('parada');
+  var half = faixa.scrollWidth/2;
+  caixa.classList.toggle('parada', half <= caixa.clientWidth);
+  faixa.style.setProperty('--dur', Math.max(213, half/1.5).toFixed(1)+'s');
+}
+window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira(); });
 
 function renderCategorias(){
   var base = state.tx, outs = 0, byC = {};
@@ -1437,6 +1447,7 @@ function setView(){
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
+  if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
     if (a.dataset.view===v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');

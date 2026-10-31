@@ -293,6 +293,9 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .months > .mchip{margin-right:6px}
 .months-wrap:hover .months,.months-wrap:focus-within .months{animation-play-state:paused}
 @keyframes esteira{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.months-wrap.parada{-webkit-mask-image:none;mask-image:none}
+.months-wrap.parada .months{animation:none;width:auto}
+.months-wrap.parada .months [aria-hidden="true"]{display:none}
 @media (prefers-reduced-motion: reduce){.months-wrap{overflow-x:auto;-webkit-mask-image:none;mask-image:none}.months{animation:none;width:auto}.months [aria-hidden="true"]{display:none}}
 .mchip{all:unset;box-sizing:border-box;flex:none;display:flex;align-items:baseline;gap:8px;min-height:34px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);cursor:pointer}
 .mchip:hover{border-color:var(--ink-3)}
