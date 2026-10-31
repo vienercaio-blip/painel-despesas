@@ -213,26 +213,29 @@ function readFiles(files){
     var nome = good.map(function(r){return r.nome;}).join(', ');
     state.perfil = perfil;
     var salvar = $('saveMode').checked;
+    /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
+       escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
     var pronto = salvar
       ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:$('savePage').value || null, lancamentos:combined })
-          .then(function(meta){ return carregarSalvo(meta.id).then(function(){ recarregarSalvos(); return true; }); },
+          .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
                 function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
       : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
     pronto.then(function(saved){
-      var a = state.tx[0].date, b = state.tx[state.tx.length-1].date;
-      var months = {}; state.tx.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
+      var lista = combined.map(doServidor).sort(function(x,y){ return x.date-y.date; });
+      var a = lista[0].date, b = lista[lista.length-1].date;
+      var months = {}; lista.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
       var nm = Object.keys(months).length;
       $('upResTitle').textContent = 'Últimos extratos';
-      $('upSum').textContent = state.tx.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
-        (saved===true ? ' Salvo em Extratos salvos.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
-      $('upResult').querySelector('.drop-actions').hidden = false;
+      $('upSum').textContent = lista.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
+        (saved===true ? ' Salvo em Extratos salvos. Abra o extrato na lista para ver o painel.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
+      $('upResult').querySelector('.drop-actions').hidden = saved===true;
       $('upResult').hidden = false;
       $('msg').hidden = true;
       /* extrato salvo: leva o usuário direto para a lista de salvos */
       if (saved===true){
         showPanel('salvos');
         $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
-        toast('Extrato salvo: '+state.tx.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'.');
+        toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.');
       }
     });
   }).catch(function(e){ showMsg(e.message, true); });
@@ -1304,6 +1307,11 @@ function readSalesFile(f){
     $('sResult').hidden = false;
   }).catch(function(e){ salesMsg(e.message || 'Não foi possível ler a planilha.', true); });
 }
+/* nenhum extrato escolhido: esconde as abas do painel e volta ao Início */
+function fecharExtrato(){
+  state.loaded = false; state.savedId = null; state.raw = []; state.tx = []; state.overrides = {};
+  refreshTabs(); setView(); renderSaved();
+}
 function refreshTabs(){
   document.querySelectorAll('a.dash-tab').forEach(function(a){
     var v = a.dataset.view;
@@ -1914,7 +1922,7 @@ $('savedList').addEventListener('click', function(e){
   askX({ kind:'excluir-extrato', danger:true, title:'Excluir o extrato salvo?', text:'"'+(x.name||'Extrato')+'" ('+x.n+' lançamentos) será apagado. As suas regras e categorias continuam valendo. Isso não pode ser desfeito.',
     yes:'Excluir extrato', back:d, onYes:function(){
       API.excluirExtrato(id).then(function(){
-        if (state.savedId===id){ state.savedId = null; if (MODE==='vendas'){ sales = []; salesFile = ''; renderSales(); refreshTabs(); } }
+        if (state.savedId===id){ if (MODE==='vendas'){ state.savedId = null; sales = []; salesFile = ''; renderSales(); refreshTabs(); } else fecharExtrato(); }
         return recarregarSalvos().then(function(){ toast('Extrato excluído.'); });
       }).catch(falhou);
     } });
