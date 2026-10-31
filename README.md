@@ -30,7 +30,7 @@ dados_site/
 | Login e separação dos dados de cada cliente | Desenhar telas, gráficos e tabelas |
 | Ler os arquivos do banco (OFX, CSV, Excel) | Filtros de período, busca, tooltips |
 | Categorizar automaticamente cada despesa | Confirmações antes de cada mudança |
-| Guardar extratos, páginas, categorias, regras, correções e preferências | Exportar PDF e CSV |
+| Guardar extratos, subpastas, categorias, regras, correções e preferências | Exportar PDF e CSV |
 
 Antes, tudo isso ficava no `localStorage` do navegador: se o cliente trocasse de computador ou limpasse o navegador, perdia tudo. Agora fica no banco de dados, na conta de cada cliente.
 
@@ -66,7 +66,13 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 18 testes: leitura dos 4 formatos, salvar/abrir/mesclar extratos, páginas, categorias, regras, preferências e a garantia de que um cliente não enxerga os dados de outro.
+São 44 testes: leitura dos 4 formatos, salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos e a garantia de que um cliente não enxerga os dados de outro.
+
+## Tipos de conta
+
+São dois: **Pessoa física** (`pf`, 17 categorias padrão) e **Empresa ou MEI** (`empresa`, 13 categorias). O tipo é escolhido nas configurações e decide as categorias, a pasta dos extratos salvos e os textos do dashboard. Cada categoria padrão tem um código fixo (`pf:mercado`, `empresa:fornecedores`), usado para guardar as edições do cliente.
+
+Bancos de versões antigas são convertidos sozinhos ao ligar o servidor: o antigo tipo "MEI / PME" vira Empresa ou MEI (subpasta com nome repetido ganha " (MEI)"), e as edições das categorias passam da posição para o código.
 
 ## Endereços da API
 
@@ -74,19 +80,19 @@ Todos exigem login e respondem em JSON.
 
 | Método e endereço | Para quê |
 |---|---|
-| `GET /api/estado` | Tudo para abrir o painel: perfis, categorias, regras, preferências |
+| `GET /api/estado` | Tudo para abrir o painel: tipos de conta e suas categorias padrão, categorias, regras, preferências |
 | `POST /api/leitura` | Envia arquivos e recebe os lançamentos lidos e categorizados (não salva) |
 | `GET /api/extratos?tipo=despesas` | Lista os extratos salvos |
 | `POST /api/extratos` | Salva um extrato |
 | `GET /api/extratos/<id>` | Abre um extrato (lançamentos + correções) |
-| `PATCH /api/extratos/<id>` | Renomeia ou muda de página |
+| `PATCH /api/extratos/<id>` | Renomeia ou muda de subpasta |
 | `DELETE /api/extratos/<id>` | Exclui |
 | `POST /api/extratos/<id>/lancamentos` | Acrescenta lançamentos (ignora repetidos) |
 | `PUT /api/extratos/<id>/correcoes` | Guarda as correções "só neste extrato" |
 | `POST /api/extratos/mesclar` | Junta vários extratos do mesmo perfil |
-| `GET/POST /api/paginas`, `PATCH/DELETE /api/paginas/<id>` | Páginas |
+| `GET/POST /api/paginas`, `PATCH/DELETE /api/paginas/<id>` | Subpastas (dentro das pastas Pessoa física e Empresa ou MEI) |
 | `POST /api/categorias`, `PATCH/DELETE /api/categorias/<id>` | Categorias criadas pelo cliente |
-| `PUT/DELETE /api/categorias-padrao/<perfil>/<posição>` | Editar ou restaurar uma categoria padrão |
+| `PUT/DELETE /api/categorias-padrao/<perfil>/<codigo>` | Editar ou restaurar uma categoria padrão (ex.: `pf/mercado`) |
 | `POST /api/regras`, `DELETE /api/regras?origem=...` | Regras do cliente |
 | `POST /api/categorizar` | Recalcula a categoria automática de uma lista de descrições |
 | `PUT /api/preferencias/<confirmacoes ou config>` | Preferências |
