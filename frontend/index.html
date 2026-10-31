@@ -377,7 +377,16 @@
         <tbody id="rows"></tbody>
       </table>
     </div>
-    <p class="foot" id="foot"></p>
+    <div class="tx-pager">
+      <p class="foot" id="foot"></p>
+      <div class="tx-pager-ctl">
+        <label class="tx-per" for="txPor">Mostrar por vez
+          <select id="txPor"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="0">Todos</option></select>
+        </label>
+        <button type="button" class="btn btn-sm" id="txPrev">‹ Anterior</button>
+        <button type="button" class="btn btn-sm" id="txNext">Próxima ›</button>
+      </div>
+    </div>
   </section>
   </div>
 

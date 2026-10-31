@@ -1553,7 +1553,16 @@ function renderTable(){
   eb.textContent = ed ? 'Concluir edição' : 'Editar categorias';
   eb.classList.toggle('primary', ed);
   $('txHint').innerHTML = ed ? 'Edição ligada: escolha a nova categoria na coluna <b>Categoria</b>.' : 'Para corrigir uma categoria, clique em <b>Editar categorias</b>.';
-  var LIMIT = 300, shown = list.slice(0,LIMIT);
+  /* quantos lançamentos por vez (escolha do usuário, guardada na conta); 0 = todos */
+  var por = [25,50,100,0].indexOf(+cfg.porPagina)!==-1 ? +cfg.porPagina : 50;
+  $('txPor').value = String(por);
+  var chave = [fc, state.filter, q, JSON.stringify(state.p), list.length].join('|');
+  if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
+  var nPag = por ? Math.max(1, Math.ceil(list.length/por)) : 1;
+  state.txPag = Math.min(state.txPag||0, nPag-1);
+  var ini = por ? state.txPag*por : 0, shown = por ? list.slice(ini, ini+por) : list;
+  $('txPrev').hidden = $('txNext').hidden = nPag<=1;
+  $('txPrev').disabled = state.txPag===0; $('txNext').disabled = state.txPag>=nPag-1;
   $('rows').innerHTML = shown.map(function(t){
     var c = t.value>0 ? null : catOf(t);
     var catCell = t.value>0 ? '<span class="in">Entrada</span>' :
@@ -1562,7 +1571,7 @@ function renderTable(){
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>';
   var tot = list.reduce(function(s,t){return s+t.value;},0);
-  $('foot').textContent = (list.length>LIMIT ? 'Mostrando os primeiros '+LIMIT+' de '+list.length+' lançamentos. Use a busca para encontrar outros.' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+periodName(state.p)+'.';
+  $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+periodName(state.p)+'.';
 }
 
 /* ---------- events ---------- */
@@ -1680,6 +1689,9 @@ function mudarCategoria(e){
 $('cdRows').addEventListener('change', mudarCategoria);
 $('rows').addEventListener('change', mudarCategoria);
 $('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
+$('txPor').addEventListener('change', function(){ cfg.porPagina = +this.value; state.txPag = 0; saveCfg(); renderTable(); });
+$('txPrev').addEventListener('click', function(){ state.txPag--; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
+$('txNext').addEventListener('click', function(){ state.txPag++; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
 $('origins').addEventListener('change', function(e){
   var s = e.target.closest('select'); if (!s) return;
   var key = s.dataset.origin, from = state.cat, to = s.value;

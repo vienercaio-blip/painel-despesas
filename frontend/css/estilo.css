@@ -416,6 +416,11 @@ td.r,th.r{text-align:right}
 td select{min-height:36px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);max-width:220px}
 td .in{color:var(--good);font-weight:500}
 .foot{font-size:13px;color:var(--ink-3)}
+.tx-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.tx-pager .foot{margin:0}
+.tx-pager-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tx-per{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.tx-per select{min-height:36px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 
 .tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.4;max-width:240px;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .tip b{font-weight:600}
@@ -426,3 +431,4 @@ td .in{color:var(--good);font-weight:500}
 .user-area b{color:var(--ink-2);font-weight:600}
 .conta-tipo{font-size:12px;color:var(--ink-3);opacity:.85}
 .sair-form{margin:0}
+.btn:disabled{opacity:.45;cursor:default;pointer-events:none}
