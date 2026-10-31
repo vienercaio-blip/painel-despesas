@@ -103,3 +103,118 @@ test('atalhos', () => {
   assert.equal(Analise.atalho('top5', c).length, 5);
   assert.deepEqual(Analise.atalho('semFixas', c), ['B', 'C', 'D', 'E', 'F', 'Outros (revisar)']);
 });
+
+// ---------- ações ("O que fazer agora") ----------
+
+const N = {delivery:'Delivery', tarifas:'Tarifas bancárias', assinaturas:'Assinaturas', compras:'Compras online',
+  dividas:'Dívidas e juros', taxas:'Taxas de cartão e apps'};
+const ids = r => r.lista.map(a => a.id);
+
+test('delivery acima de 8% das saídas, economia metade', () => {
+  const sim = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{Delivery:81}, nomes:N}));
+  assert.deepEqual(ids(sim), ['delivery']);
+  assert.equal(sim.lista[0].economia, 40.5);
+  assert.equal(sim.lista[0].titulo, 'Pedir delivery metade das vezes');
+  assert.equal(sim.lista[0].motivo, 'Você gastou R$ 81.00 neste mês com Delivery, 8% de tudo que saiu.');
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{Delivery:80}, nomes:N}))), []);
+});
+
+test('tarifas (pf): qualquer valor, economia total', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Tarifas bancárias':30}, nomes:N}));
+  assert.deepEqual(ids(r), ['tarifas']);
+  assert.equal(r.lista[0].titulo, 'Trocar para uma conta sem tarifa');
+  assert.equal(r.lista[0].economia, 30);
+});
+
+test('assinaturas acima de R$ 100 por mês, economia 1/3', () => {
+  const r = Analise.acoes(ctx({ins:5000, outs:3000, nM:2, byCat:{Assinaturas:201}, nomes:N}));
+  assert.deepEqual(ids(r), ['assinaturas']);
+  assert.equal(r.lista[0].economia, 33.5);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:5000, outs:3000, nM:2, byCat:{Assinaturas:200}, nomes:N}))), []);
+});
+
+test('compras online acima de 10% das saídas, economia 30%', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Compras online':110}, nomes:N}));
+  assert.deepEqual(ids(r), ['compras']);
+  assert.equal(r.lista[0].titulo, 'Esperar 24 h antes de comprar online');
+  assert.equal(Math.round(r.lista[0].economia * 100) / 100, 33);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Compras online':100}, nomes:N}))), []);
+});
+
+test('dívidas acima de 15%, sem estimativa', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Dívidas e juros':151}, nomes:N}));
+  assert.deepEqual(ids(r), ['dividas']);
+  assert.equal(r.lista[0].economia, null);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Dívidas e juros':150}, nomes:N}))), []);
+});
+
+test('empresa: maquininha usa % das entradas, economia 1/4', () => {
+  const r = Analise.acoes(ctx({perfil:'empresa', ins:1000, outs:500, byCat:{'Taxas de cartão e apps':31}, nomes:N}));
+  assert.deepEqual(ids(r), ['taxas']);
+  assert.equal(r.lista[0].titulo, 'Negociar a taxa da maquininha');
+  assert.equal(r.lista[0].economia, 7.75);
+  assert.equal(r.lista[0].motivo, 'Taxas de cartão e apps levaram R$ 31.00 neste mês, 3% do que entrou.');
+  assert.deepEqual(ids(Analise.acoes(ctx({perfil:'empresa', ins:1000, outs:500, byCat:{'Taxas de cartão e apps':30}, nomes:N}))), []);
+});
+
+test('empresa: tarifas e contratos fixos', () => {
+  const r = Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{'Tarifas bancárias':20, Aluguel:600}, fixas:['Tarifas bancárias', 'Aluguel'], nomes:N}));
+  assert.deepEqual(ids(r), ['tarifasEmpresa', 'fixos']);   // fixos 62%, sem estimativa: por último
+  assert.equal(r.lista[0].titulo, 'Negociar o pacote do banco');
+  assert.equal(r.lista[1].titulo, 'Revisar contratos fixos');
+  const pouco = Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{Aluguel:600}, fixas:['Aluguel'], nomes:N}));
+  assert.deepEqual(ids(pouco), []);   // exatamente 60%: não aparece
+});
+
+test('ações de pf não aparecem em empresa e vice-versa', () => {
+  assert.deepEqual(ids(Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{Delivery:500}, nomes:N}))), []);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:1000, outs:500, byCat:{'Taxas de cartão e apps':100}, nomes:N}))), []);
+});
+
+test('volta ao normal: 3+ meses, +20% e +R$ 50, só a maior', () => {
+  const meses = vals => vals.map((v, i) => ({name:'m' + i, cat:v}));
+  const r = Analise.acoes(ctx({ins:9000, outs:3000, nM:3, byCat:{Mercado:390, Lazer:300},
+    meses:meses([{Mercado:100, Lazer:50}, {Mercado:100, Lazer:50}, {Mercado:190, Lazer:200}]), nomes:N}));
+  assert.deepEqual(ids(r), ['normal']);
+  assert.equal(r.lista[0].titulo, 'Trazer Lazer de volta ao normal');   // +150 > +90
+  assert.equal(r.lista[0].economia, 150);
+  const pouco = Analise.acoes(ctx({ins:9000, outs:3000, nM:3, byCat:{Mercado:340},
+    meses:meses([{Mercado:100}, {Mercado:100}, {Mercado:140}]), nomes:N}));
+  assert.deepEqual(ids(pouco), []);   // +40%, mas só R$ 40
+  const doisMeses = Analise.acoes(ctx({ins:9000, outs:3000, nM:2, byCat:{Mercado:400},
+    meses:meses([{Mercado:100}, {Mercado:300}]), nomes:N}));
+  assert.deepEqual(ids(doisMeses), []);
+});
+
+test('Outros acima de 10%, com link para Organizar', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Outros (revisar)':101}, nomes:N}));
+  assert.deepEqual(ids(r), ['outros']);
+  assert.equal(r.lista[0].link, 'organizar');
+  assert.equal(r.lista[0].economia, null);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Outros (revisar)':100}, nomes:N}))), []);
+});
+
+test('ordem por economia, sem estimativa por último, no máximo 3', () => {
+  const r = Analise.acoes(ctx({ins:9000, outs:1000, nomes:N, byCat:{
+    'Dívidas e juros':200, Delivery:100, 'Tarifas bancárias':80, Assinaturas:150, 'Compras online':300}}));
+  // economias: compras 90, tarifas 80, delivery 50, assinaturas 50 (empate: ordem da tabela), dívidas sem estimativa
+  assert.deepEqual(ids(r), ['compras', 'tarifas', 'delivery']);
+});
+
+test('nome renomeado: usa ctx.nomes', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Comida em casa':200}, nomes:Object.assign({}, N, {delivery:'Comida em casa'})}));
+  assert.deepEqual(ids(r), ['delivery']);
+  assert.match(r.lista[0].motivo, /com Comida em casa/);
+});
+
+test('categoria que não existe (nome null) não quebra', () => {
+  assert.doesNotThrow(() => Analise.acoes(ctx({ins:2000, outs:1000, byCat:{X:1}})));
+});
+
+test('semana não sugere nada; sem ações, mensagem verde', () => {
+  assert.equal(Analise.acoes(ctx({escopo:'semana', ins:100, outs:1000, byCat:{Delivery:500}, nomes:N})).vazio,
+    'Escolha um mês ou mais para ver sugestões.');
+  assert.equal(Analise.acoes(ctx({ins:2000, outs:1000, nomes:N})).vazio, 'Nada urgente: seus gastos estão sob controle.');
+  assert.equal(Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, nomes:N})).vazio, 'Nada urgente: seus custos estão sob controle.');
+  assert.equal(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{Delivery:500}, nomes:N})).vazio, null);
+});

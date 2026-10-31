@@ -43,6 +43,69 @@ function veredito(c){
   return v;
 }
 
+/* ---------- Parte 2: o que fazer agora ---------- */
+function acoes(c){
+  var pf = c.perfil!=='empresa';
+  if (c.escopo==='semana') return { lista:[], vazio:'Escolha um mês ou mais para ver sugestões.' };
+  var q = quando(c), L = [];
+  function val(cod){ var n = c.nomes && c.nomes[cod]; return n ? (c.byCat[n]||0) : 0; }
+  function nome(cod){ return c.nomes[cod]; }
+  function deSaidas(v){ return c.outs>0 ? v/c.outs : 0; }
+  function gastou(v, n){
+    return pf ? 'Você gastou '+c.brl(v/c.nM)+' '+q+' com '+n+', '+c.pct(deSaidas(v))+' de tudo que saiu.'
+              : 'Saíram '+c.brl(v/c.nM)+' '+q+' com '+n+', '+c.pct(deSaidas(v))+' das saídas.';
+  }
+  function add(id, titulo, motivo, economia, cat, link){
+    L.push({ id:id, titulo:titulo, motivo:motivo, economia:economia, cat:cat||null, link:link||null });
+  }
+  var v;
+  if (pf){
+    v = val('delivery');
+    if (deSaidas(v)>0.08) add('delivery', 'Pedir delivery metade das vezes', gastou(v, nome('delivery')), v/c.nM*0.5, nome('delivery'));
+    v = val('tarifas');
+    if (v>0) add('tarifas', 'Trocar para uma conta sem tarifa', gastou(v, nome('tarifas')), v/c.nM, nome('tarifas'));
+    v = val('assinaturas');
+    if (v/c.nM>100) add('assinaturas', 'Cancelar assinaturas que não usa', gastou(v, nome('assinaturas')), v/c.nM/3, nome('assinaturas'));
+    v = val('compras');
+    if (deSaidas(v)>0.10) add('compras', 'Esperar 24 h antes de comprar online', gastou(v, nome('compras')), v/c.nM*0.3, nome('compras'));
+    v = val('dividas');
+    if (deSaidas(v)>0.15) add('dividas', 'Quitar primeiro as dívidas com juros',
+      'Você pagou '+c.brl(v/c.nM)+' '+q+' em '+nome('dividas')+', '+c.pct(deSaidas(v))+' de tudo que saiu.', null, nome('dividas'));
+  } else {
+    v = val('taxas');
+    if (c.ins>0 && v/c.ins>0.03) add('taxas', 'Negociar a taxa da maquininha',
+      nome('taxas')+' levaram '+c.brl(v/c.nM)+' '+q+', '+c.pct(v/c.ins)+' do que entrou.', v/c.nM*0.25, nome('taxas'));
+    v = val('tarifas');
+    if (v>0) add('tarifasEmpresa', 'Negociar o pacote do banco', gastou(v, nome('tarifas')), v/c.nM, nome('tarifas'));
+    var fixos = c.fixas.reduce(function(s,n){ return s+(c.byCat[n]||0); },0);
+    if (deSaidas(fixos)>0.60) add('fixos', 'Revisar contratos fixos',
+      'Os custos fixos somam '+c.brl(fixos/c.nM)+' '+q+', '+c.pct(deSaidas(fixos))+' das saídas.', null, null);
+  }
+  /* categoria que subiu no último mês em relação à média dos anteriores */
+  if (c.meses.length>=3){
+    var ult = c.meses[c.meses.length-1], ant = c.meses.slice(0,-1), melhor = null;
+    Object.keys(c.byCat).forEach(function(n){
+      if (n===c.outros) return;
+      var media = ant.reduce(function(s,m){ return s+(m.cat[n]||0); },0)/ant.length, agora = ult.cat[n]||0;
+      if (media>0 && agora>media*1.2 && agora-media>=50 && (!melhor || agora-media>melhor.d)) melhor = {n:n, d:agora-media, agora:agora};
+    });
+    if (melhor) add('normal', 'Trazer '+melhor.n+' de volta ao normal',
+      (pf ? 'Em '+ult.name+' você gastou ' : 'Em '+ult.name+' saíram ')+c.brl(melhor.agora)+' com '+melhor.n+', '+c.brl(melhor.d)+' acima da média.',
+      melhor.d, melhor.n);
+  }
+  v = c.byCat[c.outros]||0;
+  if (deSaidas(v)>0.10) add('outros', 'Classificar despesas sem categoria',
+    c.pct(deSaidas(v))+' das saídas estão sem categoria. Classificar deixa o painel mais preciso.', null, c.outros, 'organizar');
+  /* maior economia primeiro; sem estimativa por último (sort estável: empate mantém a ordem) */
+  L = L.map(function(a,i){ return {a:a, i:i}; }).sort(function(x,y){
+    var ex = x.a.economia, ey = y.a.economia;
+    if (ex===null && ey===null) return x.i-y.i;
+    if (ex===null) return 1; if (ey===null) return -1;
+    return ey-ex || x.i-y.i;
+  }).map(function(x){ return x.a; }).slice(0,3);
+  return { lista:L, vazio: L.length ? null : 'Nada urgente: seus '+(pf ? 'gastos' : 'custos')+' estão sob controle.' };
+}
+
 /* ---------- Parte 3: barras de "para onde vai o dinheiro" ---------- */
 function seta(c, nome){
   if (c.meses.length<2) return null;
@@ -78,7 +141,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, barras:barras, atalho:atalho };
+return { veredito:veredito, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;
