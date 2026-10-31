@@ -10,28 +10,35 @@
 var OTHER = 'Outros (revisar)';
 /* Categorias padrão de cada perfil: preenchido com o que vem de /api/estado. */
 var PROFILES = {};
-function validPerfil(v){ return PROFILES[v] ? v : 'pf'; }
+function validPerfil(v){
+  if (v==='pme' || v==='cafe') v = 'empresa';  /* nomes antigos: MEI / PME e o protótipo */
+  return PROFILES[v] ? v : 'pf';
+}
 function curPerfil(){ return validPerfil(state.perfil); }
 function curRules(){ return PROFILES[curPerfil()].rules; }
-function baseFixed(){ return PROFILES[curPerfil()].fixed; }
-function bKey(i){ return curPerfil()+':'+i; }
+function bKey(codigo){ return curPerfil()+':'+codigo; }
 /* tipo de conta escolhido nas configurações (vale para os extratos enviados) */
 function chosenPerfil(){ return validPerfil(cfg.perfil); }
 function builtinDefs(){
-  var ed = state.bEdits || {}, fx = baseFixed();
-  return curRules().map(function(r,i){
-    var e = ed[bKey(i)];
-    return { id:'b'+i, idx:i, builtin:true, edited:!!e,
-      name: (e && e.name) || r[0],
-      type: (e && e.type) || (fx.indexOf(r[0])!==-1 ? 'fixo' : 'variavel'),
-      kws: (e && e.kws) ? e.kws : r[1].map(function(k){ return k.trim(); }),
-      raw: (e && e.kws) ? null : r[1] };
+  var ed = state.bEdits || {};
+  return curRules().map(function(r){
+    var e = ed[bKey(r.codigo)];
+    return { id:'b:'+r.codigo, codigo:r.codigo, builtin:true, edited:!!e,
+      name: (e && e.name) || r.nome,
+      type: (e && e.type) || (r.fixa ? 'fixo' : 'variavel'),
+      kws: (e && e.kws) ? e.kws : r.palavras.map(function(k){ return k.trim(); }),
+      raw: (e && e.kws) ? null : r.palavras };
   });
 }
 function customDefs(){ return (state.custom||[]).map(function(c){ return {id:c.id, builtin:false, name:c.name, type:c.type, kws:c.kws||[]}; }); }
 function allDefs(){ return builtinDefs().concat(customDefs()); }
 function allCats(){ return allDefs().map(function(d){ return d.name; }).concat([OTHER]); }
-function feesName(){ return builtinDefs()[0].name; }
+/* lista de categorias para um seletor; inclui a escolhida mesmo que ela não exista
+   no tipo atual (ex.: regra antiga apontando para "Mercado" num extrato de Empresa) */
+function catsCom(sel){ var l = allCats(); if (sel && l.indexOf(sel)===-1) l.push(sel); return l; }
+/* nome atual de uma categoria padrão do tipo atual, pelo código (null se não existir) */
+function catByCode(codigo){ var d = builtinDefs().filter(function(x){ return x.codigo===codigo; })[0]; return d ? d.name : null; }
+function feesName(){ return catByCode('taxas'); }
 function renameCat(orig, name){
   if (orig===name) return;
   Object.keys(state.rules).forEach(function(k){ if (state.rules[k].cat===orig) state.rules[k].cat = name; });
@@ -333,11 +340,11 @@ var ICON_FOLDER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 var ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg>';
 var ICON_LOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
 var ICON_FOLDER_S ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
-/* Extratos: 3 pastas principais (os tipos de conta) com subpastas dentro.
+/* Extratos: 2 pastas principais (os tipos de conta) com subpastas dentro.
    Só a pasta do tipo de conta atual abre; as outras aparecem com cadeado.
    state.page = id da subpasta aberta, ou null = pasta principal.
    Vendas (em pausa) continua com a lista simples de páginas. */
-var PASTAS = ['pf', 'empresa', 'pme'];
+var PASTAS = ['pf', 'empresa'];
 function pagesAtuais(){
   var p = getPages();
   return MODE==='vendas' ? p : p.filter(function(x){ return x.perfil===chosenPerfil(); });
@@ -598,7 +605,7 @@ function renderCategorias(){
     '<span><b>'+origins.length+'</b> '+(origins.length===1?'origem':'origens diferentes')+'</span>'+
     '<span>Média <b>'+brl.format(total/list.length)+'</b></span>';
 
-  var opts = function(sel){ return allCats().map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join(''); };
+  var opts = function(sel){ return catsCom(sel).map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join(''); };
   $('origins').innerHTML = origins.map(function(o){
     return '<li class="origin"><div class="who"><strong>'+esc(o.label)+'</strong>'+
       '<span class="meta"><span class="num">'+brl.format(o.v)+'</span> · '+o.n+(o.n===1?' pagamento':' pagamentos')+' · último em '+fmtDate(o.last)+' · '+pct.format(o.v/total)+' da categoria</span>'+
@@ -617,8 +624,7 @@ function renderCategorias(){
 }
 
 /* ---------- dashboard ---------- */
-var BASE_FIXED = ['Aluguel','Folha de pagamento','Água, luz e internet','Impostos e encargos','Tarifas bancárias'];
-var FIXED = BASE_FIXED.slice();
+var FIXED = [];
 function refreshFixed(){ FIXED = allDefs().filter(function(d){ return d.type==='fixo'; }).map(function(d){ return d.name; }); }
 /* refaz a categoria automática dos lançamentos (no servidor) depois de mudar categorias */
 function reclassify(){
@@ -1483,7 +1489,7 @@ function renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev){
 function renderTable(){
   var q = norm(state.q).trim();
   var fc = state.fcat || 'all';
-  var opts = '<option value="all">Todas</option><option value="__in">Entradas</option>'+allCats().map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>';}).join('');
+  var opts = '<option value="all">Todas</option><option value="__in">Entradas</option>'+catsCom(fc==='all'||fc==='__in' ? null : fc).map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>';}).join('');
   $('fCat').innerHTML = opts; $('fCat').value = fc;
   var list = cur().filter(function(t){
     if (fc==='__in' && t.value<0) return false;
@@ -1675,11 +1681,11 @@ $('customList').addEventListener('submit', function(e){
 function doEdit(d, id, orig, name, type, kwTxt){
   var pedido;
   if (d.builtin){
-    var prev = state.bEdits[bKey(d.idx)] || {};
+    var prev = state.bEdits[bKey(d.codigo)] || {};
     var kwsChanged = kwTxt.trim() !== d.kws.join(', ');
     var ed = { name:name, type:type, kws: kwsChanged ? parseKws(kwTxt) : (prev.kws || null) };
-    pedido = API.editarPadrao(curPerfil(), d.idx, { nome:ed.name, tipo:ed.type, palavras:ed.kws })
-      .then(function(){ state.bEdits[bKey(d.idx)] = ed; });
+    pedido = API.editarPadrao(curPerfil(), d.codigo, { nome:ed.name, tipo:ed.type, palavras:ed.kws })
+      .then(function(){ state.bEdits[bKey(d.codigo)] = ed; });
   } else {
     pedido = API.editarCategoria(id, { nome:name, tipo:type, palavras:parseKws(kwTxt) })
       .then(function(){ state.custom.forEach(function(c){ if (c.id===id){ c.name = name; c.type = type; c.kws = parseKws(kwTxt); } }); });
@@ -1701,12 +1707,12 @@ $('customList').addEventListener('click', function(e){
   var rs = e.target.closest('[data-creset]');
   if (rs){
     var bd = allDefs().filter(function(x){ return x.id===rs.dataset.creset; })[0]; if (!bd) return;
-    var cur = bd.name, def = curRules()[bd.idx][0];
+    var cur = bd.name, def = curRules().filter(function(r){ return r.codigo===bd.codigo; })[0].nome;
     if (norm(cur)!==norm(def) && allCats().some(function(c){ return c!==cur && norm(c)===norm(def); })){ ruleMsg('Não dá para restaurar: já existe outra categoria chamada "'+def+'".'); return; }
     askX({ kind:'restaurar', title:'Restaurar "'+cur+'" ao padrão?', text:'O nome volta a ser "'+def+'", e o tipo de custo e as palavras-chave voltam aos originais do sistema.',
       yes:'Restaurar padrão', back:rs, onYes:function(){
-        API.restaurarPadrao(curPerfil(), bd.idx).then(function(){
-          delete state.bEdits[bKey(bd.idx)];
+        API.restaurarPadrao(curPerfil(), bd.codigo).then(function(){
+          delete state.bEdits[bKey(bd.codigo)];
           renameCat(cur, def); refreshFixed();
           return reclassify();
         }).then(function(){
@@ -1840,7 +1846,7 @@ $('cfgClear').addEventListener('click', function(){
 });
 /* ---------- mesclar extratos salvos ---------- */
 var MERGE_ON = false, MERGE_SEL = [];
-function perfilOf(x){ return validPerfil(x.perfil==='cafe' ? 'empresa' : x.perfil); }
+function perfilOf(x){ return validPerfil(x.perfil); }
 function perfilLabel(p){ return PROFILES[p] ? PROFILES[p].label : p; }
 function updateMergeBar(){
   var n = MERGE_SEL.length;
@@ -2074,7 +2080,7 @@ state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};
 API.estado().then(function(e){
   Object.keys(e.perfis).forEach(function(k){
     var p = e.perfis[k];
-    PROFILES[k] = { label:p.rotulo, rules:p.regras, fixed:p.fixas };
+    PROFILES[k] = { label:p.rotulo, rules:p.regras };
   });
   OTHER = e.outros || OTHER;
   state.custom = e.categorias.map(categoriaLocal);
