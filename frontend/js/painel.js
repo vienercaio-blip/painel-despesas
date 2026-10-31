@@ -155,7 +155,7 @@ function doServidor(l){
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
   state.raw = list; state.savedId = null; state.loaded = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
-  state.editLanc = false;
+  state.editLanc = false; state.txPor = 10;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
@@ -1553,8 +1553,8 @@ function renderTable(){
   eb.textContent = ed ? 'Concluir edição' : 'Editar categorias';
   eb.classList.toggle('primary', ed);
   $('txHint').innerHTML = ed ? 'Edição ligada: escolha a nova categoria na coluna <b>Categoria</b>.' : 'Para corrigir uma categoria, clique em <b>Editar categorias</b>.';
-  /* quantos lançamentos por vez (escolha do usuário, guardada na conta); 0 = todos */
-  var por = [10,25,50,100,0].indexOf(+cfg.porPagina)!==-1 ? +cfg.porPagina : 10;
+  /* quantos lançamentos por vez; 0 = todos. Sempre começa em 10 */
+  var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 10;
   $('txPor').value = String(por);
   var chave = [fc, state.filter, q, JSON.stringify(state.p), list.length].join('|');
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
@@ -1689,7 +1689,7 @@ function mudarCategoria(e){
 $('cdRows').addEventListener('change', mudarCategoria);
 $('rows').addEventListener('change', mudarCategoria);
 $('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
-$('txPor').addEventListener('change', function(){ cfg.porPagina = +this.value; state.txPag = 0; saveCfg(); renderTable(); });
+$('txPor').addEventListener('change', function(){ state.txPor = +this.value; state.txPag = 0; renderTable(); });
 $('txPrev').addEventListener('click', function(){ state.txPag--; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
 $('txNext').addEventListener('click', function(){ state.txPag++; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
 $('origins').addEventListener('change', function(e){
@@ -2172,6 +2172,7 @@ API.estado().then(function(e){
   Object.keys(e.regras).forEach(function(k){ var r = e.regras[k]; state.rules[k] = { cat:r.categoria, label:r.rotulo, at:r.criada_em }; });
   state.askPrefs = e.preferencias.confirmacoes || {};
   cfg = e.preferencias.config || {};
+  delete cfg.porPagina;  /* versão anterior guardava a quantidade por vez; agora sempre começa em 10 */
   var un = $('userName'); if (un) un.textContent = e.usuario.nome;
   applyCfg();
   renderSales();
