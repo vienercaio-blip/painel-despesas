@@ -1606,7 +1606,7 @@ function renderPrefNotes(){
     if (!keys.length){ pn.hidden = true; pn.innerHTML = ''; return; }
     pn.hidden = false;
     var list = keys.map(function(k){ return KIND_LABEL[k] || k; }).join(', ');
-    var rc = state.askPrefs.reclass ? ' Mudanças de categoria estão sendo aplicadas como <b>'+(state.askPrefs.reclass==='yes' ? 'regra para os próximos extratos' : 'só neste extrato')+'</b>.' : '';
+    var rc = state.askPrefs.reclass ? ' Mudanças de categoria estão sendo aplicadas como <b>'+({yes:'regra para os próximos extratos', alt:'todos da mesma origem, só neste extrato'}[state.askPrefs.reclass] || 'só neste extrato')+'</b>.' : '';
     pn.innerHTML = '<span><b>Confirmação desligada</b> para: '+esc(list)+'.'+rc+'</span><button type="button" class="btn" data-askreset="1">Voltar a perguntar</button>';
   });
 }
@@ -1618,14 +1618,15 @@ document.addEventListener('click', function(e){
 /* o: kind, title, text, yes, no?, cancel?, danger?, skipHelp?, onYes, onNo?, onCancel?, back? */
 function askX(o){
   var pref = state.askPrefs[o.kind];
-  if (pref==='yes' || (pref==='no' && o.onNo)){
-    if (pref==='yes') o.onYes(); else o.onNo();
+  if (pref==='yes' || (pref==='no' && o.onNo) || (pref==='alt' && o.onAlt)){
+    if (pref==='yes') o.onYes(); else if (pref==='alt') o.onAlt(); else o.onNo();
     toast('Feito sem confirmação, como você escolheu. Para voltar a confirmar, use Configurações, no topo da página.');
     return;
   }
   $('askT').textContent = o.title; $('askD').textContent = o.text;
   $('askYes').textContent = o.yes; $('askYes').className = 'btn '+(o.danger ? 'danger-solid' : 'primary');
   $('askNo').hidden = !o.no; if (o.no) $('askNo').textContent = o.no;
+  $('askAlt').hidden = !o.alt; if (o.alt) $('askAlt').textContent = o.alt;
   $('askCancel').textContent = o.cancel || 'Cancelar';
   $('askSkip').checked = false; $('askSkipHelp').hidden = true;
   $('askSkipHelp').textContent = o.skipHelp || 'Da próxima vez, esta ação será feita direto, sem pedir confirmação. Dá para voltar a perguntar em Configurações, no topo da página.';
@@ -1636,12 +1637,13 @@ function askX(o){
 function closeAsk(choice){
   var a = askState; if (!a) return;
   askState = null; $('askBg').hidden = true;
-  if ((choice==='yes' || choice==='no') && $('askSkip').checked){ state.askPrefs[a.o.kind] = choice; savePrefs(); renderPrefNotes(); }
-  if (choice==='yes') a.o.onYes(); else if (choice==='no') a.o.onNo(); else if (a.o.onCancel) a.o.onCancel();
+  if ((choice==='yes' || choice==='no' || choice==='alt') && $('askSkip').checked){ state.askPrefs[a.o.kind] = choice; savePrefs(); renderPrefNotes(); }
+  if (choice==='yes') a.o.onYes(); else if (choice==='alt') a.o.onAlt(); else if (choice==='no') a.o.onNo(); else if (a.o.onCancel) a.o.onCancel();
   if (a.back && a.back.focus && document.body.contains(a.back)) a.back.focus({preventScroll:true});
 }
 $('askYes').addEventListener('click', function(){ closeAsk('yes'); });
 $('askNo').addEventListener('click', function(){ closeAsk('no'); });
+$('askAlt').addEventListener('click', function(){ closeAsk('alt'); });
 $('askCancel').addEventListener('click', function(){ closeAsk('cancel'); });
 $('askSkip').addEventListener('change', function(e){ $('askSkipHelp').hidden = !e.target.checked; });
 $('askBg').addEventListener('click', function(e){ if (e.target===$('askBg')) closeAsk('cancel'); });
@@ -1649,7 +1651,7 @@ document.addEventListener('keydown', function(e){
   if (!askState) return;
   if (e.key==='Escape'){ e.preventDefault(); closeAsk('cancel'); return; }
   if (e.key==='Tab'){
-    var f = [$('askYes'), $('askNo'), $('askCancel'), $('askSkip')].filter(function(x){ return !x.hidden; });
+    var f = [$('askYes'), $('askAlt'), $('askNo'), $('askCancel'), $('askSkip')].filter(function(x){ return !x.hidden; });
     var i = f.indexOf(document.activeElement);
     e.preventDefault(); f[(i + (e.shiftKey ? f.length-1 : 1) + f.length) % f.length].focus();
   }
@@ -1659,10 +1661,19 @@ var RECLASS_HELP = 'As próximas mudanças de categoria vão usar esta mesma res
 function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id], to = s.value;
-  askX({ kind:'reclass', title:'Manter esta mudança nos próximos extratos?',
-    text:'Você mudou "'+t.desc+'" para '+to+'. Se manter, sempre que essa origem aparecer em um extrato novo ela já vem como '+to+'.',
-    yes:'Sim, manter nos próximos extratos', no:'Não, só neste extrato', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
+  /* mesma origem = mesma descrição, ignorando números (datas, códigos) */
+  var mesma = state.tx.filter(function(x){ return x.value<0 && x.origin===t.origin; });
+  var n = mesma.length;
+  askX({ kind:'reclass', title:'Mudar a categoria de quais lançamentos?',
+    text:'Você mudou "'+t.desc+'" para '+to+'.'+(n>1 ? ' Neste extrato há '+n+' lançamentos dessa mesma origem.' : '')+' Se escolher os próximos extratos, sempre que essa origem aparecer ela já vem como '+to+'.',
+    yes:'Todos dessa origem, também nos próximos extratos',
+    alt: n>1 ? 'Todos dessa origem, só neste extrato ('+n+')' : null,
+    no:'Só este lançamento', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
     onYes:function(){ setRule(t.origin, t.desc, to).then(render, function(e){ falhou(e); render(); }); },
+    onAlt: n>1 ? function(){
+      mesma.forEach(function(x){ state.overrides[x.id] = to; });
+      ruleMsg(n+' lançamentos de "'+t.desc+'" mudaram para '+to+' só neste extrato.'); render();
+    } : null,
     onNo:function(){ state.overrides[t.id] = to; ruleMsg('"'+t.desc+'" mudou para '+to+' só neste extrato.'); render(); },
     onCancel:render });
 }
@@ -1677,7 +1688,8 @@ $('origins').addEventListener('change', function(e){
     text:'Você moveu todos os pagamentos de "'+label+'" para '+to+'. Se manter, os próximos extratos também vão classificar essa origem como '+to+'.',
     yes:'Sim, manter nos próximos extratos', no:'Não, só neste extrato', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
     onYes:function(){ setRule(key, label, to).then(render, function(e){ falhou(e); render(); }); },
-    onNo:function(){
+    onNo:function(){ this.onAlt(); },
+    onAlt:function(){  /* aqui "só neste extrato" já é todos dessa origem */
       state.tx.forEach(function(t){ if (t.value<0 && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
       ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato.'); render();
     },
