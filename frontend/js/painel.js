@@ -1324,10 +1324,12 @@ function exportPdf(){
   var all = function(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); };
   var txt = function(el){ return el ? el.textContent.replace(/\s+/g,' ').trim() : ''; };
   var file = state.fileName || 'Extrato';
-  var kpis = all('#dKpis .kpi').map(function(k){ return {l: txt(k.querySelector('.label')), v: txt(k.querySelector('.value'))}; });
+  var nums = all('#dNums .kpi').map(function(k){ return {l: txt(k.querySelector('.label')), v: txt(k.querySelector('.value'))}; });
+  var acoes = all('#dAcoes .acao').map(function(a){ return [txt(a.querySelector('h3')), txt(a.querySelector('p')), txt(a.querySelector('.eco'))]; });
+  var semAcao = txt(document.querySelector('#dAcoes .acoes-vazio'));
+  var barras = all('#dBarras .barra').map(function(b){ return {l: txt(b.querySelector('.bn')), v: txt(b.querySelector('.bv .num'))+' · '+txt(b.querySelector('.bv small'))}; });
   var ins = all('#dIns li').map(txt);
-  var months = all('#pMonths .mchip').map(function(c){ return {l: txt(c.querySelector('.ml')), v: txt(c.querySelector('.mv'))}; });
-  var cats = all('#cats li').map(txt);
+  var months = all('#pMonths .mchip:not([aria-hidden])').map(function(c){ return {l: txt(c.querySelector('.ml')), v: txt(c.querySelector('.mv'))}; });
   var now = new Date();
   var doc = makePdf();
   doc.line('Relatório de despesas', 18, true, 4);
@@ -1335,20 +1337,29 @@ function exportPdf(){
   doc.line('Período: '+periodName(state.p)+(txt($('dSpan')) ? ' · '+txt($('dSpan')) : ''), 10);
   doc.line('Gerado em '+fmtDate(now)+' às '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'), 9, false, 6);
   doc.rule();
-  doc.line('Indicadores', 13, true, 4);
-  kpis.forEach(function(k){ doc.kv(k.l, k.v); });
+  doc.para(txt($('dVerT'))+' '+txt($('dVerTx')), 12, true, 80);
+  if (txt($('dVerPesa'))) doc.para(txt($('dVerPesa')), 10, false, 92);
+  doc.gap(4);
+  nums.forEach(function(k){ doc.kv(k.l, k.v); });
   doc.gap(10);
-  doc.line('Principais conclusões', 13, true, 4);
-  ins.forEach(function(t){ doc.para('- '+t, 10, false, 92); doc.gap(3); });
+  doc.line('O que fazer agora', 13, true, 4);
+  if (acoes.length) acoes.forEach(function(a){ doc.para('- '+a[0]+': '+a[1]+(a[2] ? ' '+a[2] : ''), 10, false, 92); doc.gap(3); });
+  else doc.para(semAcao, 10, false, 92);
   doc.gap(8);
+  if (barras.length){
+    doc.line('Para onde vai o dinheiro', 13, true, 4);
+    if (state.dashCats) doc.para('Categorias analisadas: '+state.dashCats.join(', ')+'.', 9, false, 100);
+    barras.forEach(function(b){ doc.kv(b.l, b.v); });
+    doc.gap(10);
+  }
   if (months.length){
     doc.line('Resultado por mês', 13, true, 4);
     months.forEach(function(m){ doc.kv(m.l, m.v); });
     doc.gap(10);
   }
-  if (cats.length){
-    doc.line('Despesas por categoria', 13, true, 4);
-    cats.forEach(function(c){ doc.para(c, 10, false, 92); doc.gap(2); });
+  if (ins.length){
+    doc.line('Outras informações', 13, true, 4);
+    ins.forEach(function(t){ doc.para('- '+t, 10, false, 92); doc.gap(3); });
   }
   var name = 'relatorio-despesas-'+now.toISOString().slice(0,10)+'.pdf';
   return saveBytes(name, doc.bytes(), 'application/pdf');

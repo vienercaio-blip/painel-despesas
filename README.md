@@ -20,6 +20,7 @@ dados_site/
     ├── css/estilo.css
     └── js/
         ├── api.js          todas as conversas com o servidor
+        ├── analise.js      contas do dashboard: veredito, ações sugeridas, barras e filtro
         └── painel.js       telas, gráficos e interações
 ```
 
@@ -66,7 +67,22 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 44 testes: leitura dos 4 formatos, salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos e a garantia de que um cliente não enxerga os dados de outro.
+São 56 testes no servidor: leitura dos 4 formatos, salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+
+As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
+```
+node --test frontend/tests
+```
+
+## O dashboard
+
+Feito para quem não tem tempo: responde de cima para baixo.
+
+1. **Veredito:** uma frase em verde, amarelo ou vermelho dizendo se sobra ou falta dinheiro, e os números Entrou, Saiu e Sobrou.
+2. **O que fazer agora:** até 3 ações com a economia estimada (ex.: pedir delivery metade das vezes).
+3. **Para onde vai o dinheiro:** as categorias em barras, com o seletor "Despesas analisadas" (todas, as 3 ou 5 maiores, sem as contas fixas ou à escolha). O filtro nunca muda o veredito nem os números.
+4. **Mês a mês:** o resultado de cada mês (ou o gasto das categorias escolhidas).
+5. **Ver mais detalhes:** saldo acumulado, dias do mês, categorias que mais mudaram, projeção e outras informações.
 
 ## Tipos de conta
 
