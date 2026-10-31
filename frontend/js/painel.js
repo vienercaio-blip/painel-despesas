@@ -2174,7 +2174,11 @@ document.addEventListener('keydown', function(e){
   else if (e.key==='ArrowDown' && items.length){ e.preventDefault(); items[(i+1)%items.length].focus({preventScroll:true}); }
   else if (e.key==='ArrowUp' && items.length){ e.preventDefault(); items[(i-1+items.length)%items.length].focus({preventScroll:true}); }
 });
-window.addEventListener('hashchange', function(){ keepScroll(setView); });
+window.addEventListener('hashchange', function(){
+  /* trocar de aba mantém a rolagem; vindo de um clique numa barra do dashboard, abre no topo */
+  if (state.irTopo){ state.irTopo = false; setView(); window.scrollTo(0, 0); return; }
+  keepScroll(setView);
+});
 setView();
 var tip = $('tip');
 var tipEl = null, tipTimer = null, tipX = 0, tipY = 0, DWELL = 1500;
@@ -2264,6 +2268,7 @@ function abrirLancamentos(cat){
   state.fcat = cat; state.filter = 'out';
   document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   renderTable();
+  state.irTopo = true;
   location.hash = 'lancamentos';
 }
 
