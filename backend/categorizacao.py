@@ -51,7 +51,7 @@ REGRAS_EMPRESA = [
     ("contas", "Água, luz e internet", ["energia", "coelba", " enel", "cemig", "copel", "light ", " agua", "embasa", "sabesp", "compesa", "internet", " vivo", " claro", " tim ", " oi ", " gas "]),
     ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
     ("seguros", "Seguros", ["seguro", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
-    ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", "nfe", "compra", "mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "padaria", "laticinio", "torrefacao", "embalage", "material de limpeza"]),
+    ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", "nfe", "mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "padaria", "laticinio", "torrefacao", "embalage", "material de limpeza"]),
     ("combustivel", "Combustível e entregas", [" posto ", "gasolina", "diesel", "etanol", "combustivel", "motoboy", "frete", "correios", "loggi", "lalamove"]),
     ("manutencao", "Manutenção", ["manutencao", "conserto", "reparo", "assistencia tecnica"]),
     ("marketing", "Marketing", ["anuncio", "google ads", "meta ads", "facebook", "instagram", "impulsionamento", "marketing", "panfleto", "grafica"]),

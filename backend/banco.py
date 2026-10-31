@@ -11,7 +11,7 @@ from pathlib import Path
 
 from flask import current_app, g
 
-from categorizacao import CODIGOS_ANTIGOS, normalizar
+from categorizacao import CODIGOS_ANTIGOS, PERFIS, normalizar
 
 
 def obter_banco():
@@ -89,6 +89,21 @@ def _converter_tipos_de_conta(con):
         )
 
     con.execute("UPDATE extratos SET perfil = 'empresa' WHERE perfil = 'pme'")
+
+    # categoria criada pelo cliente com o nome de uma categoria padrão (ex.: ele
+    # criou "Delivery" antes de ela existir): a dele ganha " (sua)", e as regras
+    # e correções que apontavam para ela vão junto
+    padrao = {normalizar(nome) for p in PERFIS.values() for _, nome, _ in p["regras"]}
+    for cid, usuario_id, nome in con.execute("SELECT id, usuario_id, nome FROM categorias").fetchall():
+        if normalizar(nome) in padrao:
+            novo = nome + " (sua)"
+            con.execute("UPDATE categorias SET nome = ? WHERE id = ?", (novo, cid))
+            con.execute("UPDATE regras SET categoria = ? WHERE usuario_id = ? AND categoria = ?", (novo, usuario_id, nome))
+            con.execute(
+                "UPDATE correcoes SET categoria = ? WHERE categoria = ? AND lancamento_id IN ("
+                "SELECT l.id FROM lancamentos l JOIN extratos e ON e.id = l.extrato_id WHERE e.usuario_id = ?)",
+                (novo, nome, usuario_id),
+            )
 
     for usuario_id, valor in con.execute("SELECT usuario_id, valor FROM preferencias WHERE chave = 'config'").fetchall():
         config = json.loads(valor)

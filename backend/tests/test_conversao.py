@@ -35,3 +35,28 @@ def test_conversao_de_banco_antigo(app):
     edicoes = dict(con.execute("SELECT chave, nome FROM edicoes_padrao"))
     assert edicoes == {"pf:mercado": "Feira", "empresa:aluguel": "Imóvel", "empresa:fornecedores": "Compras"}
     con.close()
+
+
+def test_categoria_criada_com_nome_de_categoria_padrao_nova(app):
+    """Quem já tinha criado "Delivery" ou "Seguros" antes de virarem categorias
+    padrão fica com a sua renomeada, levando junto as regras e correções."""
+    caminho = app.config["BANCO"]
+    con = sqlite3.connect(caminho)
+    ana = _ids(con)["ana@exemplo.com"]
+    con.execute("INSERT INTO categorias (usuario_id, nome, palavras, criada_em) VALUES (?, 'delivery', '[\"ifood\"]', 'x')", (ana,))
+    con.execute("INSERT INTO categorias (usuario_id, nome, palavras, criada_em) VALUES (?, 'Diarista', '[]', 'x')", (ana,))
+    con.execute("INSERT INTO regras VALUES (?, 'ifood x', 'delivery', 'IFOOD X', 'x')", (ana,))
+    cur = con.execute("INSERT INTO extratos (usuario_id, nome, perfil, salvo_em) VALUES (?, 'E', 'pf', 'x')", (ana,))
+    lanc = con.execute("INSERT INTO lancamentos (extrato_id, data, descricao, valor) VALUES (?, '2026-01-01', 'IFOOD X', -10)", (cur.lastrowid,)).lastrowid
+    con.execute("INSERT INTO correcoes VALUES (?, 'delivery')", (lanc,))
+    con.commit()
+    con.close()
+
+    criar_tabelas(caminho)
+    criar_tabelas(caminho)
+
+    con = sqlite3.connect(caminho)
+    assert {r[0] for r in con.execute("SELECT nome FROM categorias")} == {"delivery (sua)", "Diarista"}
+    assert con.execute("SELECT categoria FROM regras").fetchone()[0] == "delivery (sua)"
+    assert con.execute("SELECT categoria FROM correcoes").fetchone()[0] == "delivery (sua)"
+    con.close()

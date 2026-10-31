@@ -19,6 +19,9 @@ CASOS = [
     ("pf", "TARIFA PACOTE SERVICOS", "Tarifas bancárias"),
     ("empresa", "TARIFA PACOTE SERVICOS", "Tarifas bancárias"),
     ("pf", "CESTA BASICA SUPERMERCADO", "Mercado"),
+    # muitos bancos começam as compras no débito com "COMPRA CARTAO"
+    ("empresa", "COMPRA CARTAO DEB POSTO IPIRANGA", "Combustível e entregas"),
+    ("empresa", "COMPRA CARTAO GRAFICA RAPIDA", "Marketing"),
 ]
 
 

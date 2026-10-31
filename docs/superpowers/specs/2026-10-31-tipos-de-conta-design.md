@@ -117,7 +117,7 @@ As palavras são comparadas com a descrição já normalizada (minúsculas, sem 
 | 6 | contas | Água, luz e internet | F | energia, coelba, ` enel`, cemig, copel, `light `, ` agua`, embasa, sabesp, compesa, internet, ` vivo`, ` claro`, ` tim `, ` oi `, ` gas ` |
 | 7 | contabilidade | Contabilidade e sistemas | F | contabil, contador, sistema, software, nuvem, certificado digital |
 | 8 | seguros | 🆕 Seguros | F | seguro, porto seguro, mapfre, allianz, tokio marine, sulamerica |
-| 9 | fornecedores | Fornecedores | | fornecedor, distribuidora, atacadista, insumo, nota fiscal, nfe, compra, mercado, supermerc, atacad, assai, makro, carrefour, hortifruti, acougue, padaria, laticinio, torrefacao, embalage, material de limpeza |
+| 9 | fornecedores | Fornecedores | | fornecedor, distribuidora, atacadista, insumo, nota fiscal, nfe, mercado, supermerc, atacad, assai, makro, carrefour, hortifruti, acougue, padaria, laticinio, torrefacao, embalage, material de limpeza |
 | 10 | combustivel | 🆕 Combustível e entregas | | ` posto `, gasolina, diesel, etanol, combustivel, motoboy, frete, correios, loggi, lalamove |
 | 11 | manutencao | Manutenção | | manutencao, conserto, reparo, assistencia tecnica |
 | 12 | marketing | Marketing | | anuncio, google ads, meta ads, facebook, instagram, impulsionamento, marketing, panfleto, grafica |
@@ -125,6 +125,8 @@ As palavras são comparadas com a descrição já normalizada (minúsculas, sem 
 
 - **"Mercado" sai de Empresa.** As compras em supermercado e atacado passam a contar como Fornecedores, como já acontecia no MEI.
 - Em Empresa, iFood e Rappi continuam em Taxas de cartão e apps: ali eles são a taxa que o app cobra do restaurante.
+- **"compra" não é palavra-chave de Fornecedores** (mudança depois da revisão). Muitos bancos começam as compras no débito com "COMPRA CARTAO", e com ela "COMPRA CARTAO POSTO" cairia em Fornecedores, não em Combustível.
+- **Categoria criada pelo cliente com o nome de uma categoria padrão nova** (ex.: ele já tinha criado "Delivery"): a dele ganha o final " (sua)", e as regras e correções que apontavam para ela vão junto. Isso roda junto com a conversão, quando o servidor liga.
 
 ## Parte 3: textos e indicadores do dashboard
 

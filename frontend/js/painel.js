@@ -1014,7 +1014,7 @@ function renderDashboard(){
   var rise = chg.filter(function(r){return r.d>0 && r.p!==null && r.p>0.1;})[0];
   if (rise) L.push({w:true, t:'A categoria '+rise.c+' subiu '+pct.format(rise.p)+' em '+cmpB.name+' ('+brl.format(rise.d)+' a mais que em '+cmpA.name+'). Vale entender o motivo antes que vire o novo normal.'});
   if (X.negocio && T.ins && fees/T.ins>0.03) L.push({w:true, t:'Taxas de cartão, antecipação e aplicativos levam '+pct.format(fees/T.ins)+' de tudo o que entra ('+brl.format(fees/nM)+' por mês). Negociar a taxa da maquininha é dinheiro direto no resultado.'});
-  if (!X.negocio){
+  if (!X.negocio && !isWeek){  /* valores por mês e por ano não fazem sentido numa semana só */
     var deliv = byCat[catByCode('delivery')] || 0, tarif = byCat[catByCode('tarifas')] || 0;
     if (T.outs && deliv/T.outs>0.10) L.push({w:true, t:'Delivery levou '+brl.format(deliv/nM)+' por mês ('+pct.format(deliv/T.outs)+' dos gastos). Cozinhar mais vezes por semana é uma das economias mais rápidas.'});
     if (tarif>0) L.push({w:false, t:'Você pagou '+brl.format(tarif/nM*12)+' por ano em tarifas do banco. Muitas contas digitais não cobram tarifa.'});
