@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tipos de conta</title>
+<style>
+:root{
+  --bg:#f7f6f3; --card:#ffffff; --text:#1f2328; --muted:#5f6670; --line:#e3e1dc;
+  --accent:#2f6f5e; --accent-soft:#e3f0ec; --warn:#8a5a00; --warn-soft:#fff4dc; --warn-line:#f0d9a6;
+  --code:#f0eee9; --new:#2f6f5e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --card:#1e2125; --text:#e6e6e3; --muted:#a0a6ad; --line:#30343a;
+    --accent:#7cc3ad; --accent-soft:#1f3530; --warn:#f0c46a; --warn-soft:#2e2715; --warn-line:#5a4a22;
+    --code:#2a2e33; --new:#7cc3ad;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b; --card:#1e2125; --text:#e6e6e3; --muted:#a0a6ad; --line:#30343a;
+  --accent:#7cc3ad; --accent-soft:#1f3530; --warn:#f0c46a; --warn-soft:#2e2715; --warn-line:#5a4a22;
+  --code:#2a2e33; --new:#7cc3ad;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 16px 64px}
+header h1{font-size:28px;line-height:1.25;margin:0 0 6px}
+.meta{color:var(--muted);font-size:14px}
+.status{display:inline-block;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-line);border-radius:999px;padding:2px 10px;font-size:13px;margin-left:6px}
+nav{margin:20px 0 8px;display:flex;flex-wrap:wrap;gap:8px}
+nav a{color:var(--accent);background:var(--accent-soft);text-decoration:none;font-size:14px;padding:4px 12px;border-radius:999px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:20px}
+h2{font-size:21px;margin:0 0 12px}
+h3{font-size:17px;margin:24px 0 8px}
+p{margin:8px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.table{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--code);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{color:var(--muted);width:1%;white-space:nowrap}
+td.f{text-align:center;font-weight:600;color:var(--accent)}
+code{background:var(--code);border-radius:4px;padding:1px 5px;font-size:.9em;font-family:ui-monospace,Consolas,monospace;white-space:pre}
+.kw{color:var(--muted)}
+.new{color:var(--new);font-weight:600;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.box{border-radius:10px;padding:14px 16px;margin:16px 0}
+.box.warn{background:var(--warn-soft);border:1px solid var(--warn-line)}
+.box.warn strong:first-child{color:var(--warn)}
+.box.info{background:var(--accent-soft)}
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.goal{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.goal b{display:block;color:var(--accent);font-size:22px}
+footer{color:var(--muted);font-size:13px;margin-top:24px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Tipos de conta: Pessoa física e Empresa ou MEI</h1>
+  <div class="meta">Especificação · 31/10/2026 <span class="status">aguardando sua revisão</span></div>
+  <nav>
+    <a href="#objetivo">Objetivo</a>
+    <a href="#p1">1. Tipos e conversão</a>
+    <a href="#p2">2. Categorias</a>
+    <a href="#p3">3. Dashboard</a>
+    <a href="#p4">4. Testes</a>
+  </nav>
+</header>
+
+<section id="objetivo">
+  <h2>Objetivo</h2>
+  <p>Hoje o painel tem três tipos de conta (Pessoa física, Empresa e MEI / PME), e o dashboard fala com todos como se fossem um negócio. Além disso, boa parte das saídas de Pessoa física cai em "Outros (revisar)".</p>
+  <div class="goals">
+    <div class="goal"><b>2 tipos</b>Pessoa física e Empresa ou MEI, com os dados atuais convertidos</div>
+    <div class="goal"><b>17 + 13</b>categorias completas para cada tipo</div>
+    <div class="goal"><b>Textos por tipo</b>o dashboard fala a língua de cada um</div>
+  </div>
+</section>
+
+<section id="p1">
+  <h2>Parte 1: dois tipos de conta e a conversão dos dados</h2>
+  <h3>Os tipos</h3>
+  <div class="table"><table>
+    <tr><th>Código</th><th>Nome na tela</th></tr>
+    <tr><td><code>pf</code></td><td>Pessoa física</td></tr>
+    <tr><td><code>empresa</code></td><td>Empresa ou MEI</td></tr>
+  </table></div>
+  <p>O código <code>pme</code> deixa de existir. O servidor continua aceitando <code>pme</code> vindo de algum lugar antigo e o trata como <code>empresa</code>, do mesmo jeito que já trata <code>cafe</code>.</p>
+  <p><strong>Onde aparece:</strong> nas configurações (2 opções), na janela "De que tipo é esse extrato?" (2 opções) e nas pastas de "Extratos salvos" (2 pastas principais em vez de 3).</p>
+
+  <h3>Código fixo para cada categoria padrão</h3>
+  <p>Hoje as edições do usuário nas categorias padrão são guardadas pela <strong>posição</strong> na lista (<code>pf:3</code>). Como as listas vão mudar de ordem e ganhar itens, cada categoria passa a ter um <strong>código que nunca muda</strong> (<code>pf:mercado</code>, <code>empresa:fornecedores</code>). Isso vale para:</p>
+  <ul>
+    <li>a chave em <code>edicoes_padrao</code>;</li>
+    <li>os endereços <code>PUT/DELETE /api/categorias-padrao/&lt;perfil&gt;/&lt;codigo&gt;</code>, que hoje recebem a posição;</li>
+    <li>o <code>id</code> das categorias padrão na tela, hoje <code>b0</code>, <code>b1</code>… Ele passa a usar o código;</li>
+    <li>a função da tela que acha o cartão "Taxas de cartão e apps" pela posição 0. Ela passa a procurar pelo código <code>taxas</code>.</li>
+  </ul>
+
+  <h3>Conversão automática</h3>
+  <p>Roda quando o servidor liga. Na segunda vez em diante, ela não encontra nada para converter e não faz nada.</p>
+  <div class="table"><table>
+    <tr><th>O que</th><th>Antes</th><th>Depois</th></tr>
+    <tr><td>Extratos salvos</td><td>perfil <code>pme</code></td><td>perfil <code>empresa</code></td></tr>
+    <tr><td>Subpastas</td><td>da pasta MEI</td><td>da pasta Empresa ou MEI. Se já existir uma subpasta com o mesmo nome em Empresa, a que vem do MEI ganha o final " (MEI)"</td></tr>
+    <tr><td>Tipo de conta nas configurações</td><td><code>pme</code></td><td><code>empresa</code></td></tr>
+    <tr><td>Edições nas categorias padrão</td><td>por posição</td><td>por código (tabela abaixo). Se a mesma categoria foi editada em Empresa e em MEI, vale a de Empresa</td></tr>
+    <tr><td>Regras do usuário</td><td>apontam pelo nome da categoria</td><td>não mudam</td></tr>
+  </table></div>
+
+  <h3>De posição para código</h3>
+  <div class="table"><table>
+    <tr><th>Posição antiga</th><th><code>pf:</code></th><th><code>empresa:</code></th><th><code>pme:</code> (vira <code>empresa:</code>)</th></tr>
+    <tr><td class="n">0</td><td>dividas</td><td>taxas</td><td>taxas</td></tr>
+    <tr><td class="n">1</td><td>moradia</td><td>tarifas</td><td>tarifas</td></tr>
+    <tr><td class="n">2</td><td>casa</td><td>aluguel</td><td>aluguel</td></tr>
+    <tr><td class="n">3</td><td>mercado</td><td>folha</td><td>folha</td></tr>
+    <tr><td class="n">4</td><td>transporte</td><td>impostos</td><td>impostos</td></tr>
+    <tr><td class="n">5</td><td>saude</td><td>contas</td><td>contas</td></tr>
+    <tr><td class="n">6</td><td>educacao</td><td><em>descartada</em> ("Mercado" deixa de existir em Empresa)</td><td>fornecedores</td></tr>
+    <tr><td class="n">7</td><td>lazer</td><td>manutencao</td><td>manutencao</td></tr>
+    <tr><td class="n">8</td><td>assinaturas</td><td></td><td>marketing</td></tr>
+    <tr><td class="n">9</td><td>investimentos</td><td></td><td>contabilidade</td></tr>
+  </table></div>
+
+  <div class="box warn"><strong>Atenção a um caso.</strong> Se o usuário tinha uma regra ou correção apontando para o "Mercado" de Empresa, ou para outro nome que só existia lá, ela continua salva, mas em Empresa nenhuma categoria tem mais esse nome. No plano, preciso conferir como a tela mostra uma categoria que não existe no tipo atual e garantir que ela não quebre nada.</div>
+</section>
+
+<section id="p2">
+  <h2>Parte 2: as categorias de cada tipo</h2>
+  <p>A primeira categoria cuja palavra-chave aparece na descrição é a que vale, por isso a ordem importa. <strong>"Transferências para pessoas" fica sempre por último</strong>: só os PIX e transferências que nada mais reconhece caem nela.</p>
+  <p>As palavras são comparadas com a descrição já normalizada (minúsculas, sem acento, sem pontuação). Uma palavra entre <code> </code> com espaço antes ou depois tem o espaço de propósito, para não pegar pedaço de outra palavra. <strong>F</strong> = conta como custo fixo.</p>
+
+  <div class="box warn">
+    <strong>Precisa do seu ok: mudanças de ordem em relação ao que combinamos em conversa.</strong> Elas apareceram ao montar a lista completa.
+    <ul>
+      <li><strong>Assinaturas e Compras online sobem para antes de Mercado.</strong> Se Compras ficasse depois, "MERCADO LIVRE" cairia em Mercado, porque contém "mercado". Assinaturas também sobe, para ficar antes de Compras: "AMAZON PRIME" vai para Assinaturas e "AMAZON MARKETPLACE" vai para Compras.</li>
+      <li><strong>Pets sobe para antes de Saúde.</strong> Assim, "CLINICA VETERINARIA" vai para Pets, e não para Saúde por causa de "clinica".</li>
+      <li><strong>IOF e anuidade saem de Dívidas e vão só para Tarifas bancárias.</strong> Como Dívidas vem antes, se elas ficassem nas duas, Tarifas nunca as pegaria.</li>
+      <li><strong>"cesta" vira "cesta de serviços".</strong> Só "cesta" pegaria "CESTA BASICA" do supermercado.</li>
+      <li><strong>"posto" ganha espaços dos dois lados</strong> (aqui e em Empresa). Sem eles, "IMPOSTO" cai em Combustível. Esse erro já existe hoje.</li>
+    </ul>
+  </div>
+
+  <h3>Pessoa física: 17 categorias</h3>
+  <div class="table"><table>
+    <tr><th>#</th><th>Categoria</th><th>F</th><th>Palavras-chave</th></tr>
+    <tr><td class="n">1</td><td>Dívidas e juros</td><td class="f">F</td><td class="kw">juros, parcela, emprestimo, financiamento, fatura, cartao de credito, multa, rotativo, cheque especial, consignado</td></tr>
+    <tr><td class="n">2</td><td>Tarifas bancárias<span class="new">nova</span></td><td class="f">F</td><td class="kw">tarifa, pacote servicos, pacote de servicos, cesta de servicos, cesta servicos, <code> iof </code>, anuidade, manutencao de conta</td></tr>
+    <tr><td class="n">3</td><td>Moradia</td><td class="f">F</td><td class="kw">aluguel, condominio, iptu, imobiliaria</td></tr>
+    <tr><td class="n">4</td><td>Contas da casa</td><td class="f">F</td><td class="kw">energia, coelba, enel, cemig, copel, <code> light </code>, agua, embasa, sabesp, compesa, <code> gas </code>, internet, <code> vivo </code>, <code> claro </code>, <code> tim </code>, <code> oi </code></td></tr>
+    <tr><td class="n">5</td><td>Delivery<span class="new">nova</span></td><td></td><td class="kw">ifood, <code> ifd </code>, rappi, ze delivery, 99food, <code> 99 food</code>, keeta, aiqfome, james delivery, daki, uber eats, delivery</td></tr>
+    <tr><td class="n">6</td><td>Assinaturas</td><td class="f">F</td><td class="kw">assinatura, netflix, spotify, deezer, prime video, amazon prime, amazonprime, youtube, apple, google one, icloud, disney, <code> max </code>, globoplay</td></tr>
+    <tr><td class="n">7</td><td>Compras online<span class="new">nova</span></td><td></td><td class="kw">shopee, mercado livre, mercadolivre, <code> amazon </code>, magalu, magazine luiza, shein, aliexpress, temu</td></tr>
+    <tr><td class="n">8</td><td>Mercado</td><td></td><td class="kw">mercado, supermerc, atacad, assai, makro, carrefour, hortifruti, acougue, feira, padaria</td></tr>
+    <tr><td class="n">9</td><td>Transporte</td><td></td><td class="kw">uber, 99app, <code> 99 pop</code>, combustivel, <code> posto </code>, gasolina, etanol, estacionamento, pedagio, onibus, metro, passagem, ipva, licenciamento, detran, bilhete unico</td></tr>
+    <tr><td class="n">10</td><td>Pets<span class="new">nova</span></td><td></td><td class="kw">pet shop, petshop, petz, cobasi, veterin, racao</td></tr>
+    <tr><td class="n">11</td><td>Saúde</td><td></td><td class="kw">farmacia, drogaria, drogasil, <code> raia </code>, droga raia, pague menos, hospital, clinica, consulta, plano de saude, unimed, dentista, odonto, exame, laboratorio</td></tr>
+    <tr><td class="n">12</td><td>Academia e bem-estar<span class="new">nova</span></td><td></td><td class="kw">academia, smart fit, smartfit, pilates, salao, barbearia</td></tr>
+    <tr><td class="n">13</td><td>Educação</td><td class="f">F</td><td class="kw">escola, faculdade, curso, mensalidade, livro, udemy, alura</td></tr>
+    <tr><td class="n">14</td><td>Lazer</td><td></td><td class="kw">cinema, restaurante, <code> bar </code>, show, viagem, hotel, ingresso, lanchonete</td></tr>
+    <tr><td class="n">15</td><td>Presentes<span class="new">nova</span></td><td></td><td class="kw">presente, floricultura</td></tr>
+    <tr><td class="n">16</td><td>Investimentos</td><td></td><td class="kw">investimento, aplicacao, tesouro, cdb, corretora, poupanca, fundo</td></tr>
+    <tr><td class="n">17</td><td>Transferências para pessoas<span class="new">nova</span></td><td></td><td class="kw">pix enviado, pix transf, transferencia, <code> transf </code>, <code> ted </code>, <code> doc </code></td></tr>
+  </table></div>
+
+  <h3>Empresa ou MEI: 13 categorias</h3>
+  <p>(Na conversa eu disse 14, mas a lista sempre teve 13.)</p>
+  <div class="table"><table>
+    <tr><th>#</th><th>Categoria</th><th>F</th><th>Palavras-chave</th></tr>
+    <tr><td class="n">1</td><td>Taxas de cartão e apps</td><td></td><td class="kw"><code> taxa</code>, <code> mdr </code>, antecipacao, comissao, <code> ifood </code>, <code> cielo </code>, <code> stone </code>, <code> getnet </code>, pagseguro, <code> sumup </code>, <code> rede </code>, mercado pago, maquininha, rappi</td></tr>
+    <tr><td class="n">2</td><td>Tarifas bancárias</td><td class="f">F</td><td class="kw">tarifa, pacote servicos, pacote de servicos, cesta de servicos, <code> iof </code>, juros, anuidade, manutencao de conta</td></tr>
+    <tr><td class="n">3</td><td>Impostos e encargos</td><td class="f">F</td><td class="kw"><code> das </code>, das mei, pgmei, simples nacional, <code> darf</code>, <code> gps </code>, <code> inss</code>, <code> fgts</code>, <code> iptu</code>, <code> icms</code>, <code> iss </code>, imposto</td></tr>
+    <tr><td class="n">4</td><td>Folha de pagamento</td><td class="f">F</td><td class="kw">salario, folha, <code> pro labore</code>, prolabore, vale transporte, vale refeicao, adiantamento, ferias, rescisao</td></tr>
+    <tr><td class="n">5</td><td>Aluguel</td><td class="f">F</td><td class="kw">aluguel, imobiliaria, condominio</td></tr>
+    <tr><td class="n">6</td><td>Água, luz e internet</td><td class="f">F</td><td class="kw">energia, coelba, <code> enel</code>, cemig, copel, <code>light </code>, <code> agua</code>, embasa, sabesp, compesa, internet, <code> vivo</code>, <code> claro</code>, <code> tim </code>, <code> oi </code>, <code> gas </code></td></tr>
+    <tr><td class="n">7</td><td>Contabilidade e sistemas</td><td class="f">F</td><td class="kw">contabil, contador, sistema, software, nuvem, certificado digital</td></tr>
+    <tr><td class="n">8</td><td>Seguros<span class="new">nova</span></td><td class="f">F</td><td class="kw">seguro, porto seguro, mapfre, allianz, tokio marine, sulamerica</td></tr>
+    <tr><td class="n">9</td><td>Fornecedores</td><td></td><td class="kw">fornecedor, distribuidora, atacadista, insumo, nota fiscal, nfe, compra, mercado, supermerc, atacad, assai, makro, carrefour, hortifruti, acougue, padaria, laticinio, torrefacao, embalage, material de limpeza</td></tr>
+    <tr><td class="n">10</td><td>Combustível e entregas<span class="new">nova</span></td><td></td><td class="kw"><code> posto </code>, gasolina, diesel, etanol, combustivel, motoboy, frete, correios, loggi, lalamove</td></tr>
+    <tr><td class="n">11</td><td>Manutenção</td><td></td><td class="kw">manutencao, conserto, reparo, assistencia tecnica</td></tr>
+    <tr><td class="n">12</td><td>Marketing</td><td></td><td class="kw">anuncio, google ads, meta ads, facebook, instagram, impulsionamento, marketing, panfleto, grafica</td></tr>
+    <tr><td class="n">13</td><td>Transferências para pessoas<span class="new">nova</span></td><td></td><td class="kw">pix enviado, pix transf, transferencia, <code> transf </code>, <code> ted </code>, <code> doc </code></td></tr>
+  </table></div>
+  <ul>
+    <li><strong>"Mercado" sai de Empresa.</strong> As compras em supermercado e atacado passam a contar como Fornecedores, como já acontecia no MEI.</li>
+    <li>Em Empresa, iFood e Rappi continuam em Taxas de cartão e apps: ali eles são a taxa que o app cobra do restaurante.</li>
+  </ul>
+</section>
+
+<section id="p3">
+  <h2>Parte 3: textos e indicadores do dashboard</h2>
+  <p>Tudo o que muda por tipo fica <strong>num único lugar do <code>painel.js</code></strong>, para não espalhar condicionais pelo arquivo.</p>
+
+  <h3>Os 4 cartões do topo</h3>
+  <div class="table"><table>
+    <tr><th>Hoje (para todos)</th><th>Pessoa física</th><th>Empresa ou MEI</th></tr>
+    <tr><td>Resultado, com o selo "Lucro / Prejuízo no período"</td><td>selo "Sobrou dinheiro / Faltou dinheiro"</td><td>igual a hoje</td></tr>
+    <tr><td>Margem ("De cada R$ 100 que entram…")</td><td>"Quanto sobra", com a mesma conta</td><td>igual a hoje</td></tr>
+    <tr><td>Custos fixos por mês</td><td>"Contas fixas por mês"</td><td>igual a hoje</td></tr>
+    <tr><td>Taxas de cartão e apps</td><td>"Onde mais gasta": a categoria com mais saídas, com o valor por mês e o % do total</td><td>igual a hoje</td></tr>
+  </table></div>
+
+  <h3>Textos e gráficos</h3>
+  <div class="table"><table>
+    <tr><th>Onde</th><th>Pessoa física</th><th>Empresa ou MEI</th></tr>
+    <tr><td>Quadro "Custos fixos e variáveis"</td><td>"Contas fixas e gastos do dia a dia". Fixas: "Pagas todo mês, mesmo sem usar". Variáveis: "Mudam conforme o seu consumo"</td><td>igual a hoje</td></tr>
+    <tr><td>"X dias de entradas"</td><td>"o salário dos primeiros X dias do mês vai só para as contas fixas"</td><td>igual a hoje</td></tr>
+    <tr><td>Gráfico "Caixa acumulado"</td><td>"Saldo acumulado"</td><td>igual a hoje</td></tr>
+    <tr><td>Gráfico "Entradas por dia da semana"</td><td>escondido</td><td>igual a hoje</td></tr>
+    <tr><td>Dica do cartão Margem</td><td>"Quanto maior, mais folga no orçamento para imprevistos."</td><td>"Quanto maior, mais folga no caixa para imprevistos."</td></tr>
+  </table></div>
+  <p>A dica da Margem corrige o "caixaio" que existe hoje. Ele é resto de uma troca de texto antiga, que deixou para trás o "io" de "negócio".</p>
+
+  <h3>Conclusões automáticas ("Principais conclusões")</h3>
+  <ul>
+    <li><strong>Só em Empresa ou MEI</strong>, como hoje: a do dia da semana com mais entradas e a de negociar a taxa da maquininha.</li>
+    <li><strong>Só em Pessoa física</strong>, e só quando passar do limite:
+      <ul>
+        <li>Delivery acima de 10% das saídas: "Delivery levou R$ X por mês (Y% dos gastos). Cozinhar mais vezes por semana é uma das economias mais rápidas."</li>
+        <li>Tarifas bancárias acima de R$ 0: "Você pagou R$ X por ano em tarifas do banco. Muitas contas digitais não cobram tarifa."</li>
+      </ul>
+    </li>
+    <li>As outras conclusões (margem, dias em que as saídas se concentram, melhor e pior mês, categoria que mais subiu) valem para os dois tipos.</li>
+  </ul>
+</section>
+
+<section id="p4">
+  <h2>Parte 4: testes e verificação</h2>
+  <h3>Testes automáticos do servidor (escritos antes do código)</h3>
+  <ol>
+    <li><strong>Conversão de dados</strong>, partindo de um banco no formato antigo com extratos <code>pme</code>, subpastas de MEI (uma com nome repetido em Empresa), tipo de conta <code>pme</code> nas configurações e as edições <code>pf:3</code>, <code>pme:6</code>, <code>empresa:2</code> e <code>empresa:6</code>. Depois da conversão, o teste confere que tudo virou <code>empresa</code>, que a subpasta repetida ganhou " (MEI)", que cada edição foi para o código certo e que a de <code>empresa:6</code> foi descartada. Também confere que rodar a conversão de novo não muda nada.</li>
+    <li><strong>Categorização com descrições reais típicas</strong> (tabela abaixo).</li>
+    <li><strong><code>pme</code> vindo de fora:</strong> o servidor aceita e trata como <code>empresa</code> na leitura, ao salvar, nas subpastas e nos endereços de categoria padrão.</li>
+    <li><strong>Os 23 testes atuais continuam passando.</strong> Os que usam <code>pme</code> ou a posição da categoria são ajustados.</li>
+  </ol>
+  <div class="table"><table>
+    <tr><th>Descrição</th><th>Pessoa física</th><th>Empresa ou MEI</th></tr>
+    <tr><td><code>IFD*PIZZARIA BELLA</code></td><td>Delivery</td><td></td></tr>
+    <tr><td><code>UBER TRIP</code></td><td>Transporte</td><td></td></tr>
+    <tr><td><code>UBER EATS</code></td><td>Delivery</td><td></td></tr>
+    <tr><td><code>MERCADO LIVRE</code></td><td>Compras online</td><td></td></tr>
+    <tr><td><code>AMAZON PRIME</code></td><td>Assinaturas</td><td></td></tr>
+    <tr><td><code>CLINICA VETERINARIA</code></td><td>Pets</td><td></td></tr>
+    <tr><td><code>SMART FIT</code></td><td>Academia e bem-estar</td><td></td></tr>
+    <tr><td><code>PIX ENVIADO MARIA SILVA</code></td><td>Transferências para pessoas</td><td>Transferências para pessoas</td></tr>
+    <tr><td><code>PIX ENVIADO MARIA CONTABILIDADE</code></td><td></td><td>Contabilidade e sistemas</td></tr>
+    <tr><td><code>DAS MEI</code></td><td></td><td>Impostos e encargos</td></tr>
+    <tr><td><code>PAGTO IMPOSTO</code></td><td></td><td>Impostos e encargos</td></tr>
+    <tr><td><code>TARIFA PACOTE SERVICOS</code></td><td>Tarifas bancárias</td><td>Tarifas bancárias</td></tr>
+    <tr><td><code>CESTA BASICA SUPERMERCADO</code></td><td>Mercado</td><td></td></tr>
+  </table></div>
+
+  <h3>Medição com os extratos de exemplo</h3>
+  <div class="goals">
+    <div class="goal"><b>&lt; 5%</b>das saídas em "Outros (revisar)" nos extratos de Pessoa física</div>
+    <div class="goal"><b>&lt; 10%</b>das saídas em "Outros (revisar)" nos extratos de Empresa</div>
+  </div>
+  <p>A medição é feita por um script avulso, fora do projeto, e o resultado vai na mensagem final.</p>
+
+  <h3>Tela</h3>
+  <p>Checagem de sintaxe do JavaScript e um roteiro curto para você testar no navegador: trocar o tipo de conta e ver os cartões e textos mudarem, ver só 2 pastas principais e conferir as conclusões novas de Pessoa física.</p>
+
+  <h3>Ordem de implementação (um commit por passo)</h3>
+  <ol>
+    <li>Categorias novas com códigos fixos e conversão das edições (servidor e testes).</li>
+    <li>Fusão de MEI com Empresa: conversão de extratos, subpastas e configurações, mais a tela com 2 opções e 2 pastas.</li>
+    <li>Textos e indicadores por tipo no dashboard.</li>
+    <li>Medição final, atualização do README (que ainda fala em "páginas" e em 18 testes) e roteiro de teste.</li>
+  </ol>
+
+  <div class="box info"><strong>Fora do escopo:</strong> a planilha de vendas, que continua em pausa, e mudanças na forma de classificar. A prioridade continua a mesma: correção, regra, categoria do cliente e, por fim, categoria padrão.</div>
+</section>
+
+<footer>Versão em HTML de <code>2026-10-31-tipos-de-conta-design.md</code></footer>
+</div>
+</body>
+</html>
