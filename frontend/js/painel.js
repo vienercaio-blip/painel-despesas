@@ -222,12 +222,18 @@ function readFiles(files){
       var a = state.tx[0].date, b = state.tx[state.tx.length-1].date;
       var months = {}; state.tx.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
       var nm = Object.keys(months).length;
-      $('upResTitle').textContent = 'Extrato pronto';
+      $('upResTitle').textContent = 'Últimos extratos';
       $('upSum').textContent = state.tx.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
         (saved===true ? ' Salvo em Extratos salvos.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
       $('upResult').querySelector('.drop-actions').hidden = false;
       $('upResult').hidden = false;
       $('msg').hidden = true;
+      /* extrato salvo: leva o usuário direto para a lista de salvos */
+      if (saved===true){
+        showPanel('salvos');
+        $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
+        toast('Extrato salvo: '+state.tx.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'.');
+      }
     });
   }).catch(function(e){ showMsg(e.message, true); });
 }
