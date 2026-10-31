@@ -218,17 +218,22 @@
 
   <div class="view" id="viewDash" hidden>
     <div id="dashBank">
-    <section class="kpis" id="dKpis" aria-label="Indicadores do extrato"></section>
+    <section class="card verdict" id="dVer" aria-live="polite">
+      <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span></p>
+      <p class="verdict-pesa" id="dVerPesa"></p>
+      <div class="kpis kpis3" id="dNums"></div>
+    </section>
+
+    <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
+      <div class="card-head"><h2 id="dAcoesT">O que fazer agora</h2></div>
+      <div class="acoes" id="dAcoes"></div>
+    </section>
 
     <section class="grid2">
       <div class="card">
         <div class="card-head"><h2>Resultado por mês</h2><span class="hint">Entradas menos saídas</span></div>
         <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
         <div class="chart-box" id="dRes"></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2 id="dFixT">Custos fixos e variáveis</h2><span class="hint">Média por mês</span></div>
-        <div id="dFix" class="fixvar"></div>
       </div>
     </section>
 
@@ -563,6 +568,7 @@
 <!-- leitor de Excel: usado só pela planilha de vendas (recurso em pausa) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/analise.js"></script>
 <script src="/js/painel.js"></script>
 </body>
 </html>

@@ -880,24 +880,43 @@ function renderDashboard(){
   /* a categoria com mais saídas, sem contar "Outros" (cartão "Onde mais gasta") */
   var topCat = Object.keys(byCat).filter(function(c){ return c!==OTHER; }).sort(function(a,b){ return byCat[b]-byCat[a]; })[0] || null;
 
-  /* KPIs */
-  var k = [
-    {l: isWeek ? 'Resultado da semana' : nM===1 ? 'Resultado do mês' : 'Resultado médio por mês', v:brl.format(res/nM), s:(nM===1?'1 mês no extrato':nM+' meses no extrato'), pill: res>=0 ? ['pos',X.pilulaPos] : ['neg',X.pilulaNeg],
-      m: moreHTML('Resultado de cada mês', months.map(function(o){return [o.name, brl.format(o.res)];}), 'É tudo o que entrou menos tudo o que saiu, dividido pelo número de meses do extrato.')},
-    {l:X.margemTitulo, v:pct.format(margin), s:'De cada R$ 100 que entram, '+(margin>=0?'sobram ':'faltam ')+brl.format(Math.abs(margin*100)),
-      m: moreHTML(X.margemMais, months.map(function(o){return [o.name, pct.format(o.ins?o.res/o.ins:0)];}), X.margemNota)},
-    {l: isWeek ? X.fixosTituloSemana : X.fixosTitulo, v:brl.format(fixedM), s:pct.format(T.outs?fixed/T.outs:0)+' das saídas',
-      m: moreHTML(X.fixosMais, FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)+'/mês'];}), X.fixosCardNota(Math.round(dailyIns ? fixedM/dailyIns : 0)))},
-    X.negocio ? {l:'Taxas de cartão e apps', v:pct.format(T.ins?fees/T.ins:0), s:brl.format(fees/nM)+(isWeek?' na semana':' por mês')+', sobre as entradas',
-      m: moreHTML('De onde vêm as taxas', topOrigins(feeTx, 5, nM).map(function(o){return [o.l, brl.format(o.v)+'/mês'];}), 'Percentual calculado sobre tudo o que entrou na conta no período.')}
-    : topCat ? {l:'Onde mais gasta', v:brl.format(byCat[topCat]/nM), s:topCat+' · '+pct.format(T.outs?byCat[topCat]/T.outs:0)+' das saídas',
-      m: moreHTML('O que mais pesa em '+topCat, topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===topCat; }), 5, nM).map(function(o){return [o.l, brl.format(o.v)+(isWeek?'':'/mês')];}), 'A categoria com mais saídas no período, sem contar "'+OTHER+'".')}
-    : {l:'Onde mais gasta', v:'—', s:'Nenhuma saída classificada', m: moreHTML('Onde mais gasta', [], 'Classifique as saídas na aba Organizar para ver onde o dinheiro mais vai.')}
+  /* contexto para as contas do dashboard (js/analise.js) */
+  var ctx = { perfil:curPerfil(), escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
+    ins:T.ins, outs:T.outs, byCat:byCat, fixas:FIXED, outros:OTHER,
+    meses: months.map(function(o){ return {name:MESES[o.m], cat:o.cat}; }),
+    nomes: {delivery:catByCode('delivery'), tarifas:catByCode('tarifas'), assinaturas:catByCode('assinaturas'),
+      compras:catByCode('compras'), dividas:catByCode('dividas'), taxas:catByCode('taxas')},
+    brl:function(n){ return brl.format(n); }, pct:function(n){ return pct.format(n); } };
+
+  /* Parte 1: veredito e os três números */
+  var ver = Analise.veredito(ctx);
+  $('dVer').className = 'card verdict '+ver.cor;
+  $('dVerT').textContent = ver.titulo;
+  $('dVerTx').textContent = ver.texto;
+  $('dVerPesa').textContent = ver.pesa || '';
+  var pp = prevP(), ant = null;
+  if (pp){ var pl = state.tx.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
+  var quandoTxt = isWeek ? 'nesta semana' : nM>1 ? 'média por mês, em '+nM+' meses' : 'neste mês';
+  var nums = [
+    {l:'Entrou', v:brl.format(T.ins/nM), s:quandoTxt+(ant ? deltaTxt(T.ins, ant.ins, ant.label) : '')},
+    {l:'Saiu', v:brl.format(T.outs/nM), s:quandoTxt+(ant ? deltaTxt(T.outs, ant.outs, ant.label) : '')},
+    {l: res>=0 ? 'Sobrou' : 'Faltou', v:brl.format(Math.abs(res)/nM), neg: res<0,
+      s:quandoTxt+(ant ? ' · <span class="delta">'+(res-(ant.ins-ant.outs)>=0?'+':'-')+brl.format(Math.abs(res-(ant.ins-ant.outs)))+'</span> vs. '+ant.label : '')}
   ];
-  $('dKpis').innerHTML = k.map(function(x){
-    return '<div class="kpi hoverable" data-tip="'+esc('<b>'+esc(x.l)+'</b>')+'" data-more="'+esc(x.m)+'"><span class="label">'+esc(x.l)+'</span><span class="value num">'+esc(x.v)+'</span>'+
-      (x.pill?'<span class="pill '+x.pill[0]+'">'+x.pill[1]+'</span>':'')+'<span class="sub">'+esc(x.s)+'</span></div>';
+  $('dNums').innerHTML = nums.map(function(x){
+    return '<div class="kpi"><span class="label">'+x.l+'</span><span class="value num'+(x.neg?' neg':'')+'">'+esc(x.v)+'</span><span class="sub">'+x.s+'</span></div>';
   }).join('');
+
+  /* Parte 2: o que fazer agora */
+  var ac = Analise.acoes(ctx);
+  $('dAcoes').innerHTML = ac.lista.length ? ac.lista.map(function(a){
+    var origens = a.cat ? topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===a.cat; }), 3, nM) : [];
+    var mais = moreHTML(a.cat ? 'De onde vem: '+a.cat : a.titulo, origens.map(function(o){ return [o.l, brl.format(o.v)+(nM>1?'/mês':'')]; }), '');
+    return '<div class="acao hoverable" data-tip="'+esc('<b>'+esc(a.titulo)+'</b>')+'" data-more="'+esc(mais)+'">'+
+      '<h3>'+esc(a.titulo)+'</h3><p>'+esc(a.motivo)+'</p>'+
+      (a.economia ? '<p class="eco">Economia: ~'+brl0.format(a.economia)+'/mês · '+brl0.format(a.economia*12)+'/ano</p>' : '')+
+      (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
+  }).join('') : '<p class="acoes-vazio'+(isWeek?' neutro':'')+'">'+esc(ac.vazio)+'</p>';
 
   /* gráfico: resultado por mês */
   var rSel = $('rPeriod'), yrs = [];
@@ -919,21 +938,6 @@ function renderDashboard(){
       more: moreHTML('Maiores saídas do mês', Object.keys(o.cat).sort(function(a,b){return o.cat[b]-o.cat[a];}).slice(0,4).map(function(c){return [c, brl.format(o.cat[c])];}),
         nM>1 ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
   }), {valueLabels: chartM.length<=8, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, big:true, aria:'Resultado por mês'});
-
-  /* fixos x variáveis */
-  $('dFixT').textContent = X.fixvarTitulo;
-  var fp = T.outs ? fixed/T.outs*100 : 0;
-  var fixList = FIXED.filter(function(c){return byCat[c];}).map(function(c){ return '<li><span>'+esc(c)+'</span><span class="num">'+brl.format(byCat[c]/nM)+'</span></li>'; }).join('');
-  var varCats = Object.keys(byCat).filter(function(c){return FIXED.indexOf(c)===-1;}).sort(function(a,b){return byCat[b]-byCat[a];});
-  var varList = varCats.map(function(c){ return '<li><span>'+esc(c)+'</span><span class="num">'+brl.format(byCat[c]/nM)+'</span></li>'; }).join('');
-  $('dFix').innerHTML =
-    '<div class="stack" role="img" aria-label="Fixos '+pct.format(fp/100)+', variáveis '+pct.format(1-fp/100)+'">'+
-      '<span style="width:'+fp.toFixed(1)+'%;background:var(--s1)" data-tip="<b>'+X.fixosRotulo+'</b><br>'+brl.format(fixedM)+' por mês" data-more="'+esc(moreHTML(X.fixosRotulo+' por mês', FIXED.filter(function(c){return byCat[c];}).map(function(c){return [c, brl.format(byCat[c]/nM)];}), X.fixosNota))+'"></span>'+
-      '<span style="width:'+(100-fp).toFixed(1)+'%;background:var(--s2)" data-tip="<b>'+X.varRotulo+'</b><br>'+brl.format(varM)+' por mês" data-more="'+esc(moreHTML(X.varRotulo+' por mês', varCats.slice(0,5).map(function(c){return [c, brl.format(byCat[c]/nM)];}), X.varNota))+'"></span></div>'+
-    '<div class="fv-cols">'+
-      '<div><p class="fv-h"><i class="sw" style="background:var(--s1)"></i>Fixos <b class="num">'+brl.format(fixedM)+'</b> · '+pct.format(fp/100)+'</p><p class="fv-d">'+X.fixosDesc+'</p><ul class="fv-list">'+fixList+'</ul></div>'+
-      '<div><p class="fv-h"><i class="sw" style="background:var(--s2)"></i>Variáveis <b class="num">'+brl.format(varM)+'</b> · '+pct.format(1-fp/100)+'</p><p class="fv-d">'+X.varDesc+'</p><ul class="fv-list">'+varList+'</ul></div>'+
-    '</div>';
 
   /* caixa acumulado */
   var byDay = {}; tx.forEach(function(t){ var kk = isoD(t.date); byDay[kk] = (byDay[kk]||0) + t.value; });
