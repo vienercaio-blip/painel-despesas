@@ -181,11 +181,11 @@ function xlsxToCsv(f){
     return parts.join('\n');
   });
 }
-function readFiles(files){
+function readFiles(files, perfil){
   files = Array.prototype.slice.call(files);
   if (!files.length) return;
   showMsg('Enviando '+(files.length===1?'o arquivo':files.length+' arquivos')+' para leitura…', false);
-  var perfil = chosenPerfil();
+  perfil = perfil || chosenPerfil();
   API.lerArquivos(files, perfil).then(function(resp){
     var results = resp.arquivos;
     var good = results.filter(function(r){return !r.erro;});
@@ -306,6 +306,8 @@ function carregarSalvo(id){
 }
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
+  var x = getSaved().filter(function(v){ return v.id===id; })[0];
+  if (x && perfilOf(x)!==chosenPerfil()){ avisoTipo(x); return; }
   carregarSalvo(id).then(function(){
     $('upResult').hidden = true;
     location.hash = 'dashboard';
@@ -1479,11 +1481,11 @@ function renderTable(){
 }
 
 /* ---------- events ---------- */
-$('file').addEventListener('change', function(e){ readFiles(e.target.files); e.target.value=''; });
+$('file').addEventListener('change', function(e){ pedirTipo(e.target.files); e.target.value=''; });
 var drop = $('drop');
 ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
-drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
+drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) pedirTipo(e.dataTransfer.files); });
 document.querySelectorAll('.table-tools .seg button').forEach(function(b){
   b.addEventListener('click', function(){
     state.filter = b.dataset.f;
@@ -1760,7 +1762,51 @@ function closeCfg(){ $('cfgBg').style.display = 'none'; $('cfgBtn').focus(); }
 $('cfgBtn').addEventListener('click', openCfg);$('cfgClose').addEventListener('click', closeCfg);
 $('cfgBg').addEventListener('click', function(e){ if (e.target===$('cfgBg')) closeCfg(); });
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && $('cfgBg').style.display!=='none') closeCfg(); });
-document.querySelectorAll('input[name="cfgPerfil"]').forEach(function(r){ r.addEventListener('change', function(){ cfg.perfil = this.value; saveCfg(); applyCfg(); }); });
+/* trocar o tipo de conta recomeça tudo: salva, volta ao Início e recarrega o site */
+document.querySelectorAll('input[name="cfgPerfil"]').forEach(function(r){ r.addEventListener('change', function(){
+  cfg.perfil = this.value;
+  API.salvarPreferencia('config', cfg).then(function(){ location.hash = 'inicio'; location.reload(); }).catch(falhou);
+}); });
+
+/* ---------- tipo do extrato: perguntado a cada envio ---------- */
+var tipoFiles = null;
+function pedirTipo(files){
+  tipoFiles = Array.prototype.slice.call(files || []);
+  if (!tipoFiles.length) return;
+  document.querySelectorAll('input[name="tipoExt"]').forEach(function(r){ r.checked = false; });
+  $('tipoErr').hidden = true;
+  $('tipoBg').style.display = 'flex'; hideTip();
+  document.querySelector('input[name="tipoExt"]').focus();
+}
+function fecharTipo(){ $('tipoBg').style.display = 'none'; tipoFiles = null; }
+$('tipoGo').addEventListener('click', function(){
+  var r = document.querySelector('input[name="tipoExt"]:checked'), err = $('tipoErr');
+  if (!r){ err.textContent = 'Escolha o tipo do extrato.'; err.hidden = false; return; }
+  if (r.value!==chosenPerfil()){
+    err.textContent = 'Você está usando a conta '+perfilLabel(chosenPerfil())+'. Para enviar um extrato de '+perfilLabel(r.value)+', troque o tipo de conta nas configurações.';
+    err.hidden = false; return;
+  }
+  var files = tipoFiles; fecharTipo(); readFiles(files, r.value);
+});
+$('tipoClose').addEventListener('click', fecharTipo);
+$('tipoBg').addEventListener('click', function(e){ if (e.target===$('tipoBg')) fecharTipo(); });
+
+/* ---------- aviso: extrato salvo de outro tipo de conta ---------- */
+function avisoTipo(x){
+  $('avisoD').textContent = '"'+(x.name||'Extrato')+'" é um extrato de '+perfilLabel(perfilOf(x))+', e você está usando a conta '+perfilLabel(chosenPerfil())+
+    '. Cada tipo de conta usa categorias diferentes, por isso só dá para abrir extratos do mesmo tipo. Para abrir este, troque o tipo de conta nas configurações.';
+  $('avisoBg').style.display = 'flex'; hideTip();
+  $('avisoClose').focus();
+}
+function fecharAviso(){ $('avisoBg').style.display = 'none'; }
+$('avisoClose').addEventListener('click', fecharAviso);
+$('avisoCfg').addEventListener('click', function(){ fecharAviso(); openCfg(); });
+$('avisoBg').addEventListener('click', function(e){ if (e.target===$('avisoBg')) fecharAviso(); });
+document.addEventListener('keydown', function(e){
+  if (e.key!=='Escape') return;
+  if ($('tipoBg').style.display!=='none') fecharTipo();
+  if ($('avisoBg').style.display!=='none') fecharAviso();
+});
 $('cfgTexto').addEventListener('change', function(){ cfg.textoGrande = this.checked; saveCfg(); applyCfg(); });
 $('cfgEsteira').addEventListener('change', function(){ cfg.esteira = this.checked; saveCfg(); applyCfg(); });
 $('cfgClear').addEventListener('click', function(){

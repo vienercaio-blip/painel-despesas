@@ -482,12 +482,32 @@
     <div class="modal-actions"><button type="button" class="btn primary" id="mgGo" disabled>Mesclar</button><button type="button" class="btn ghost" id="mgClose">Cancelar</button></div>
   </div>
 </div>
+<div class="modal-bg" id="tipoBg" style="display:none">
+  <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="tipoT">
+    <div class="card-head"><h2 id="tipoT">De que tipo é esse extrato?</h2></div>
+    <div class="cfg-sec">
+      <p>O tipo fica registrado no extrato e define as categorias usadas.</p>
+      <label class="cfg-row"><input type="radio" name="tipoExt" value="pf"> Pessoa física</label>
+      <label class="cfg-row"><input type="radio" name="tipoExt" value="empresa"> Empresa</label>
+      <label class="cfg-row"><input type="radio" name="tipoExt" value="pme"> MEI / PME</label>
+    </div>
+    <p class="form-err" id="tipoErr" role="alert" hidden></p>
+    <div class="modal-actions"><button type="button" class="btn primary" id="tipoGo">Continuar</button><button type="button" class="btn ghost" id="tipoClose">Cancelar</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="avisoBg" style="display:none">
+  <div class="modal cfg-modal" role="alertdialog" aria-modal="true" aria-labelledby="avisoT" aria-describedby="avisoD">
+    <div class="card-head"><h2 id="avisoT">Este extrato é de outro tipo de conta</h2></div>
+    <p id="avisoD"></p>
+    <div class="modal-actions"><button type="button" class="btn primary" id="avisoCfg">Abrir configurações</button><button type="button" class="btn ghost" id="avisoClose">Entendi</button></div>
+  </div>
+</div>
 <div class="modal-bg" id="cfgBg" style="display:none">
   <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="cfgT">
     <div class="card-head"><h2 id="cfgT">Configurações</h2></div>
     <div class="cfg-sec">
       <h3>Tipo de conta</h3>
-      <p>Usado nos extratos que você enviar. Você pode trocar quando quiser.</p>
+      <p>Só dá para enviar e abrir extratos deste tipo. Ao trocar, o site recarrega e volta ao início.</p>
       <label class="cfg-row"><input type="radio" name="cfgPerfil" value="pf"> Pessoa física</label>
       <label class="cfg-row"><input type="radio" name="cfgPerfil" value="empresa"> Empresa</label>
       <label class="cfg-row"><input type="radio" name="cfgPerfil" value="pme"> MEI / PME</label>
