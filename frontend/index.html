@@ -29,7 +29,6 @@
       <span>Tipo: <b id="modoName"></b></span>
       <button type="button" class="btn ghost btn-sm" id="modoTrocar">Trocar</button>
     </div>
-    <form class="sair-form" method="post" action="/sair"><button type="submit" class="btn ghost btn-sm">Sair</button></form>
     <button type="button" class="btn ghost btn-sm cfg-btn" id="cfgBtn" aria-haspopup="dialog" aria-controls="cfgBg" aria-label="Configurações" data-tip="Configurações"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
     </div>
   </header>
@@ -512,6 +511,11 @@
       <h3>Seus dados</h3>
       <p>Extratos, páginas, categorias e regras ficam salvos na sua conta, no servidor do painel.</p>
       <button type="button" class="btn" id="cfgClear">Apagar todos os meus dados</button>
+    </div>
+    <div class="cfg-sec">
+      <h3>Conta</h3>
+      <p>Sai da sua conta neste navegador. Seus dados continuam salvos.</p>
+      <form class="sair-form" method="post" action="/sair"><button type="submit" class="btn">Sair da conta</button></form>
     </div>
     <div class="modal-actions"><button type="button" class="btn primary" id="cfgClose">Fechar</button></div>
   </div>
