@@ -45,6 +45,7 @@ function renameCat(orig, name){
   Object.keys(state.overrides).forEach(function(k){ if (state.overrides[k]===orig) state.overrides[k] = name; });
   if (state.cat===orig) state.cat = name;
   if (state.fcat===orig) state.fcat = name;
+  if (state.dashCats) state.dashCats = state.dashCats.map(function(c){ return c===orig ? name : c; });
 }
 function parseKws(txt){ return String(txt||'').split(',').map(function(k){ return norm(k).trim(); }).filter(function(k){ return k.length>=2; }); }
 
@@ -159,7 +160,7 @@ function doServidor(l){
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
   state.raw = list; state.savedId = null; state.loaded = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
-  state.editLanc = false; state.txPor = 10;
+  state.editLanc = false; state.txPor = 10; state.dashCats = null; state.dashDet = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
@@ -785,29 +786,11 @@ var resRange = 'ult12';
 /* Textos do dashboard que mudam conforme o tipo de conta. */
 var TEXTOS = {
   pf: {
-    pilulaPos:'Sobrou dinheiro', pilulaNeg:'Faltou dinheiro',
-    margemTitulo:'Quanto sobra', margemMais:'Quanto sobrou em cada mês',
-    margemNota:'É o resultado dividido pelas entradas. Quanto maior, mais folga no orçamento para imprevistos.',
-    fixosTitulo:'Contas fixas por mês', fixosTituloSemana:'Contas fixas na semana', fixosMais:'O que forma as contas fixas',
-    fixosCardNota:function(n){ return 'Equivalem a cerca de '+n+' dias de renda. Reduzir uma conta fixa melhora o resultado de todos os meses seguintes.'; },
-    fixvarTitulo:'Contas fixas e gastos do dia a dia', fixosRotulo:'Contas fixas', varRotulo:'Gastos do dia a dia',
-    fixosDesc:'Pagas todo mês, mesmo sem usar', varDesc:'Mudam conforme o seu consumo',
-    fixosNota:'São pagas todo mês, mesmo sem usar.',
-    varNota:'Mudam conforme o seu consumo. Compare com a sua renda para ver se estão crescendo no mesmo ritmo.',
     diasEntradas:function(n, fixedM){ return 'Suas contas fixas ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de renda. Ou seja, o salário dos primeiros '+n+' dias do mês vai só para as contas fixas.'; },
     caixaTitulo:'Saldo acumulado',
     mostraDiaSemana:false, negocio:false
   },
   empresa: {
-    pilulaPos:'Lucro no período', pilulaNeg:'Prejuízo no período',
-    margemTitulo:'Margem', margemMais:'Margem de cada mês',
-    margemNota:'Margem = resultado dividido pelas entradas. Quanto maior, mais folga no caixa para imprevistos.',
-    fixosTitulo:'Custos fixos por mês', fixosTituloSemana:'Custos fixos na semana', fixosMais:'O que forma os custos fixos',
-    fixosCardNota:function(n){ return 'Equivalem a cerca de '+n+' dias de entradas. Reduzir um custo fixo melhora o resultado de todos os meses seguintes.'; },
-    fixvarTitulo:'Custos fixos e variáveis', fixosRotulo:'Custos fixos', varRotulo:'Custos variáveis',
-    fixosDesc:'Pagos todo mês, vendendo ou não', varDesc:'Acompanham o movimento',
-    fixosNota:'São pagos todo mês, com ou sem movimento. É o mínimo que o negócio precisa faturar.',
-    varNota:'Sobem e descem com o movimento. Compare com as entradas para ver se estão crescendo no mesmo ritmo.',
     diasEntradas:function(n, fixedM){ return 'Os custos fixos ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de entradas. Ou seja, o que entra nos primeiros '+n+' dias do mês serve só para pagar os custos fixos.'; },
     caixaTitulo:'Caixa acumulado',
     mostraDiaSemana:true, negocio:true
@@ -817,6 +800,9 @@ function textos(){ return TEXTOS[curPerfil()]; }
 
 function renderDashboard(){
   var X = textos();
+  /* despesas analisadas (null = todas). Não muda veredito, números, ações, saldo nem projeção */
+  var sel = state.dashCats;
+  function noFiltro(t){ return !sel || sel.indexOf(catOf(t))!==-1; }
   var tx = cur(); if (!tx.length) tx = state.tx; if (!tx.length) return;
   var isWeek = state.p.w!=='all';
   var first = tx[0].date, last = tx[tx.length-1].date;
@@ -836,13 +822,12 @@ function renderDashboard(){
   }
   var months = groupMonths(tx), allMonths = groupMonths(state.tx);
   var nM = months.length;
-  var T = sums(tx), res = T.ins - T.outs, margin = T.ins ? res/T.ins : 0;
+  var T = sums(tx), res = T.ins - T.outs;
 
   /* fixos e variáveis */
   var fixed = 0, byCat = {};
   tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
   var variable = T.outs - fixed, fixedM = fixed/nM, varM = variable/nM;
-  var fees = byCat[feesName()] || 0;
 
   /* dias */
   var nDays = Math.round((last-first)/864e5)+1;
@@ -851,7 +836,7 @@ function renderDashboard(){
   var domOut = []; for (var j=0;j<31;j++) domOut.push(0);
   tx.forEach(function(t){
     if (ehEntrada(t)) dowIns[(t.date.getDay()+6)%7] += t.value;
-    else domOut[t.date.getDate()-1] -= t.value;
+    else if (noFiltro(t)) domOut[t.date.getDate()-1] -= t.value;
   });
   var dowAvg = dowIns.map(function(v,i){ return dowCount[i] ? v/dowCount[i] : 0; });
   var domAvg = domOut.map(function(v){ return v/nM; });
@@ -873,12 +858,9 @@ function renderDashboard(){
     var mkk = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
     (monthTx[mkk] = monthTx[mkk] || []).push(t);
     var dk = isoD(t.date); (dayTx[dk] = dayTx[dk] || []).push(t);
-    if (ehEntrada(t)) dowTx[(t.date.getDay()+6)%7].push(t); else domTx[t.date.getDate()-1].push(t);
+    if (ehEntrada(t)) dowTx[(t.date.getDay()+6)%7].push(t); else if (noFiltro(t)) domTx[t.date.getDate()-1].push(t);
   });
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
-  var feeTx = tx.filter(function(t){ return ehSaida(t) && catOf(t)===feesName(); });
-  /* a categoria com mais saídas, sem contar "Outros" (cartão "Onde mais gasta") */
-  var topCat = Object.keys(byCat).filter(function(c){ return c!==OTHER; }).sort(function(a,b){ return byCat[b]-byCat[a]; })[0] || null;
 
   /* contexto para as contas do dashboard (js/analise.js) */
   var ctx = { perfil:curPerfil(), escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
@@ -918,7 +900,35 @@ function renderDashboard(){
       (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
   }).join('') : '<p class="acoes-vazio'+(isWeek?' neutro':'')+'">'+esc(ac.vazio)+'</p>';
 
-  /* gráfico: resultado por mês */
+  /* Parte 3: para onde vai o dinheiro */
+  var bar = Analise.barras(ctx, sel);
+  var nTodas = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).length;
+  var maxV = bar.linhas.reduce(function(m,l){ return Math.max(m, l.mes); }, 0);
+  $('dBarras').innerHTML = bar.linhas.length ? bar.linhas.map(function(l){
+    return '<li class="barra'+(l.outros?' outros':'')+(l.negativo?' neg':'')+'" data-cat="'+esc(l.nome)+'" role="link" tabindex="0" title="Ver os lançamentos de '+esc(l.nome)+'">'+
+      '<span class="bn">'+esc(l.nome)+(l.fixa?'<span class="tag-fixa">fixa</span>':'')+
+        (l.seta==='sobe'?'<span class="seta-sobe" title="Subiu no último mês">↑</span>':l.seta==='desce'?'<span class="seta-desce" title="Caiu no último mês">↓</span>':'')+'</span>'+
+      '<span class="bt"><i style="width:'+(l.negativo || maxV<=0 ? 0 : Math.max(1, l.mes/maxV*100)).toFixed(1)+'%"></i></span>'+
+      '<span class="bv"><span class="num">'+brl.format(l.mes)+(nM>1?'/mês':'')+'</span><small>'+pct.format(Math.max(0,l.pct))+'</small>'+
+        (l.outros?' <a href="#categorias" data-classificar="1">classificar →</a>':'')+'</span></li>';
+  }).join('') : '<li class="barras-vazio">Nenhuma saída neste período.</li>';
+  var fixAn = bar.linhas.filter(function(l){ return l.fixa; }).reduce(function(s2,l){ return s2+l.mes*nM; }, 0);
+  $('dFixLinha').textContent = fixAn>0 ? (X.negocio ? 'Custos fixos: ' : 'Contas fixas: ')+brl.format(fixAn/nM)+(nM>1?' por mês':'')+', '+pct.format(bar.total>0 ? fixAn/bar.total : 0)+' das saídas'+(sel?' analisadas':'')+'.' : '';
+  var aviso = $('dFiltroAviso');
+  aviso.hidden = !sel;
+  if (sel) aviso.innerHTML = 'Analisando '+bar.linhas.length+' de '+nTodas+' categorias: '+brl.format(bar.total/nM)+(nM>1?'/mês':'')+', '+pct.format(T.outs ? bar.total/T.outs : 0)+' das saídas · <button type="button" data-atalho="todas">Mostrar todas</button>';
+  $('dFiltroBtn').textContent = (sel ? bar.linhas.length+' de '+nTodas+' categorias' : 'Todas as despesas ('+nTodas+')')+' ▾';
+  var ordem = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).sort(function(a,b){
+    if (a===OTHER) return 1; if (b===OTHER) return -1; return byCat[b]-byCat[a]; });
+  var marcadas = ordem.filter(function(c){ return !sel || sel.indexOf(c)!==-1; });
+  $('dFiltroLista').innerHTML = ordem.map(function(c){
+    var on = !sel || sel.indexOf(c)!==-1, trava = on && marcadas.length===1;
+    return '<li><label><input type="checkbox" value="'+esc(c)+'"'+(on?' checked':'')+(trava?' disabled title="Deixe pelo menos uma categoria marcada"':'')+'> '+esc(c)+
+      '<span class="num">'+brl.format(byCat[c]/nM)+(nM>1?'/mês':'')+'</span></label></li>';
+  }).join('');
+  $('dDet').open = !!state.dashDet;
+
+  /* gráfico: resultado por mês (ou gastos das categorias escolhidas) */
   var rSel = $('rPeriod'), yrs = [];
   months.forEach(function(o){ if (yrs.indexOf(o.y)===-1) yrs.push(o.y); });
   var rOpts = [['ult6','Últimos 6 meses'],['ult12','Últimos 12 meses'],['all','Todos os meses']].concat(yrs.map(function(y){ return ['y:'+y, 'Ano de '+y]; }));
@@ -932,12 +942,24 @@ function renderDashboard(){
   else if (resRange==='ult12') chartM = months.slice(-12);
   else if (resRange.indexOf('y:')===0) chartM = months.filter(function(o){ return 'y:'+o.y===resRange; });
   if (!chartM.length) chartM = months;
+  if (sel){
+    var selNomes = sel.filter(function(c){ return byCat[c]; });
+    $('dResT').textContent = selNomes.length<=2 ? 'Gastos com '+selNomes.join(' e ')+', mês a mês' : 'Gastos com as '+selNomes.length+' categorias escolhidas, mês a mês';
+    $('dResH').textContent = 'Soma das categorias escolhidas';
+    $('dRes').innerHTML = barSVG(chartM.map(function(o){
+      var v = sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0);
+      return {label:o.label, v:v, fill:'var(--accent)', tip:'<b>'+esc(o.name)+'</b><br>Gastos: '+brl.format(v),
+        more: moreHTML('Neste mês', sel.filter(function(c){ return o.cat[c]; }).sort(function(a,b){ return o.cat[b]-o.cat[a]; }).map(function(c){ return [c, brl.format(o.cat[c])]; }), '')};
+    }), {valueLabels: chartM.length<=8, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, big:true, aria:$('dResT').textContent});
+  } else {
+  $('dResT').textContent = 'Resultado por mês'; $('dResH').textContent = 'Entradas menos saídas';
   $('dRes').innerHTML = barSVG(chartM.map(function(o){
     return {label:o.label, v:o.res, fill: o.res>=0 ? 'var(--good)' : 'var(--bad)',
       tip:'<b>'+esc(o.name)+'</b><br>Entradas: '+brl.format(o.ins)+'<br>Saídas: '+brl.format(o.outs)+'<br>Resultado: '+brl.format(o.res)+'<br>Margem: '+pct.format(o.ins?o.res/o.ins:0),
       more: moreHTML('Maiores saídas do mês', Object.keys(o.cat).sort(function(a,b){return o.cat[b]-o.cat[a];}).slice(0,4).map(function(c){return [c, brl.format(o.cat[c])];}),
         nM>1 ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
   }), {valueLabels: chartM.length<=8, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, big:true, aria:'Resultado por mês'});
+  }
 
   /* caixa acumulado */
   var byDay = {}; tx.forEach(function(t){ var kk = isoD(t.date); byDay[kk] = (byDay[kk]||0) + t.value; });
@@ -991,7 +1013,7 @@ function renderDashboard(){
     var A = cmpA, B = cmpB;
     $('dChgA').textContent = A.label; $('dChgB').textContent = B.label;
     $('dChgHint').textContent = 'Comparando '+A.name+' com '+B.name;
-    var cs = {}; Object.keys(A.cat).concat(Object.keys(B.cat)).forEach(function(c){ cs[c]=1; });
+    var cs = {}; Object.keys(A.cat).concat(Object.keys(B.cat)).forEach(function(c){ if (!sel || sel.indexOf(c)!==-1) cs[c]=1; });
     chg = Object.keys(cs).map(function(c){ var a = A.cat[c]||0, b = B.cat[c]||0; return {c:c, a:a, b:b, d:b-a, p: a ? (b-a)/a : null}; })
       .sort(function(x,y){ return Math.abs(y.d)-Math.abs(x.d); }).slice(0,6);
     $('dChg').innerHTML = chg.map(function(r){
@@ -1021,24 +1043,14 @@ function renderDashboard(){
     '<div class="kpi hoverable" data-tip="<b>Saídas esperadas</b>" data-more="'+projBase('outs','Saídas dos meses usados')+'"><span class="label">Saídas esperadas</span><span class="value num">'+brl.format(pOut)+'</span></div>'+
     '<div class="kpi hoverable" data-tip="<b>Resultado esperado</b>" data-more="'+projBase('res','Resultado dos meses usados')+'"><span class="label">Resultado esperado</span><span class="value num">'+brl.format(pRes)+'</span><span class="pill '+(pRes>=0?'pos':'neg')+'">'+(pRes>=0?'Deve sobrar dinheiro':'Atenção: deve faltar dinheiro')+'</span></div>';
 
-  /* conclusões */
+  /* outras informações (o que virou veredito ou ação já aparece no topo) */
   var L = [];
-  L.push({w: margin<0.05, t:'De cada R$ 100 que entram, '+(margin>=0?'sobram ':'faltam ')+brl.format(Math.abs(margin*100))+'. '+(margin<0.05?'É uma margem apertada: qualquer imprevisto pode virar prejuízo.':'')});
-  if (dailyIns>0 && !isWeek) { var dd2 = fixedM/dailyIns; L.push({w:false, t:X.diasEntradas(Math.round(dd2), fixedM)}); }
-  if (!isWeek) L.push({w:true, t:'As saídas se concentram nos dias '+top3.map(function(i){return i+1;}).sort(function(a,b){return a-b;}).join(', ').replace(/, (\d+)$/,' e $1')+': juntos, somam em média '+brl.format(top3sum)+' por mês ('+pct.format(T.outs?top3sum/(T.outs/nM):0)+' das saídas). Deixe dinheiro reservado para essas datas.'});
-  if (X.negocio && dowAvg[bestD]>0) L.push({w:false, t:DOW[bestD]+' é o dia em que mais entra dinheiro na conta (média de '+brl.format(dowAvg[bestD])+')'+(dowAvg[worstD]>0 ? ', e '+DOW[worstD].toLowerCase()+' é o mais fraco ('+brl.format(dowAvg[worstD])+').' : ', e '+DOW[worstD].toLowerCase()+' não tem entradas.')+' Lembre que repasses de cartão e aplicativos costumam cair dias depois da venda.'});
   if (nM>=2){
     var best = months.slice().sort(function(a,b){return b.res-a.res;})[0], worst = months.slice().sort(function(a,b){return a.res-b.res;})[0];
     L.push({w:false, t:'O melhor mês foi '+best.name+' (resultado de '+brl.format(best.res)+') e o mais fraco, '+worst.name+' ('+brl.format(worst.res)+').'});
   }
-  var rise = chg.filter(function(r){return r.d>0 && r.p!==null && r.p>0.1;})[0];
-  if (rise) L.push({w:true, t:'A categoria '+rise.c+' subiu '+pct.format(rise.p)+' em '+cmpB.name+' ('+brl.format(rise.d)+' a mais que em '+cmpA.name+'). Vale entender o motivo antes que vire o novo normal.'});
-  if (X.negocio && T.ins && fees/T.ins>0.03) L.push({w:true, t:'Taxas de cartão, antecipação e aplicativos levam '+pct.format(fees/T.ins)+' de tudo o que entra ('+brl.format(fees/nM)+' por mês). Negociar a taxa da maquininha é dinheiro direto no resultado.'});
-  if (!X.negocio && !isWeek){  /* valores por mês e por ano não fazem sentido numa semana só */
-    var deliv = byCat[catByCode('delivery')] || 0, tarif = byCat[catByCode('tarifas')] || 0;
-    if (T.outs && deliv/T.outs>0.10) L.push({w:true, t:'Delivery levou '+brl.format(deliv/nM)+' por mês ('+pct.format(deliv/T.outs)+' dos gastos). Cozinhar mais vezes por semana é uma das economias mais rápidas.'});
-    if (tarif>0) L.push({w:false, t:'Você pagou '+brl.format(tarif/nM*12)+' por ano em tarifas do banco. Muitas contas digitais não cobram tarifa.'});
-  }
+  if (!isWeek && top3sum>0) L.push({w:false, t:'As saídas'+(sel?' analisadas':'')+' se concentram nos dias '+top3.map(function(i){return i+1;}).sort(function(a,b){return a-b;}).join(', ').replace(/, (\d+)$/,' e $1')+': juntos, somam em média '+brl.format(top3sum)+' por mês ('+pct.format(T.outs?top3sum/(T.outs/nM):0)+' das saídas). Deixe dinheiro reservado para essas datas.'});
+  if (dailyIns>0 && !isWeek) { var dd2 = fixedM/dailyIns; L.push({w:false, t:X.diasEntradas(Math.round(dd2), fixedM)}); }
   $('dIns').innerHTML = L.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
 }
 
@@ -2179,6 +2191,44 @@ document.addEventListener('mousemove', function(e){
 });
 document.addEventListener('mouseleave', hideTip);
 window.addEventListener('scroll', hideTip, true);
+
+/* ---------- dashboard: filtro de despesas, barras e detalhes ---------- */
+function abrirFiltro(abrir){
+  $('dFiltro').hidden = !abrir; $('dFiltroBtn').setAttribute('aria-expanded', abrir ? 'true' : 'false');
+}
+$('dFiltroBtn').addEventListener('click', function(e){ e.stopPropagation(); abrirFiltro($('dFiltro').hidden); });
+document.addEventListener('click', function(e){ if (!$('dFiltro').hidden && !e.target.closest('.filtro-wrap')) abrirFiltro(false); });
+document.addEventListener('keydown', function(e){ if (e.key==='Escape' && !$('dFiltro').hidden){ abrirFiltro(false); $('dFiltroBtn').focus(); } });
+$('dOnde').addEventListener('click', function(e){
+  var at = e.target.closest('[data-atalho]');
+  if (at){
+    var tx = cur(), byCat = {};
+    tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; } });
+    state.dashCats = Analise.atalho(at.dataset.atalho, {byCat:byCat, fixas:FIXED, outros:OTHER});
+    renderDashboard(); return;
+  }
+  if (e.target.closest('[data-classificar]')) return;  /* o link segue para a aba Organizar */
+  var b = e.target.closest('.barra');
+  if (b) abrirLancamentos(b.dataset.cat);
+});
+$('dOnde').addEventListener('keydown', function(e){
+  var b = e.target.closest('.barra');
+  if (b && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); abrirLancamentos(b.dataset.cat); }
+});
+$('dFiltroLista').addEventListener('change', function(){
+  var todas = [], marcadas = [];
+  $('dFiltroLista').querySelectorAll('input[type=checkbox]').forEach(function(c){ todas.push(c.value); if (c.checked) marcadas.push(c.value); });
+  state.dashCats = marcadas.length===todas.length ? null : marcadas;
+  renderDashboard();
+});
+$('dDet').addEventListener('toggle', function(){ state.dashDet = $('dDet').open; });
+/* clicar numa barra: abre a aba Lançamentos já filtrada naquela categoria */
+function abrirLancamentos(cat){
+  state.fcat = cat; state.filter = 'out';
+  document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
+  renderTable();
+  location.hash = 'lancamentos';
+}
 
 /* ---------- inicialização: busca tudo no servidor ---------- */
 state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};

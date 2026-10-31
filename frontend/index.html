@@ -229,14 +229,37 @@
       <div class="acoes" id="dAcoes"></div>
     </section>
 
+    <section class="card" id="dOnde" aria-labelledby="dOndeT">
+      <div class="card-head"><h2 id="dOndeT">Para onde vai o dinheiro</h2>
+        <div class="filtro-wrap">
+          <button type="button" class="btn btn-sm" id="dFiltroBtn" aria-expanded="false" aria-controls="dFiltro">Todas as despesas ▾</button>
+          <div class="filtro-painel" id="dFiltro" role="group" aria-label="Despesas analisadas" hidden>
+            <div class="filtro-atalhos">
+              <button type="button" class="btn btn-sm" data-atalho="todas">Todas</button>
+              <button type="button" class="btn btn-sm" data-atalho="top3">Só as 3 maiores</button>
+              <button type="button" class="btn btn-sm" data-atalho="top5">Só as 5 maiores</button>
+              <button type="button" class="btn btn-sm" data-atalho="semFixas">Tirar as contas fixas</button>
+            </div>
+            <ul class="filtro-lista" id="dFiltroLista"></ul>
+          </div>
+        </div>
+      </div>
+      <p class="filtro-aviso" id="dFiltroAviso" hidden></p>
+      <p class="hint" id="dFixLinha"></p>
+      <ul class="barras" id="dBarras"></ul>
+    </section>
+
     <section class="grid2">
       <div class="card">
-        <div class="card-head"><h2>Resultado por mês</h2><span class="hint">Entradas menos saídas</span></div>
+        <div class="card-head"><h2 id="dResT">Resultado por mês</h2><span class="hint" id="dResH">Entradas menos saídas</span></div>
         <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
         <div class="chart-box" id="dRes"></div>
       </div>
     </section>
 
+    <details class="det" id="dDet">
+      <summary>Ver mais detalhes</summary>
+      <div class="det-corpo">
     <section class="card">
       <div class="card-head"><h2 id="dCumT">Caixa acumulado</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
       <div class="chart-box" id="dCum"></div>
@@ -271,9 +294,11 @@
     </section>
 
     <section class="card" aria-labelledby="dInsT">
-      <div class="card-head"><h2 id="dInsT">Principais conclusões</h2><span class="hint" id="dSpan"></span></div>
+      <div class="card-head"><h2 id="dInsT">Outras informações</h2><span class="hint" id="dSpan"></span></div>
       <ul class="insights scrolly" id="dIns"></ul>
     </section>
+      </div>
+    </details>
     </div>
   </div>
 
