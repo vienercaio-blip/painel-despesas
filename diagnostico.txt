@@ -1,0 +1,28 @@
+=== diagnostico 30/10/2026 13:39:57,98 === 
+--- python --- 
+Python 3.15.2
+--- bibliotecas --- 
+Package      Version
+------------ -------
+blinker      1.9.0
+click        8.5.0
+colorama     0.4.6
+et_xmlfile   2.0.0
+Flask        3.1.3
+iniconfig    2.3.1
+itsdangerous 2.2.0
+Jinja2       3.1.6
+MarkupSafe   3.0.4
+openpyxl     3.1.5
+packaging    26.3
+pip          26.2.2
+pluggy       1.7.0
+Pygments     2.21.0
+pytest       9.2.0
+Werkzeug     3.1.9
+--- carregar o app --- 
+APP OK C:\Users\CAIO\Desktop\dados_site\backend\dados\painel.db
+--- comando flask --- 
+'C:\Users\CAIO\Desktop\dados_site\backend\.venv\Scripts\flask.exe' foi bloqueado pela pol¡tica do Device Guard da sua organiza‡Æo.
+Entre em contato com o respons vel pelo suporte para obter mais informa‡äes.
+--- fim --- 

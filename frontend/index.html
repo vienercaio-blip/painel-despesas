@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel de Despesas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="14" cy="14" rx="8" ry="11" transform="rotate(30 14 14)"></ellipse><path d="M9 21 C 13 16, 15 12, 19 7"></path></svg>
+      Grão de Dados
+    </div>
+    <div class="top-right">
+    <div class="user-area"><span>Olá, <b id="userName"></b></span><form method="post" action="/sair"><button type="submit" class="btn ghost btn-sm">Sair</button></form></div>
+    <button type="button" class="btn ghost btn-sm cfg-btn" id="cfgBtn" aria-haspopup="dialog" aria-controls="cfgBg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span>Configurações</span></button>
+    <nav class="tabs" aria-label="Seções">
+      <a class="tab" href="#inicio" data-view="inicio">Início</a>
+      <a class="tab dash-tab" href="#dashboard" data-view="dashboard" hidden>Dashboard</a>
+      <a class="tab dash-tab" href="#despesas" data-view="despesas" hidden>Despesas</a>
+      <a class="tab dash-tab" href="#categorias" data-view="categorias" hidden>Categorias</a>
+      <a class="tab dash-tab" href="#lancamentos" data-view="lancamentos" hidden>Lançamentos</a>
+    </nav>
+    <div class="modo-top" id="modoTop" hidden>
+      <span>Tipo: <b id="modoName"></b></span>
+      <button type="button" class="btn ghost btn-sm" id="modoTrocar">Trocar</button>
+    </div>
+    </div>
+  </header>
+
+  <div class="view" id="viewEnviar" hidden>
+    <div class="up-head">
+      <h1 id="upTitle">Início</h1>
+      <p id="upDesc">O que você quer analisar?</p>
+    </div>
+
+    <div class="choices" id="modoSel" role="group" aria-label="Escolha o tipo de dado">
+      <button type="button" class="choice modo-card" data-modo="despesas"><span class="ct">Despesas</span><span class="cd">Extratos bancários: despesas, entradas e saídas por categoria</span></button>
+      <button type="button" class="choice modo-card" data-modo="vendas"><span class="ct">Vendas</span><span class="cd">Planilha de vendas: faturamento, produtos, horários e pagamentos</span></button>
+    </div>
+
+    <div id="modeArea" hidden>
+
+    <div class="choices" role="group" aria-label="O que você quer fazer">
+      <button type="button" class="choice" data-panel="novo" aria-pressed="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
+        <span class="ct" id="ctNovo">Enviar novo extrato</span>
+        <span class="cd" id="cdNovo">OFX ou CSV, um ou vários arquivos</span>
+      </button>
+      <button type="button" class="choice" data-panel="salvos" aria-pressed="false">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M8 13h8"></path></svg>
+        <span class="ct" id="ctSalvos">Extratos salvos</span>
+        <span class="cd" id="savedCount">Nenhum extrato salvo ainda</span>
+      </button>
+    </div>
+
+    <div class="up-layout" id="panelNovo">
+      <div class="up-main">
+        <fieldset class="perfil-choice"><legend>Esse extrato é de:</legend>
+          <label><input type="radio" name="perfilUp" value="pf" checked> Pessoa física</label>
+          <label><input type="radio" name="perfilUp" value="empresa"> Empresa</label>
+          <label><input type="radio" name="perfilUp" value="pme"> MEI / PME</label>
+        </fieldset>
+        <div class="drop drop-big" id="drop">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
+          <h2>Arraste o extrato para cá</h2>
+          <p>ou escolha o arquivo no computador ou no celular</p>
+          <div class="drop-actions">
+            <label class="btn primary" for="file">Escolher arquivos</label>
+            <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,text/csv" multiple>
+          </div>
+          <div class="save-row">
+            <label class="check" for="saveMode"><input type="checkbox" id="saveMode" checked> Salvar para acessar depois</label>
+            <label class="save-page" for="savePage">na página <select id="savePage"></select></label>
+          </div>
+        </div>
+
+        <div id="msg" class="msg" role="status" hidden></div>
+
+        <section class="card" id="upResult" hidden aria-labelledby="upResTitle">
+          <div class="card-head"><h2 id="upResTitle">Extrato pronto</h2></div>
+          <ul class="up-files scrolly" id="upFiles"></ul>
+          <p class="up-sum" id="upSum"></p>
+          <div class="drop-actions">
+            <a class="btn primary" href="#dashboard">Ver dashboard</a>
+            <a class="btn" href="#despesas">Ver despesas</a>
+            <a class="btn" href="#categorias">Ver categorias</a>
+          </div>
+        </section>
+
+        <p class="privacy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+          O arquivo é enviado com segurança para o servidor do painel, que lê os lançamentos. Se a opção "Salvar para acessar depois" estiver desmarcada, o extrato não fica guardado.
+        </p>
+      </div>
+
+      <aside class="up-side">
+        <section class="card" aria-labelledby="howTitle">
+          <h2 id="howTitle" style="font-size:18px">Como exportar do seu banco</h2>
+          <ol class="steps">
+            <li>Entre no internet banking ou no aplicativo do banco, na conta que você quer analisar (pessoal ou da empresa).</li>
+            <li>Abra o <b>extrato</b> e escolha o período (um mês ou vários).</li>
+            <li>Procure a opção <b>exportar</b>, <b>salvar</b> ou <b>baixar</b> e escolha o formato <b>OFX</b> ou <b>CSV</b>. Alguns bancos chamam o OFX de "Money".</li>
+            <li>Volte aqui e envie o arquivo baixado.</li>
+          </ol>
+        </section>
+        <section class="card" aria-labelledby="fmtTitle">
+          <h2 id="fmtTitle" style="font-size:18px">Formatos</h2>
+          <ul class="fmts">
+            <li><span class="fmt ok">OFX</span><span>Aceito. É o formato mais confiável.</span></li>
+            <li><span class="fmt ok">CSV</span><span>Aceito, com colunas de data, descrição e valor.</span></li>
+            <li><span class="fmt ok">Excel</span><span>Aceito (.xlsx, .xls, .ods). Cada aba com cabeçalho na primeira linha.</span></li>
+            <li><span class="fmt no">PDF</span><span>Ainda não aceito. Exporte em OFX ou CSV.</span></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <div class="up-layout" id="panelVendas" hidden>
+      <div class="up-main">
+        <div class="drop drop-big">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
+          <h2>Envie a planilha de vendas</h2>
+          <p>CSV separado por ponto e vírgula, com as colunas do modelo</p>
+          <div class="drop-actions">
+            <button type="button" class="btn" id="sTpl">Baixar planilha modelo</button>
+            <label class="btn primary" for="sFile">Enviar planilha de vendas</label>
+            <input type="file" id="sFile" accept=".csv,.txt,.xlsx,.xls,.ods,text/csv">
+          </div>
+          <div class="save-row">
+            <label class="check" for="sSave"><input type="checkbox" id="sSave" checked> Salvar para acessar depois</label>
+            <label class="save-page" for="sSavePage">na página <select id="sSavePage"></select></label>
+          </div>
+        </div>
+
+        <div id="sMsg" class="msg" role="status" hidden></div>
+
+        <section class="card" id="sResult" hidden aria-labelledby="sResT">
+          <div class="card-head"><h2 id="sResT">Planilha pronta</h2></div>
+          <p class="up-sum" id="sSum"></p>
+          <div class="drop-actions"><a class="btn primary" href="#dashboard">Ver análise de vendas</a></div>
+        </section>
+
+        <p class="privacy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+          A planilha é lida no seu navegador. Se você marcar "Salvar", ela fica guardada na sua conta.
+        </p>
+      </div>
+
+      <aside class="up-side">
+        <section class="card" aria-labelledby="colsTitle">
+          <h2 id="colsTitle" style="font-size:18px">Colunas da planilha</h2>
+          <ul class="fmts">
+            <li><span class="fmt ok">Data</span><span>Obrigatória. Ex.: 03/08/2026</span></li>
+            <li><span class="fmt ok">Produto</span><span>Obrigatório.</span></li>
+            <li><span class="fmt ok">Valor</span><span>Valor total ou valor unitário, com quantidade.</span></li>
+            <li><span class="fmt mid">Hora</span><span>Opcional. Permite ver horários de pico.</span></li>
+            <li><span class="fmt mid">Categoria</span><span>Opcional. Agrupa os produtos.</span></li>
+            <li><span class="fmt mid">Pagamento</span><span>Opcional. Pix, cartão, dinheiro etc.</span></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <section class="card" id="panelSalvos" hidden aria-labelledby="svTitle">
+      <div class="card-head"><h2 id="svTitle">Extratos salvos</h2><span class="hint">Guardados na sua conta</span></div>
+      <div class="pg-layout">
+        <nav class="pg-nav" aria-labelledby="pgNavT">
+          <div class="pg-nav-head">
+            <h3 id="pgNavT">Páginas</h3>
+            <button type="button" class="btn btn-sm" id="newPageBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+              Nova página
+            </button>
+          </div>
+          <form class="inline-form" id="newPageForm" hidden novalidate>
+            <label for="newPageName">Nome da nova página</label>
+            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: 2026, Loja Centro">
+            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar página</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
+            <p class="form-err" id="newPageErr" role="alert" hidden></p>
+          </form>
+          <div class="pages-list" id="pagesBar" role="tablist" aria-orientation="vertical" aria-label="Escolha a página de extratos"></div>
+        </nav>
+        <div class="pg-main">
+          <div class="page-head" id="pageHead" hidden></div>
+          <div class="merge-start"><button type="button" class="btn btn-sm" id="mergeBtn">Mesclar extratos</button></div>
+          <div class="merge-bar" id="mergeBar" hidden>
+            <span id="mergeCount">Marque os extratos que quer mesclar (mínimo 2).</span>
+            <span class="sva"><button type="button" class="btn primary btn-sm" id="mergeGo" disabled>Continuar</button><button type="button" class="btn ghost btn-sm" id="mergeCancel">Cancelar</button></span>
+          </div>
+          <ul class="saved scrolly" id="savedList"></ul>
+          <p class="empty" id="savedEmpty">Nenhum extrato salvo ainda. Envie um extrato com a opção "Salvar para acessar depois" marcada e ele aparece aqui.</p>
+        </div>
+      </div>
+    </section>
+    </div>
+  </div>
+
+  <section class="intro" id="introSec">
+    <div class="intro-text">
+      <span id="srcBadge" class="badge">Exemplo · dados fictícios</span>
+      <h1 id="pageTitle">Para onde vai o seu dinheiro</h1>
+      <p id="srcText"></p>
+    </div>
+  </section>
+
+  <section class="card period" id="periodSec" aria-labelledby="pTitle">
+    <div class="period-row">
+      <h2 id="pTitle">Período</h2>
+      <div class="field"><label for="pY">Ano</label><select id="pY"></select></div>
+      <div class="field"><label for="pM">Mês</label><select id="pM"></select></div>
+      <div class="field"><label for="pW">Semana</label><select id="pW"></select></div>
+      <button type="button" class="btn btn-sm" id="pClear">Ver todo o período</button>
+      <button type="button" class="btn btn-sm" id="pdfBtn">Exportar PDF</button>
+      <span class="hint p-sum" id="pSum"></span>
+    </div>
+    <div class="months-wrap"><div class="months" id="pMonths" role="group" aria-label="Resultado por mês"></div></div>
+  </section>
+
+  <div class="view" id="viewDash" hidden>
+    <div id="dashBank">
+    <section class="kpis" id="dKpis" aria-label="Indicadores do extrato"></section>
+
+    <section class="grid2">
+      <div class="card">
+        <div class="card-head"><h2>Resultado por mês</h2><span class="hint">Entradas menos saídas</span></div>
+        <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
+        <div class="chart-box" id="dRes"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Custos fixos e variáveis</h2><span class="hint">Média por mês</span></div>
+        <div id="dFix" class="fixvar"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Caixa acumulado</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
+      <div class="chart-box" id="dCum"></div>
+    </section>
+
+    <section class="grid2">
+      <div class="card">
+        <div class="card-head"><h2>Entradas por dia da semana</h2><span class="hint">Média do que entra na conta em cada dia</span></div>
+        <div class="chart-box" id="dWeek"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Saídas por dia do mês</h2><span class="hint">Média do que sai em cada dia</span></div>
+        <div class="chart-box" id="dDom"></div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="dChgT">
+      <div class="card-head"><h2 id="dChgT">Categorias que mais mudaram</h2><span class="hint" id="dChgHint"></span></div>
+      <div class="table-box scroll-table" id="dChgBox">
+        <table>
+          <thead><tr><th scope="col">Categoria</th><th scope="col" class="r" id="dChgA">Mês anterior</th><th scope="col" class="r" id="dChgB">Último mês</th><th scope="col" class="r">Variação</th></tr></thead>
+          <tbody id="dChg"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="dChgEmpty" hidden>Envie um extrato com pelo menos dois meses para comparar as categorias.</p>
+    </section>
+
+    <section class="card" aria-labelledby="dProjT">
+      <div class="card-head"><h2 id="dProjT">Projeção para o próximo mês</h2><span class="hint" id="dProjHint"></span></div>
+      <div class="kpis" id="dProj"></div>
+      <p class="foot">É uma estimativa simples, pela média dos últimos meses. Não considera datas especiais, reajustes ou gastos fora do comum.</p>
+    </section>
+
+    <section class="card" aria-labelledby="dInsT">
+      <div class="card-head"><h2 id="dInsT">Principais conclusões</h2><span class="hint" id="dSpan"></span></div>
+      <ul class="insights scrolly" id="dIns"></ul>
+    </section>
+    </div>
+  </div>
+
+  <div class="view" id="viewVendas" hidden>
+    <section class="card" aria-labelledby="sTitle">
+      <div class="card-head"><h2 id="sTitle">Análise de vendas</h2><span class="hint" id="sSpan"></span></div>
+      <div class="sales-actions"><button type="button" class="btn" id="sExp" disabled>Exportar análise (CSV)</button></div>
+    </section>
+      <section class="card period" id="sPeriod" aria-labelledby="sPT">
+        <div class="period-row">
+          <h2 id="sPT">Período</h2>
+          <div class="field"><label for="sY">Ano</label><select id="sY"></select></div>
+          <div class="field"><label for="sM">Mês</label><select id="sM"></select></div>
+          <div class="field"><label for="sW">Semana</label><select id="sW"></select></div>
+          <button type="button" class="btn btn-sm" id="sClearP">Ver todo o período</button>
+          <span class="hint p-sum" id="sPSum"></span>
+        </div>
+      </section>
+      <div id="sBody" hidden>
+        <section class="kpis" id="sKpis" aria-label="Resumo das vendas"></section>
+
+        <section class="card" aria-labelledby="sInsT">
+          <div class="card-head"><h2 id="sInsT">Principais conclusões sobre as vendas</h2></div>
+          <ul class="insights scrolly" id="sIns"></ul>
+        </section>
+
+        <section class="grid2">
+          <div class="card"><div class="card-head"><h2>Faturamento por mês</h2></div><div class="chart-box" id="sMonth"></div></div>
+          <div class="card"><div class="card-head"><h2>Faturamento por dia da semana</h2><span class="hint">Média por dia com venda</span></div><div id="sWeek"></div></div>
+        </section>
+
+        <section class="grid2">
+          <div class="card"><div class="card-head"><h2>Faturamento por horário</h2></div><div id="sHour" class="scrolly"></div></div>
+          <div class="card"><div class="card-head"><h2>Formas de pagamento</h2></div><div id="sPay"></div></div>
+        </section>
+
+        <section class="card" aria-labelledby="sProdT">
+          <div class="card-head"><h2 id="sProdT">Produtos mais vendidos</h2>
+            <div class="field"><label for="sTop">Mostrar</label>
+              <select id="sTop">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+                <option value="20">Top 20</option>
+                <option value="50">Top 50</option>
+                <option value="all">Todos</option>
+              </select>
+            </div>
+          </div>
+          <div class="stbl-wrap scroll-table"><table class="stbl" id="sProd"></table></div>
+        </section>
+
+        <section class="card" aria-labelledby="sCatT">
+          <div class="card-head"><h2 id="sCatT">Faturamento por categoria</h2></div>
+          <div id="sCat" class="scrolly"></div>
+        </section>
+      </div>
+  </div>
+
+  <div class="view" id="viewDespesas">
+  <section class="kpis" aria-label="Resumo do período">
+    <div class="kpi"><span class="label">Entradas</span><span class="value num" id="kIn">—</span><span class="sub" id="kInSub"></span></div>
+    <div class="kpi"><span class="label">Saídas</span><span class="value num" id="kOut">—</span><span class="sub" id="kOutSub"></span></div>
+    <div class="kpi"><span class="label">Resultado do período</span><span class="value num" id="kRes">—</span><span id="kResPill" class="pill"></span></div>
+    <div class="kpi"><span class="label">Maior despesa</span><span class="value" id="kTop" style="font-family:var(--font-display);font-size:22px">—</span><span class="sub" id="kTopSub"></span></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Despesas por categoria</h2><span class="hint" id="catHint"></span></div>
+      <ul class="cats scrolly" id="cats" style="max-height:240px"></ul>
+    </div>
+    <div class="card flow-card">
+      <div class="card-head"><h2 id="flowTitle">Entradas e saídas por semana</h2></div>
+      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Entradas</span><span><i class="sw" style="background:var(--s2)"></i>Saídas</span></div>
+      <div class="chart-box" id="flow"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="insTitle">
+    <div class="card-head"><h2 id="insTitle">O que os números mostram</h2></div>
+    <ul class="insights scrolly" id="insights"></ul>
+  </section>
+
+
+  </div>
+
+  <div class="view" id="viewLanc" hidden>
+  <section class="card" aria-labelledby="txTitle">
+    <div class="card-head"><h2 id="txTitle">Todos os lançamentos</h2><span class="hint">Para corrigir uma categoria, use a página <a href="#categorias">Categorias</a>.</span></div>
+    <div class="table-tools">
+      <div class="seg" role="group" aria-label="Filtrar lançamentos">
+        <button type="button" data-f="out" aria-pressed="true">Saídas</button>
+        <button type="button" data-f="in" aria-pressed="false">Entradas</button>
+        <button type="button" data-f="all" aria-pressed="false">Todos</button>
+      </div>
+      <div class="field" style="max-width:260px"><label for="fCat">Categoria</label><select id="fCat"></select></div>
+      <label class="search" style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input id="q" type="search" placeholder="Buscar descrição" aria-label="Buscar descrição" style="border:0;background:transparent;outline:none;min-width:0;flex:1;min-height:40px">
+      </label>
+    </div>
+    <div class="table-box scroll-table">
+      <table>
+        <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="foot" id="foot"></p>
+  </section>
+  </div>
+
+  <div class="view" id="viewCategorias" hidden>
+    <div class="cat-layout">
+      <nav class="card cat-list" aria-labelledby="catListTitle">
+        <h2 id="catListTitle">Categorias de despesa</h2>
+        <div id="catList" class="scrolly cat-scroll"></div>
+      </nav>
+      <div class="cat-detail">
+        <section class="card">
+          <div class="detail-head">
+            <h2 id="cdName">—</h2>
+            <div class="facts" id="cdFacts"></div>
+          </div>
+          <p class="rule-msg" id="ruleMsg" role="status" hidden></p>
+        </section>
+        <div class="subnav" role="tablist" aria-label="Seções da categoria">
+          <button type="button" role="tab" id="tabOrigem" data-sub="origem" aria-selected="true" aria-controls="subOrigem">De onde veio</button>
+          <button type="button" role="tab" id="tabLanc" data-sub="lanc" aria-selected="false" aria-controls="subLanc">Lançamentos desta categoria <span class="cnt" id="cntLanc"></span></button>
+          <button type="button" role="tab" id="tabNova" data-sub="nova" aria-selected="false" aria-controls="subNova">Criar categoria</button>
+          <button type="button" role="tab" id="tabRegras" data-sub="regras" aria-selected="false" aria-controls="subRegras">Suas regras <span class="cnt" id="cntRegras"></span></button>
+        </div>
+        <section class="card" id="subOrigem" role="tabpanel" aria-labelledby="tabOrigem">
+          <div class="card-head"><h2 id="orTitle">De onde veio</h2><span class="hint">Pagamentos agrupados pela descrição do extrato</span></div>
+          <ul class="origins scrolly" id="origins"></ul>
+        </section>
+        <section class="card" id="subLanc" role="tabpanel" aria-labelledby="tabLanc" hidden>
+          <div class="card-head"><h2 id="clTitle">Lançamentos desta categoria</h2><span class="hint">"Identificado por" mostra a palavra do extrato que definiu a categoria</span></div>
+          <div class="table-box scroll-table">
+            <table>
+              <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Identificado por</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
+              <tbody id="cdRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" id="subRegras" role="tabpanel" aria-labelledby="tabRegras" hidden>
+      <div class="card-head"><h2 id="rlTitle">Suas regras</h2><span class="hint">Valem para todos os extratos, inclusive os próximos</span></div>
+      <ul class="saved scrolly" id="rulesList"></ul>
+      <p class="empty" id="rulesEmpty">Você ainda não criou nenhuma regra. Mude a categoria de um lançamento com a opção "Lembrar para esta origem" e ela aparece aqui.</p>
+    </section>
+        <section class="card" id="subNova" role="tabpanel" aria-labelledby="tabNova" hidden>
+          <div class="card-head"><h2>Criar categoria</h2><span class="hint">Fica disponível em todos os extratos</span></div>
+          <div class="seg subseg" role="tablist" aria-label="Criar categoria">
+            <button type="button" role="tab" id="tabNcNew" data-nc="new" aria-selected="true" aria-controls="ncNew">Nova categoria</button>
+            <button type="button" role="tab" id="tabNcList" data-nc="list" aria-selected="false" aria-controls="ncList">Categorias criadas <span class="cnt" id="cntCustom"></span></button>
+          </div>
+          <div id="ncNew" role="tabpanel" aria-labelledby="tabNcNew">
+          <form id="ncForm" class="ncform" novalidate>
+            <div class="nfield">
+              <label for="ncName">Nome da categoria</label>
+              <input id="ncName" maxlength="40" autocomplete="off" placeholder="Ex.: Marketing, Entregas, Contabilidade">
+            </div>
+            <fieldset class="nfield">
+              <legend>Tipo de custo</legend>
+              <label class="radio"><input type="radio" name="ncType" id="ncTypeVar" value="variavel" checked> <span><b>Variável</b>, acompanha o movimento (ex.: entregas, embalagens)</span></label>
+              <label class="radio"><input type="radio" name="ncType" id="ncTypeFix" value="fixo"> <span><b>Fixo</b>, pago todo mês (ex.: contabilidade, sistema, seguro)</span></label>
+            </fieldset>
+            <div class="nfield">
+              <label for="ncKw">Palavras-chave <span class="opt">(opcional)</span></label>
+              <input id="ncKw" autocomplete="off" placeholder="Ex.: contabilidade, maria contab">
+              <span class="help">Separe por vírgula. Lançamentos cuja descrição tenha uma dessas palavras entram nesta categoria automaticamente, neste e nos próximos extratos.</span>
+              <span class="help preview" id="ncPreview" aria-live="polite"></span>
+            </div>
+            <p class="form-err" id="ncErr" role="alert" hidden></p>
+            <div><button type="submit" class="btn primary">Criar categoria</button></div>
+          </form>
+          </div>
+          <div id="ncList" role="tabpanel" aria-labelledby="tabNcList" hidden>
+            <label class="search cat-search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+              <input id="catQ" type="search" placeholder="Procurar categoria" aria-label="Procurar categoria" autocomplete="off">
+            </label>
+            <p class="foot" id="catQInfo" aria-live="polite"></p>
+            <ul class="saved scrolly" id="customList"></ul>
+            <p class="empty" id="customEmpty">Nenhuma categoria criada ainda. Use "Nova categoria" para criar a primeira.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="mergeBg" style="display:none">
+  <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="mgT">
+    <div class="card-head"><h2 id="mgT">Mesclar extratos</h2></div>
+    <div class="cfg-sec">
+      <h3>Extratos que serão mesclados</h3>
+      <p class="mg-info">Só entram extratos já salvos em Extratos salvos.</p>
+      <ul class="mg-list" id="mgList"></ul>
+      <div class="field"><label for="mgName">Nome do novo extrato</label><input type="text" id="mgName" maxlength="120"></div>
+    </div>
+    <div class="cfg-sec">
+      <div class="mg-warn" id="mgWarn" hidden>
+        <p id="mgWarnText"></p>
+              </div>
+      <fieldset class="perfil-choice" id="mgDelBox"><legend>Deseja excluir os extratos que foram mesclados?</legend>
+        <label><input type="radio" name="mgDel" value="nao" checked> Não, manter os originais</label>
+        <label><input type="radio" name="mgDel" value="sim"> Sim, excluir os originais</label>
+      </fieldset>
+    </div>
+    <p class="form-err" id="mgErr" role="alert" hidden></p>
+    <div class="modal-actions"><button type="button" class="btn primary" id="mgGo" disabled>Mesclar</button><button type="button" class="btn ghost" id="mgClose">Cancelar</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="cfgBg" style="display:none">
+  <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="cfgT">
+    <div class="card-head"><h2 id="cfgT">Configurações</h2></div>
+    <div class="cfg-sec">
+      <h3>Perfil ao enviar um extrato</h3>
+      <p>Qual perfil vem marcado quando você envia um extrato novo.</p>
+      <label class="cfg-row"><input type="radio" name="cfgPerfil" value="pf"> Pessoa física</label>
+      <label class="cfg-row"><input type="radio" name="cfgPerfil" value="empresa"> Empresa</label>
+      <label class="cfg-row"><input type="radio" name="cfgPerfil" value="pme"> MEI / PME</label>
+    </div>
+    <div class="cfg-sec">
+      <h3>Aparência e movimento</h3>
+      <label class="cfg-row"><input type="checkbox" id="cfgTexto"> Texto maior</label>
+      <label class="cfg-row"><input type="checkbox" id="cfgEsteira"> Faixa de meses se movendo sozinha</label>
+    </div>
+    <div class="cfg-sec">
+      <h3>Confirmações</h3>
+      <p id="cfgConf"></p>
+      <button type="button" class="btn" id="cfgConfBtn" data-askreset="1">Voltar a perguntar em todas</button>
+    </div>
+    <div class="cfg-sec">
+      <h3>Seus dados</h3>
+      <p>Extratos, páginas, categorias e regras ficam salvos na sua conta, no servidor do painel.</p>
+      <button type="button" class="btn" id="cfgClear">Apagar todos os meus dados</button>
+    </div>
+    <div class="modal-actions"><button type="button" class="btn primary" id="cfgClose">Fechar</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="askBg" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="askT" aria-describedby="askD">
+    <h2 id="askT">Manter esta mudança nos próximos extratos?</h2>
+    <p id="askD"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn primary" id="askYes">Sim, manter nos próximos extratos</button>
+      <button type="button" class="btn" id="askNo">Não, só neste extrato</button>
+      <button type="button" class="btn ghost" id="askCancel">Cancelar mudança</button>
+    </div>
+    <label class="check ask-skip ask-last" for="askSkip"><input type="checkbox" id="askSkip"> Não perguntar novamente <span class="badge-warn">Não recomendado</span></label>
+    <p class="warn-help" id="askSkipHelp" hidden></p>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<div id="tip" class="tip" hidden></div>
+
+<!-- leitor de Excel: usado só pela planilha de vendas (recurso em pausa) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/painel.js"></script>
+</body>
+</html>
