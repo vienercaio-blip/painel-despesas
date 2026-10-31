@@ -306,7 +306,7 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .perfil-choice legend{font-size:13px;font-weight:600;color:var(--ink-2);margin-right:8px;padding:0}
 .perfil-choice label{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
 [hidden]{display:none!important}
-.cfg-btn{white-space:nowrap;gap:6px}
+.cfg-btn{width:40px;min-width:40px;padding:0;justify-content:center}
 .cfg-modal{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto}
 .cfg-sec{padding:14px 0;border-top:1px solid var(--line)}
 .cfg-sec h3{margin:0 0 6px;font-size:15px}
@@ -415,6 +415,6 @@ td .in{color:var(--good);font-weight:500}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 
 /* usuário logado e botão Sair */
-.user-area{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-3)}
+.user-area{font-size:13px;color:var(--ink-3);margin-right:24px}
 .user-area b{color:var(--ink-2);font-weight:600}
-.user-area form{margin:0}
+.sair-form{margin:0}
