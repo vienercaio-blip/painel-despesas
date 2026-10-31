@@ -15,7 +15,8 @@ function curPerfil(){ return validPerfil(state.perfil); }
 function curRules(){ return PROFILES[curPerfil()].rules; }
 function baseFixed(){ return PROFILES[curPerfil()].fixed; }
 function bKey(i){ return curPerfil()+':'+i; }
-function chosenPerfil(){ var r = document.querySelector('input[name="perfilUp"]:checked'); return r ? r.value : 'pf'; }
+/* tipo de conta escolhido nas configurações (vale para os extratos enviados) */
+function chosenPerfil(){ return validPerfil(cfg.perfil); }
 function builtinDefs(){
   var ed = state.bEdits || {}, fx = baseFixed();
   return curRules().map(function(r,i){
@@ -1742,8 +1743,7 @@ $('rPeriod').addEventListener('change', function(){ resRange = this.value; rende
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
 function applyCfg(){
-  var r = document.querySelector('input[name="perfilUp"][value="'+validPerfil(cfg.perfil)+'"]');
-  if (r) r.checked = true;
+  $('perfilAtual').textContent = perfilLabel(chosenPerfil());
   document.documentElement.classList.toggle('texto-grande', !!cfg.textoGrande);
   document.documentElement.classList.toggle('sem-esteira', cfg.esteira===false);
 }
@@ -1758,6 +1758,10 @@ function openCfg(){
 }
 function closeCfg(){ $('cfgBg').style.display = 'none'; $('cfgBtn').focus(); }
 $('cfgBtn').addEventListener('click', openCfg);
+$('perfilTrocar').addEventListener('click', function(){
+  openCfg();
+  var r = document.querySelector('input[name="cfgPerfil"]:checked'); if (r) r.focus();
+});
 $('cfgClose').addEventListener('click', closeCfg);
 $('cfgBg').addEventListener('click', function(e){ if (e.target===$('cfgBg')) closeCfg(); });
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && $('cfgBg').style.display!=='none') closeCfg(); });
