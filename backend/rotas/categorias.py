@@ -70,14 +70,17 @@ def _buscar_categoria(banco, cat_id):
     return r
 
 
-def _nome_padrao_atual(banco, perfil, posicao):
-    ed = carregar_edicoes(banco, uid()).get(f"{perfil}:{posicao}")
-    return (ed and ed["nome"]) or PERFIS[perfil]["regras"][posicao][0]
+def _regra_padrao(perfil, codigo):
+    """A categoria padrão (código, nome, palavras) do perfil; 404 se não existir."""
+    for regra in PERFIS[perfil]["regras"]:
+        if regra[0] == codigo:
+            return regra
+    erro("Categoria padrão não encontrada.", 404)
 
 
-def _validar_padrao(perfil, posicao):
-    if perfil not in PERFIS or not (0 <= posicao < len(PERFIS[perfil]["regras"])):
-        erro("Categoria padrão não encontrada.", 404)
+def _nome_padrao_atual(banco, perfil, codigo):
+    ed = carregar_edicoes(banco, uid()).get(f"{perfil}:{codigo}")
+    return (ed and ed["nome"]) or _regra_padrao(perfil, codigo)[1]
 
 
 # ---------- categorias criadas pelo cliente ----------
@@ -134,12 +137,13 @@ def excluir_categoria(cat_id):
 
 # ---------- ajustes nas categorias padrão ----------
 
-@api.put("/categorias-padrao/<perfil>/<int:posicao>")
+@api.put("/categorias-padrao/<perfil>/<codigo>")
 @login_obrigatorio
-def editar_padrao(perfil, posicao):
+def editar_padrao(perfil, codigo):
     """Muda nome, tipo e/ou palavras de uma categoria padrão.
     "palavras": null mantém as palavras originais do sistema."""
-    _validar_padrao(perfil, posicao)
+    perfil = perfil_valido(perfil)
+    _regra_padrao(perfil, codigo)
     d = corpo()
     banco = obter_banco()
     nome = texto(d.get("nome"), 40, "Dê um nome para a categoria.")
@@ -149,26 +153,27 @@ def editar_padrao(perfil, posicao):
         separar_palavras(",".join(str(p) for p in palavras) if isinstance(palavras, list) else palavras),
         ensure_ascii=False,
     )
-    antigo = _nome_padrao_atual(banco, perfil, posicao)
+    antigo = _nome_padrao_atual(banco, perfil, codigo)
     banco.execute(
         "INSERT INTO edicoes_padrao (usuario_id, chave, nome, tipo, palavras) VALUES (?, ?, ?, ?, ?) "
         "ON CONFLICT(usuario_id, chave) DO UPDATE SET nome = excluded.nome, tipo = excluded.tipo, palavras = excluded.palavras",
-        (uid(), f"{perfil}:{posicao}", nome, tipo, palavras_json),
+        (uid(), f"{perfil}:{codigo}", nome, tipo, palavras_json),
     )
     _renomear_em_tudo(banco, antigo, nome)
     banco.commit()
     return jsonify(ok=True)
 
 
-@api.delete("/categorias-padrao/<perfil>/<int:posicao>")
+@api.delete("/categorias-padrao/<perfil>/<codigo>")
 @login_obrigatorio
-def restaurar_padrao(perfil, posicao):
+def restaurar_padrao(perfil, codigo):
     """Volta a categoria padrão ao original do sistema."""
-    _validar_padrao(perfil, posicao)
+    perfil = perfil_valido(perfil)
+    original = _regra_padrao(perfil, codigo)[1]
     banco = obter_banco()
-    antigo = _nome_padrao_atual(banco, perfil, posicao)
-    banco.execute("DELETE FROM edicoes_padrao WHERE usuario_id = ? AND chave = ?", (uid(), f"{perfil}:{posicao}"))
-    _renomear_em_tudo(banco, antigo, PERFIS[perfil]["regras"][posicao][0])
+    antigo = _nome_padrao_atual(banco, perfil, codigo)
+    banco.execute("DELETE FROM edicoes_padrao WHERE usuario_id = ? AND chave = ?", (uid(), f"{perfil}:{codigo}"))
+    _renomear_em_tudo(banco, antigo, original)
     banco.commit()
     return jsonify(ok=True)
 

@@ -32,7 +32,9 @@ def test_senha_errada(app):
 def test_estado_inicial(cliente):
     e = cliente.get("/api/estado").json
     assert e["usuario"]["nome"] == "Ana"
-    assert set(e["perfis"]) == {"pf", "empresa", "pme"}
+    assert set(e["perfis"]) == {"pf", "empresa"}
+    taxas = e["perfis"]["empresa"]["regras"][0]
+    assert (taxas["codigo"], taxas["nome"], taxas["fixa"]) == ("taxas", "Taxas de cartão e apps", False)
     assert e["categorias"] == [] and e["regras"] == {}
 
 
@@ -156,10 +158,10 @@ def test_paginas(cliente, arquivo):
 
 def test_subpastas_separadas_por_tipo(cliente):
     pf = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"})
-    pme = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pme"})
+    pme = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "empresa"})
     assert pf.status_code == 201 and pme.status_code == 201
     assert cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"}).status_code == 409
-    assert {(p["nome"], p["perfil"]) for p in cliente.get("/api/paginas").json} == {("2026", "pf"), ("2026", "pme")}
+    assert {(p["nome"], p["perfil"]) for p in cliente.get("/api/paginas").json} == {("2026", "pf"), ("2026", "empresa")}
     # renomear também só conflita dentro do mesmo tipo
     cliente.post("/api/paginas", json={"nome": "Cartão", "perfil": "pf"})
     assert cliente.patch(f"/api/paginas/{pme.json['id']}", json={"nome": "Cartão"}).status_code == 200
@@ -167,7 +169,7 @@ def test_subpastas_separadas_por_tipo(cliente):
 
 def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
     pf = cliente.post("/api/paginas", json={"nome": "Casa", "perfil": "pf"}).json
-    pme = cliente.post("/api/paginas", json={"nome": "Loja", "perfil": "pme"}).json
+    pme = cliente.post("/api/paginas", json={"nome": "Loja", "perfil": "empresa"}).json
     r = cliente.post("/api/extratos", json={"nome": "x", "perfil": "pf", "pagina_id": pme["id"], "lancamentos": [CAFE_5]})
     assert r.status_code == 404
     meta = salvar(cliente, [CAFE_5], perfil="pf")
@@ -180,12 +182,12 @@ def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
 # ---------- categorias e regras ----------
 
 def test_categoria_criada_muda_a_classificacao(cliente):
-    descs = ["PIX ENVIADO MARIA CONTABILIDADE"]
+    descs = ["PAGAMENTO CONSULTORIA XYZ"]
     antes = cliente.post("/api/categorizar", json={"perfil": "empresa", "descricoes": descs}).json["resultados"][0]
     assert antes["categoria"] == "Outros (revisar)"
-    cliente.post("/api/categorias", json={"nome": "Contabilidade", "tipo": "fixo", "palavras": ["contabilidade"]})
+    cliente.post("/api/categorias", json={"nome": "Consultoria", "tipo": "fixo", "palavras": ["consultoria"]})
     depois = cliente.post("/api/categorizar", json={"perfil": "empresa", "descricoes": descs}).json["resultados"][0]
-    assert depois == {"categoria": "Contabilidade", "palavra": "contabilidade"}
+    assert depois == {"categoria": "Consultoria", "palavra": "consultoria"}
 
 
 def test_renomear_categoria_leva_regras_junto(cliente):
@@ -200,13 +202,23 @@ def test_renomear_categoria_leva_regras_junto(cliente):
 
 def test_editar_e_restaurar_categoria_padrao(cliente):
     cliente.post("/api/regras", json={"origem": "aluguel imobiliaria sol", "categoria": "Aluguel"})
-    cliente.put("/api/categorias-padrao/empresa/2", json={"nome": "Imóvel", "tipo": "fixo", "palavras": None})
+    cliente.put("/api/categorias-padrao/empresa/aluguel", json={"nome": "Imóvel", "tipo": "fixo", "palavras": None})
     e = cliente.get("/api/estado").json
-    assert e["edicoes"]["empresa:2"]["nome"] == "Imóvel"
+    assert e["edicoes"]["empresa:aluguel"]["nome"] == "Imóvel"
     assert e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Imóvel"
-    cliente.delete("/api/categorias-padrao/empresa/2")
+    cliente.delete("/api/categorias-padrao/empresa/aluguel")
     e = cliente.get("/api/estado").json
     assert e["edicoes"] == {} and e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Aluguel"
+    assert cliente.put("/api/categorias-padrao/empresa/nao-existe", json={"nome": "X"}).status_code == 404
+    r = cliente.put("/api/categorias-padrao/pme/aluguel", json={"nome": "Imóvel", "tipo": "fixo", "palavras": None})
+    assert r.status_code == 200
+    assert cliente.get("/api/estado").json["edicoes"]["empresa:aluguel"]["nome"] == "Imóvel"
+
+
+def test_pme_vindo_de_fora_vira_empresa(cliente, arquivo):
+    assert salvar(cliente, [CAFE_5], perfil="pme")["perfil"] == "empresa"
+    assert cliente.post("/api/paginas", json={"nome": "X", "perfil": "pme"}).json["perfil"] == "empresa"
+    assert enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx")), perfil="pme").json["perfil"] == "empresa"
 
 
 def test_excluir_regra(cliente):

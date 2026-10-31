@@ -26,7 +26,9 @@ def estado():
         usuario={"nome": g.usuario["nome"], "email": g.usuario["email"]},
         outros=OUTROS,
         perfis={
-            k: {"rotulo": p["rotulo"], "regras": p["regras"], "fixas": p["fixas"]}
+            k: {"rotulo": p["rotulo"], "regras": [
+                {"codigo": c, "nome": n, "palavras": pal, "fixa": c in p["fixas"]} for c, n, pal in p["regras"]
+            ]}
             for k, p in PERFIS.items()
         },
         categorias=listar_categorias(banco, uid()),

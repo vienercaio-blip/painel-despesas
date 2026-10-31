@@ -1,7 +1,7 @@
 """Regras de categorização dos lançamentos.
 
-Aqui ficam as categorias padrão de cada perfil (pessoa física, empresa,
-MEI/PME) e a lógica que decide em qual categoria cada despesa cai.
+Aqui ficam as categorias padrão de cada perfil (pessoa física e
+empresa ou MEI) e a lógica que decide em qual categoria cada despesa cai.
 
 Prioridade da classificação (da mais forte para a mais fraca):
   1. correção "só neste extrato"
@@ -15,60 +15,74 @@ import unicodedata
 
 OUTROS = "Outros (revisar)"
 
+# Cada categoria padrão: (código, nome, palavras-chave), na ordem de prioridade:
+# a primeira categoria com uma palavra encontrada na descrição é a que vale.
+# O código nunca muda: as edições do cliente são guardadas por ele ("pf:mercado").
 # Atenção: alguns termos têm espaço no início/fim de propósito
 # (ex.: " taxa", " das "), para não pegar pedaços de outras palavras.
-REGRAS_EMPRESA = [
-    ["Taxas de cartão e apps", [" taxa", " mdr ", "antecipacao", "comissao", " ifood ", " cielo ", " stone ", " getnet ", "pagseguro", " sumup ", " rede ", "mercado pago", "maquininha"]],
-    ["Tarifas bancárias", ["tarifa", "pacote servicos", " iof ", "juros", "anuidade"]],
-    ["Aluguel", ["aluguel", "imobiliaria", "condominio"]],
-    ["Folha de pagamento", ["salario", "folha", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "ferias", "rescisao"]],
-    ["Impostos e encargos", [" das ", "simples nacional", " darf", " gps ", " inss", " fgts", " iptu", " icms", " iss "]],
-    ["Água, luz e internet", ["energia", "coelba", " enel", "cemig", "copel", "light ", " agua", "embasa", "sabesp", "compesa", "internet", " vivo", " claro", " tim ", " oi ", " gas "]],
-    ["Mercado", ["mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "feira", "padaria"]],
-    ["Manutenção", ["manutencao", "conserto", "reparo", "assistencia tecnica"]],
-]
+TRANSFERENCIAS = ("transferencias", "Transferências para pessoas", ["pix enviado", "pix transf", "transferencia", " transf ", " ted ", " doc "])
 
 REGRAS_PF = [
-    ["Dívidas e juros", ["juros", "parcela", "emprestimo", "financiamento", "fatura", "cartao de credito", "iof", "multa", "anuidade"]],
-    ["Moradia", ["aluguel", "condominio", "iptu", "imobiliaria"]],
-    ["Contas da casa", ["energia", "coelba", "enel", "cemig", "copel", " light ", "agua", "embasa", "sabesp", "compesa", " gas ", "internet", " vivo ", " claro ", " tim ", " oi "]],
-    ["Mercado", ["mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "feira", "padaria"]],
-    ["Transporte", ["uber", "99app", "combustivel", "posto", "gasolina", "estacionamento", "pedagio", "onibus", "metro", "passagem"]],
-    ["Saúde", ["farmacia", "drogaria", "hospital", "clinica", "consulta", "plano de saude", "unimed", "dentista", "exame"]],
-    ["Educação", ["escola", "faculdade", "curso", "mensalidade", "livro", "udemy", "alura"]],
-    ["Lazer", ["cinema", "netflix", "spotify", "restaurante", " bar ", "show", "viagem", "hotel", "ifood"]],
-    ["Assinaturas", ["assinatura", "prime video", "youtube", "apple", "google one", "icloud", "disney"]],
-    ["Investimentos", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo"]],
+    ("dividas", "Dívidas e juros", ["juros", "parcela", "emprestimo", "financiamento", "fatura", "cartao de credito", "multa", "rotativo", "cheque especial", "consignado"]),
+    ("tarifas", "Tarifas bancárias", ["tarifa", "pacote servicos", "pacote de servicos", "cesta de servicos", "cesta servicos", " iof ", "anuidade", "manutencao de conta"]),
+    ("moradia", "Moradia", ["aluguel", "condominio", "iptu", "imobiliaria"]),
+    ("casa", "Contas da casa", ["energia", "coelba", "enel", "cemig", "copel", " light ", "agua", "embasa", "sabesp", "compesa", " gas ", "internet", " vivo ", " claro ", " tim ", " oi "]),
+    ("delivery", "Delivery", ["ifood", " ifd ", "rappi", "ze delivery", "99food", " 99 food", "keeta", "aiqfome", "james delivery", "daki", "uber eats", "delivery"]),
+    ("assinaturas", "Assinaturas", ["assinatura", "netflix", "spotify", "deezer", "prime video", "amazon prime", "amazonprime", "youtube", "apple", "google one", "icloud", "disney", " max ", "globoplay"]),
+    ("compras", "Compras online", ["shopee", "mercado livre", "mercadolivre", " amazon ", "magalu", "magazine luiza", "shein", "aliexpress", "temu"]),
+    ("mercado", "Mercado", ["mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "feira", "padaria"]),
+    ("transporte", "Transporte", ["uber", "99app", " 99 pop", "combustivel", " posto ", "gasolina", "etanol", "estacionamento", "pedagio", "onibus", "metro", "passagem", "ipva", "licenciamento", "detran", "bilhete unico"]),
+    ("pets", "Pets", ["pet shop", "petshop", "petz", "cobasi", "veterin", "racao"]),
+    ("saude", "Saúde", ["farmacia", "drogaria", "drogasil", " raia ", "droga raia", "pague menos", "hospital", "clinica", "consulta", "plano de saude", "unimed", "dentista", "odonto", "exame", "laboratorio"]),
+    ("academia", "Academia e bem-estar", ["academia", "smart fit", "smartfit", "pilates", "salao", "barbearia"]),
+    ("educacao", "Educação", ["escola", "faculdade", "curso", "mensalidade", "livro", "udemy", "alura"]),
+    ("lazer", "Lazer", ["cinema", "restaurante", " bar ", "show", "viagem", "hotel", "ingresso", "lanchonete"]),
+    ("presentes", "Presentes", ["presente", "floricultura"]),
+    ("investimentos", "Investimentos", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo"]),
+    TRANSFERENCIAS,
 ]
 
-REGRAS_PME = REGRAS_EMPRESA[:6] + [
-    ["Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", "nfe", "compra", "mercado", "atacad", "assai", "makro", "carrefour"]],
-    REGRAS_EMPRESA[7],
-    ["Marketing", ["anuncio", "google ads", "meta ads", "facebook", "instagram", "impulsionamento", "marketing", "panfleto", "grafica"]],
-    ["Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]],
+REGRAS_EMPRESA = [
+    ("taxas", "Taxas de cartão e apps", [" taxa", " mdr ", "antecipacao", "comissao", " ifood ", " cielo ", " stone ", " getnet ", "pagseguro", " sumup ", " rede ", "mercado pago", "maquininha", "rappi"]),
+    ("tarifas", "Tarifas bancárias", ["tarifa", "pacote servicos", "pacote de servicos", "cesta de servicos", " iof ", "juros", "anuidade", "manutencao de conta"]),
+    ("impostos", "Impostos e encargos", [" das ", "das mei", "pgmei", "simples nacional", " darf", " gps ", " inss", " fgts", " iptu", " icms", " iss ", "imposto"]),
+    ("folha", "Folha de pagamento", ["salario", "folha", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "ferias", "rescisao"]),
+    ("aluguel", "Aluguel", ["aluguel", "imobiliaria", "condominio"]),
+    ("contas", "Água, luz e internet", ["energia", "coelba", " enel", "cemig", "copel", "light ", " agua", "embasa", "sabesp", "compesa", "internet", " vivo", " claro", " tim ", " oi ", " gas "]),
+    ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
+    ("seguros", "Seguros", ["seguro", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
+    ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", "nfe", "compra", "mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "padaria", "laticinio", "torrefacao", "embalage", "material de limpeza"]),
+    ("combustivel", "Combustível e entregas", [" posto ", "gasolina", "diesel", "etanol", "combustivel", "motoboy", "frete", "correios", "loggi", "lalamove"]),
+    ("manutencao", "Manutenção", ["manutencao", "conserto", "reparo", "assistencia tecnica"]),
+    ("marketing", "Marketing", ["anuncio", "google ads", "meta ads", "facebook", "instagram", "impulsionamento", "marketing", "panfleto", "grafica"]),
+    TRANSFERENCIAS,
 ]
 
 PERFIS = {
     "pf": {
         "rotulo": "Pessoa física",
         "regras": REGRAS_PF,
-        "fixas": ["Moradia", "Contas da casa", "Dívidas e juros"],
+        "fixas": {"dividas", "tarifas", "moradia", "casa", "assinaturas", "educacao"},
     },
     "empresa": {
-        "rotulo": "Empresa",
+        "rotulo": "Empresa ou MEI",
         "regras": REGRAS_EMPRESA,
-        "fixas": ["Aluguel", "Folha de pagamento", "Água, luz e internet", "Impostos e encargos", "Tarifas bancárias"],
+        "fixas": {"tarifas", "impostos", "folha", "aluguel", "contas", "contabilidade", "seguros"},
     },
-    "pme": {
-        "rotulo": "MEI / PME",
-        "regras": REGRAS_PME,
-        "fixas": ["Aluguel", "Folha de pagamento", "Água, luz e internet", "Impostos e encargos", "Tarifas bancárias", "Contabilidade e sistemas"],
-    },
+}
+
+# Versões antigas guardavam as edições pela posição na lista ("pf:3").
+# Este mapa converte posição → código (None = a categoria deixou de existir).
+# O antigo perfil "pme" (MEI / PME) virou "empresa".
+CODIGOS_ANTIGOS = {
+    "pf": ["dividas", "moradia", "casa", "mercado", "transporte", "saude", "educacao", "lazer", "assinaturas", "investimentos"],
+    "empresa": ["taxas", "tarifas", "aluguel", "folha", "impostos", "contas", None, "manutencao"],
+    "pme": ["taxas", "tarifas", "aluguel", "folha", "impostos", "contas", "fornecedores", "manutencao", "marketing", "contabilidade"],
 }
 
 
 def perfil_valido(perfil):
-    if perfil == "cafe":  # nome antigo usado no protótipo
+    if perfil in ("pme", "cafe"):  # nomes antigos: MEI / PME e o protótipo
         return "empresa"
     return perfil if perfil in PERFIS else "pf"
 
@@ -107,20 +121,20 @@ def separar_palavras(texto):
 def definicoes_padrao(perfil, edicoes):
     """Categorias padrão do perfil, já com os ajustes que o cliente fez.
 
-    `edicoes` é um dicionário {"perfil:posição": {"nome", "tipo", "palavras"}}.
+    `edicoes` é um dicionário {"perfil:código": {"nome", "tipo", "palavras"}}.
     """
     perfil = perfil_valido(perfil)
     fixas = PERFIS[perfil]["fixas"]
     defs = []
-    for i, (nome, palavras) in enumerate(PERFIS[perfil]["regras"]):
-        ed = edicoes.get(f"{perfil}:{i}")
+    for codigo, nome, palavras in PERFIS[perfil]["regras"]:
+        ed = edicoes.get(f"{perfil}:{codigo}")
         defs.append({
-            "id": f"b{i}",
-            "posicao": i,
+            "id": f"b:{codigo}",
+            "codigo": codigo,
             "padrao": True,
             "editada": bool(ed),
             "nome": (ed and ed.get("nome")) or nome,
-            "tipo": (ed and ed.get("tipo")) or ("fixo" if nome in fixas else "variavel"),
+            "tipo": (ed and ed.get("tipo")) or ("fixo" if codigo in fixas else "variavel"),
             # palavras editadas pelo cliente são comparadas como início de palavra;
             # as originais, exatamente como estão escritas (com os espaços).
             "palavras": ed["palavras"] if (ed and ed.get("palavras") is not None) else [p.strip() for p in palavras],
