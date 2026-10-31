@@ -306,8 +306,8 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .perfil-choice legend{font-size:13px;font-weight:600;color:var(--ink-2);margin-right:8px;padding:0}
 .perfil-choice label{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
 [hidden]{display:none!important}
-.cfg-btn{width:40px;min-width:40px;min-height:40px;padding:0;justify-content:center}
-.cfg-btn svg{width:22px;height:22px}
+.btn.cfg-btn{width:40px;min-width:40px;min-height:40px;padding:0;justify-content:center}
+.cfg-btn svg{width:22px;height:22px;flex:none}
 .cfg-modal{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto}
 .cfg-sec{padding:14px 0;border-top:1px solid var(--line)}
 .cfg-sec h3{margin:0 0 6px;font-size:15px}
