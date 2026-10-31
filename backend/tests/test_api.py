@@ -144,12 +144,37 @@ def test_lancamento_invalido_e_recusado(cliente):
 
 def test_paginas(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
-    p = cliente.post("/api/paginas", json={"nome": "Cafeteria"}).json
-    assert cliente.post("/api/paginas", json={"nome": "cafetéria"}).status_code == 409
+    p = cliente.post("/api/paginas", json={"nome": "Cafeteria", "perfil": "empresa"}).json
+    assert p["perfil"] == "empresa"
+    assert cliente.post("/api/paginas", json={"nome": "cafetéria", "perfil": "empresa"}).status_code == 409
     meta = salvar(cliente, lanc[:5], pagina_id=p["id"])
     assert meta["pagina_id"] == p["id"]
+    # excluir a subpasta devolve o extrato para a pasta principal do tipo
     cliente.delete(f"/api/paginas/{p['id']}")
     assert cliente.get("/api/extratos").json[0]["pagina_id"] is None
+
+
+def test_subpastas_separadas_por_tipo(cliente):
+    pf = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"})
+    pme = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pme"})
+    assert pf.status_code == 201 and pme.status_code == 201
+    assert cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"}).status_code == 409
+    assert {(p["nome"], p["perfil"]) for p in cliente.get("/api/paginas").json} == {("2026", "pf"), ("2026", "pme")}
+    # renomear também só conflita dentro do mesmo tipo
+    cliente.post("/api/paginas", json={"nome": "Cartão", "perfil": "pf"})
+    assert cliente.patch(f"/api/paginas/{pme.json['id']}", json={"nome": "Cartão"}).status_code == 200
+
+
+def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
+    pf = cliente.post("/api/paginas", json={"nome": "Casa", "perfil": "pf"}).json
+    pme = cliente.post("/api/paginas", json={"nome": "Loja", "perfil": "pme"}).json
+    r = cliente.post("/api/extratos", json={"nome": "x", "perfil": "pf", "pagina_id": pme["id"], "lancamentos": [CAFE_5]})
+    assert r.status_code == 404
+    meta = salvar(cliente, [CAFE_5], perfil="pf")
+    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": pme["id"]}).status_code == 404
+    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": pf["id"]}).json["pagina_id"] == pf["id"]
+    # voltar para a pasta principal
+    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": None}).json["pagina_id"] is None
 
 
 # ---------- categorias e regras ----------

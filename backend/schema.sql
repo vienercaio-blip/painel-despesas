@@ -10,12 +10,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
   criado_em   TEXT NOT NULL
 );
 
--- Páginas: pastas para organizar os extratos salvos.
+-- Páginas: subpastas para organizar os extratos salvos.
+-- As pastas principais (Pessoa física, Empresa, MEI / PME) não ficam aqui:
+-- são o próprio perfil do extrato. Cada subpasta pertence a uma delas.
 CREATE TABLE IF NOT EXISTS paginas (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   nome        TEXT NOT NULL,
   tipo        TEXT NOT NULL DEFAULT 'despesas',   -- 'despesas' ou 'vendas'
+  perfil      TEXT NOT NULL DEFAULT 'pf',         -- pasta principal: 'pf', 'empresa' ou 'pme'
   criado_em   TEXT NOT NULL
 );
 

@@ -54,14 +54,16 @@ def _buscar(banco, extrato_id):
     return linha
 
 
-def _validar_pagina(banco, pagina_id, tipo):
+def _validar_pagina(banco, pagina_id, tipo, perfil):
+    """Confere se a subpasta existe e, nos extratos, se é da mesma pasta
+    principal (perfil) do extrato. None = pasta principal."""
     if pagina_id is None:
         return None
-    ok = banco.execute(
-        "SELECT 1 FROM paginas WHERE id = ? AND usuario_id = ? AND tipo = ?", (pagina_id, uid(), tipo)
+    pagina = banco.execute(
+        "SELECT perfil FROM paginas WHERE id = ? AND usuario_id = ? AND tipo = ?", (pagina_id, uid(), tipo)
     ).fetchone()
-    if not ok:
-        erro("Página não encontrada.", 404)
+    if not pagina or (tipo == "despesas" and pagina["perfil"] != perfil):
+        erro("Subpasta não encontrada nesta pasta.", 404)
     return pagina_id
 
 
@@ -131,8 +133,8 @@ def salvar_extrato():
         erro("Tipo inválido.")
     banco = obter_banco()
     nome = texto(d.get("nome"), 120) or "Extrato"
-    pagina_id = _validar_pagina(banco, id_ou_none(d.get("pagina_id")), tipo)
     perfil = perfil_valido(d.get("perfil"))
+    pagina_id = _validar_pagina(banco, id_ou_none(d.get("pagina_id")), tipo, perfil)
 
     linhas_json = None
     if tipo == "vendas":
@@ -197,7 +199,7 @@ def alterar_extrato(extrato_id):
         nome = texto(d["nome"], 120, "Dê um nome para o extrato.")
         banco.execute("UPDATE extratos SET nome = ? WHERE id = ?", (nome, extrato_id))
     if "pagina_id" in d:
-        pagina_id = _validar_pagina(banco, id_ou_none(d["pagina_id"]), linha["tipo"])
+        pagina_id = _validar_pagina(banco, id_ou_none(d["pagina_id"]), linha["tipo"], perfil_valido(linha["perfil"]))
         banco.execute("UPDATE extratos SET pagina_id = ? WHERE id = ?", (pagina_id, extrato_id))
     banco.commit()
     return jsonify(_meta(banco, _buscar(banco, extrato_id)))

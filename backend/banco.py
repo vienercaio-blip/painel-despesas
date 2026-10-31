@@ -32,9 +32,17 @@ def criar_tabelas(caminho_banco):
     con = sqlite3.connect(caminho_banco)
     try:
         con.executescript(schema)
+        _atualizar(con)
         con.commit()
     finally:
         con.close()
+
+
+def _atualizar(con):
+    """Acrescenta colunas novas em bancos criados por versões antigas."""
+    colunas = {r[1] for r in con.execute("PRAGMA table_info(paginas)")}
+    if "perfil" not in colunas:
+        con.execute("ALTER TABLE paginas ADD COLUMN perfil TEXT NOT NULL DEFAULT 'pf'")
 
 
 def agora():
