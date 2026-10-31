@@ -357,7 +357,7 @@
 
   <div class="view" id="viewLanc" hidden>
   <section class="card" aria-labelledby="txTitle">
-    <div class="card-head"><h2 id="txTitle">Todos os lançamentos</h2><span class="hint">Para corrigir uma categoria, use a página <a href="#categorias">Categorias</a>.</span></div>
+    <div class="card-head"><h2 id="txTitle">Todos os lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
     <div class="table-tools">
       <div class="seg" role="group" aria-label="Filtrar lançamentos">
         <button type="button" data-f="out" aria-pressed="true">Saídas</button>
@@ -369,6 +369,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
         <input id="q" type="search" placeholder="Buscar descrição" aria-label="Buscar descrição" style="border:0;background:transparent;outline:none;min-width:0;flex:1;min-height:40px">
       </label>
+      <button type="button" class="btn" id="editLanc" aria-pressed="false">Editar categorias</button>
     </div>
     <div class="table-box scroll-table">
       <table>

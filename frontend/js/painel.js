@@ -155,6 +155,7 @@ function doServidor(l){
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
   state.raw = list; state.savedId = null; state.loaded = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
+  state.editLanc = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
@@ -1433,6 +1434,7 @@ function setView(){
   $('viewDespesas').hidden = v!=='despesas';
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
+  if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
   $('tip').hidden = true;
@@ -1545,10 +1547,17 @@ function renderTable(){
     if (state.filter==='in' && t.value<0) return false;
     return !q || norm(t.desc).indexOf(q)!==-1;
   });
+  /* editar a categoria aqui só depois de ligar "Editar categorias" */
+  var ed = !!state.editLanc, eb = $('editLanc');
+  eb.setAttribute('aria-pressed', ed ? 'true' : 'false');
+  eb.textContent = ed ? 'Concluir edição' : 'Editar categorias';
+  eb.classList.toggle('primary', ed);
+  $('txHint').innerHTML = ed ? 'Edição ligada: escolha a nova categoria na coluna <b>Categoria</b>.' : 'Para corrigir uma categoria, clique em <b>Editar categorias</b>.';
   var LIMIT = 300, shown = list.slice(0,LIMIT);
   $('rows').innerHTML = shown.map(function(t){
     var c = t.value>0 ? null : catOf(t);
     var catCell = t.value>0 ? '<span class="in">Entrada</span>' :
+      ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>' :
       '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>';
@@ -1646,8 +1655,9 @@ document.addEventListener('keydown', function(e){
   }
 });
 var RECLASS_HELP = 'As próximas mudanças de categoria vão usar esta mesma resposta automaticamente, sem confirmação. Isso pode criar regras sem você perceber.';
-$('cdRows').addEventListener('change', function(e){
-  var s = e.target.closest('select'); if (!s) return;
+/* troca a categoria de um lançamento (página Categorias e aba Lançamentos) */
+function mudarCategoria(e){
+  var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id], to = s.value;
   askX({ kind:'reclass', title:'Manter esta mudança nos próximos extratos?',
     text:'Você mudou "'+t.desc+'" para '+to+'. Se manter, sempre que essa origem aparecer em um extrato novo ela já vem como '+to+'.',
@@ -1655,7 +1665,10 @@ $('cdRows').addEventListener('change', function(e){
     onYes:function(){ setRule(t.origin, t.desc, to).then(render, function(e){ falhou(e); render(); }); },
     onNo:function(){ state.overrides[t.id] = to; ruleMsg('"'+t.desc+'" mudou para '+to+' só neste extrato.'); render(); },
     onCancel:render });
-});
+}
+$('cdRows').addEventListener('change', mudarCategoria);
+$('rows').addEventListener('change', mudarCategoria);
+$('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
 $('origins').addEventListener('change', function(e){
   var s = e.target.closest('select'); if (!s) return;
   var key = s.dataset.origin, from = state.cat, to = s.value;
