@@ -1554,7 +1554,7 @@ function renderTable(){
   eb.classList.toggle('primary', ed);
   $('txHint').innerHTML = ed ? 'Edição ligada: escolha a nova categoria na coluna <b>Categoria</b>.' : 'Para corrigir uma categoria, clique em <b>Editar categorias</b>.';
   /* quantos lançamentos por vez (escolha do usuário, guardada na conta); 0 = todos */
-  var por = [25,50,100,0].indexOf(+cfg.porPagina)!==-1 ? +cfg.porPagina : 50;
+  var por = [11,25,50,100,0].indexOf(+cfg.porPagina)!==-1 ? +cfg.porPagina : 11;
   $('txPor').value = String(por);
   var chave = [fc, state.filter, q, JSON.stringify(state.p), list.length].join('|');
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
