@@ -84,6 +84,32 @@ def test_acrescentar_ignora_repetidos(cliente, arquivo):
     assert r.json["adicionados"] == 88 and r.json["repetidos"] == 100 and r.json["quantidade"] == 188
 
 
+CAFE_5 = {"data": "2026-08-10", "descricao": "VENDA CAFE EXPRESSO", "valor": 5.0}
+PAO_7 = {"data": "2026-08-10", "descricao": "VENDA PAO DE QUEIJO", "valor": 7.0}
+
+
+def test_lancamentos_iguais_no_mesmo_dia_sao_mantidos(cliente):
+    meta = salvar(cliente, [CAFE_5, CAFE_5, PAO_7])
+    assert meta["quantidade"] == 3
+
+
+def test_acrescentar_conta_repetidos_pela_quantidade(cliente):
+    meta = salvar(cliente, [CAFE_5, CAFE_5, PAO_7])
+    # o mesmo arquivo enviado de novo não duplica nada
+    r = cliente.post(f"/api/extratos/{meta['id']}/lancamentos", json={"lancamentos": [CAFE_5, CAFE_5, PAO_7]})
+    assert r.json["adicionados"] == 0 and r.json["repetidos"] == 3 and r.json["quantidade"] == 3
+    # um arquivo com um café a mais acrescenta só esse café
+    r = cliente.post(f"/api/extratos/{meta['id']}/lancamentos", json={"lancamentos": [CAFE_5, CAFE_5, CAFE_5]})
+    assert r.json["adicionados"] == 1 and r.json["repetidos"] == 2 and r.json["quantidade"] == 4
+
+
+def test_mesclar_mantem_lancamentos_iguais(cliente):
+    a = salvar(cliente, [CAFE_5, CAFE_5, PAO_7], nome="A")
+    b = salvar(cliente, [CAFE_5, CAFE_5], nome="B")
+    r = cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]]})
+    assert r.json["quantidade"] == 3 and r.json["adicionados"] == 3 and r.json["repetidos"] == 2
+
+
 def test_correcoes_so_neste_extrato(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
     meta = salvar(cliente, lanc)

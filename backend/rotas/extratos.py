@@ -2,6 +2,7 @@
 acrescentar lançamentos, guardar correções e mesclar."""
 import json
 import math
+from collections import Counter
 
 from flask import jsonify, request
 
@@ -87,18 +88,21 @@ def _limpar_lancamentos(lista):
 
 
 def _inserir_lancamentos(banco, extrato_id, lista):
-    """Grava os lançamentos que ainda não existem no extrato.
+    """Grava os lançamentos de um arquivo que ainda não existem no extrato.
+    Lançamentos iguais (mesma data, descrição e valor) são contados: se o
+    extrato já tem 2 cafés de R$ 5 no dia e o arquivo tem 3, entra só 1.
     Devolve (adicionados, repetidos)."""
-    existentes = {
+    existentes = Counter(
         (r["data"], r["descricao"], r["valor"])
         for r in banco.execute("SELECT data, descricao, valor FROM lancamentos WHERE extrato_id = ?", (extrato_id,))
-    }
+    )
+    no_arquivo = Counter()
     novos = []
     for l in lista:
         chave = (l["data"], l["descricao"], l["valor"])
-        if chave in existentes:
+        no_arquivo[chave] += 1
+        if no_arquivo[chave] <= existentes[chave]:
             continue
-        existentes.add(chave)
         novos.append((extrato_id, l["data"], l["descricao"], l["valor"]))
     banco.executemany("INSERT INTO lancamentos (extrato_id, data, descricao, valor) VALUES (?, ?, ?, ?)", novos)
     return len(novos), len(lista) - len(novos)
@@ -278,14 +282,17 @@ def mesclar_extratos():
         (uid(), base["pagina_id"], nome[:120], perfis.pop(), agora()),
     )
     novo_id = cur.lastrowid
-    todos = []
+    # cada extrato de origem entra como um arquivo separado, para que
+    # lançamentos iguais dentro de um mesmo extrato não se percam
+    adicionados = repetidos = 0
     for o in origens:
-        todos += [
+        lista = [
             {"data": r["data"], "descricao": r["descricao"], "valor": r["valor"]}
             for r in banco.execute("SELECT data, descricao, valor FROM lancamentos WHERE extrato_id = ? ORDER BY data, id", (o["id"],))
         ]
-    todos.sort(key=lambda l: l["data"])
-    adicionados, repetidos = _inserir_lancamentos(banco, novo_id, todos)
+        a, r = _inserir_lancamentos(banco, novo_id, lista)
+        adicionados += a
+        repetidos += r
     if d.get("excluir_originais"):
         banco.executemany("DELETE FROM extratos WHERE id = ?", [(i,) for i in ids])
     banco.commit()

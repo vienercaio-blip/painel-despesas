@@ -188,12 +188,16 @@ function readFiles(files){
   API.lerArquivos(files, perfil).then(function(resp){
     var results = resp.arquivos;
     var good = results.filter(function(r){return !r.erro;});
+    /* lançamentos iguais são contados por arquivo: dois cafés de R$ 5 no mesmo
+       dia ficam os dois; o mesmo período enviado em dois arquivos não duplica */
     var combined = [], seen = {}, dup = 0;
     good.forEach(function(r){
+      var noArquivo = {};
       r.lancamentos.forEach(function(l){
         var k = l.data+'|'+l.descricao+'|'+l.valor;
-        if (seen[k]){ dup++; return; }
-        seen[k] = 1; combined.push(l);
+        noArquivo[k] = (noArquivo[k] || 0) + 1;
+        if (noArquivo[k] <= (seen[k] || 0)){ dup++; return; }
+        seen[k] = noArquivo[k]; combined.push(l);
       });
     });
     $('upFiles').innerHTML = results.map(function(r){
