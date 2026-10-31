@@ -71,7 +71,6 @@
           </div>
           <div class="save-row">
             <label class="check" for="saveMode"><input type="checkbox" id="saveMode" checked> Salvar para acessar depois</label>
-            <label class="save-page" for="savePage">na página <select id="savePage"></select></label>
           </div>
         </div>
 
@@ -167,19 +166,19 @@
       <div class="pg-layout">
         <nav class="pg-nav" aria-labelledby="pgNavT">
           <div class="pg-nav-head">
-            <h3 id="pgNavT">Páginas</h3>
+            <h3 id="pgNavT">Pastas</h3>
             <button type="button" class="btn btn-sm" id="newPageBtn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-              Nova página
+              Nova subpasta
             </button>
           </div>
           <form class="inline-form" id="newPageForm" hidden novalidate>
-            <label for="newPageName">Nome da nova página</label>
-            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: 2026, Loja Centro">
-            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar página</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
+            <label for="newPageName">Nome da nova subpasta</label>
+            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: 2026, Cartão, Loja Centro">
+            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar subpasta</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
             <p class="form-err" id="newPageErr" role="alert" hidden></p>
           </form>
-          <div class="pages-list" id="pagesBar" role="tablist" aria-orientation="vertical" aria-label="Escolha a página de extratos"></div>
+          <div class="pages-list" id="pagesBar" role="tablist" aria-orientation="vertical" aria-label="Escolha a pasta de extratos"></div>
         </nav>
         <div class="pg-main">
           <div class="page-head" id="pageHead" hidden></div>

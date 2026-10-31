@@ -48,7 +48,7 @@ var API = (function(){
 
     /* páginas */
     listarPaginas: function(tipo){ return pedir('GET', '/paginas' + q({tipo: tipo})); },
-    criarPagina: function(nome, tipo){ return pedir('POST', '/paginas', {nome: nome, tipo: tipo}); },
+    criarPagina: function(nome, tipo, perfil){ return pedir('POST', '/paginas', {nome: nome, tipo: tipo, perfil: perfil}); },
     renomearPagina: function(id, nome){ return pedir('PATCH', '/paginas/' + id, {nome: nome}); },
     excluirPagina: function(id){ return pedir('DELETE', '/paginas/' + id); },
 

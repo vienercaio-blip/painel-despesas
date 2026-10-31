@@ -217,7 +217,7 @@ function readFiles(files, perfil){
     /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
        escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
     var pronto = salvar
-      ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:$('savePage').value || null, lancamentos:combined })
+      ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:null, lancamentos:combined })
           .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
                 function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
       : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
@@ -268,13 +268,13 @@ function recarregarSalvos(){
   var k = kindNow();
   return Promise.all([API.listarExtratos(k), API.listarPaginas(k)]).then(function(r){
     savedCache[k] = r[0].map(metaLocal);
-    pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, at:p.criado_em}; });
+    pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, perfil:p.perfil, at:p.criado_em}; });
     renderSaved();
   });
 }
 function isoD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function pageName(id){ var p = getPages().filter(function(x){ return x.id===id; })[0]; return p ? p.name : null; }
-function pageNameTaken(name, exceptId){ return getPages().some(function(p){ return p.id!==exceptId && norm(p.name)===norm(name); }); }
+function pageNameTaken(name, exceptId){ return pagesAtuais().some(function(p){ return p.id!==exceptId && norm(p.name)===norm(name); }); }
 
 /* correções "só neste extrato": mandadas ao servidor quando mudam */
 var lastOv = null;
@@ -331,45 +331,72 @@ var ICON_GEAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" str
 var ICON_PEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>';
 var ICON_FOLDER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M12 11v5M9.5 13.5 12 16l2.5-2.5"></path></svg>';
 var ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg>';
-var ICON_FOLDER_S = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
+var ICON_LOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
+var ICON_FOLDER_S ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
+/* Extratos: 3 pastas principais (os tipos de conta) com subpastas dentro.
+   Só a pasta do tipo de conta atual abre; as outras aparecem com cadeado.
+   state.page = id da subpasta aberta, ou null = pasta principal.
+   Vendas (em pausa) continua com a lista simples de páginas. */
+var PASTAS = ['pf', 'empresa', 'pme'];
+function pagesAtuais(){
+  var p = getPages();
+  return MODE==='vendas' ? p : p.filter(function(x){ return x.perfil===chosenPerfil(); });
+}
 function renderSaved(){
-  var a = getSaved(), pages = getPages();
-  var W = MODE==='vendas' ? ['planilha','planilhas','vendas'] : ['extrato','extratos','lançamentos'];
-  $('svTitle').textContent = MODE==='vendas' ? 'Planilhas de vendas salvas' : 'Extratos salvos';
+  var desp = MODE!=='vendas', tipoAtual = chosenPerfil();
+  var todos = getSaved(), pages = pagesAtuais();
+  var a = desp ? todos.filter(function(x){ return perfilOf(x)===tipoAtual; }) : todos;
+  var W = desp ? ['extrato','extratos','lançamentos'] : ['planilha','planilhas','vendas'];
+  var PG = desp ? 'subpasta' : 'página';
+  $('svTitle').textContent = desp ? 'Extratos salvos' : 'Planilhas de vendas salvas';
   if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
   var cur = state.page || null;
-  $('savedCount').textContent = a.length ? a.length+(a.length===1?' '+W[0]+' salvo':' '+W[1]+' salvos')+(pages.length ? ' em '+pages.length+(pages.length===1?' página':' páginas') : '') : 'Nenhum '+W[0]+' salvo ainda';
+  $('savedCount').textContent = todos.length ? todos.length+(todos.length===1?' '+W[0]+' salvo':' '+W[1]+' salvos') : 'Nenhum '+W[0]+' salvo ainda';
 
-  var cnt = function(pid){ return a.filter(function(x){ return pid==='none' ? !x.page || !pages.some(function(p){return p.id===x.page;}) : x.page===pid; }).length; };
-  var tab = function(id, label, n){ var on = (cur||'all')===id; return '<button type="button" role="tab" class="ptab" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
-  $('pagesBar').innerHTML = tab('all','Todos',a.length) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id)); }).join('') + (pages.length ? tab('none','Sem página',cnt('none')) : '');
+  var naRaiz = function(x){ return !x.page || !pages.some(function(p){ return p.id===x.page; }); };
+  var cnt = function(pid){ return a.filter(function(x){ return pid==='none' ? naRaiz(x) : x.page===pid; }).length; };
+  var tab = function(id, label, n, on, extra){ return '<button type="button" role="tab" class="ptab'+(extra||'')+'" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
+  if (desp){
+    $('pagesBar').innerHTML = PASTAS.map(function(t){
+      var n = todos.filter(function(x){ return perfilOf(x)===t; }).length;
+      if (t!==tipoAtual) return '<button type="button" class="ptab locked" data-lock="'+t+'" aria-disabled="true" data-tip="Disponível só no tipo de conta '+esc(perfilLabel(t))+'">'+ICON_LOCK+'<span class="pn">'+esc(perfilLabel(t))+'</span><span class="cnt">'+n+'</span></button>';
+      return tab('root', perfilLabel(t), n, !cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id, ' sub'); }).join('');
+    }).join('');
+  } else {
+    $('pagesBar').innerHTML = tab('all','Todos',a.length,!cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('') + (pages.length ? tab('none','Sem página',cnt('none'),cur==='none') : '');
+  }
 
   var ph = $('pageHead');
   if (cur && cur!=='none'){
     var pg = pages.filter(function(p){ return p.id===cur; })[0];
     ph.hidden = false;
     ph.innerHTML = state.editingPage===cur
-      ? '<form class="inline-form" id="renPageForm" novalidate><label for="renPageName">Novo nome da página</label><div class="inline-row"><input id="renPageName" maxlength="40" autocomplete="off" value="'+esc(pg.name)+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-pcancel="1">Cancelar</button></div><p class="form-err" id="renPageErr" role="alert" hidden></p></form>'
-      : '<span class="ph-name">Página <b>'+esc(pg.name)+'</b></span><span class="sva"><button type="button" class="btn" data-pren="1">Renomear página</button><button type="button" class="btn" data-pdel="1">Excluir página</button></span>';
+      ? '<form class="inline-form" id="renPageForm" novalidate><label for="renPageName">Novo nome da '+PG+'</label><div class="inline-row"><input id="renPageName" maxlength="40" autocomplete="off" value="'+esc(pg.name)+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-pcancel="1">Cancelar</button></div><p class="form-err" id="renPageErr" role="alert" hidden></p></form>'
+      : '<span class="ph-name">'+(desp ? esc(perfilLabel(tipoAtual))+' › ' : 'Página ')+'<b>'+esc(pg.name)+'</b></span><span class="sva"><button type="button" class="btn" data-pren="1">Renomear '+PG+'</button><button type="button" class="btn" data-pdel="1">Excluir '+PG+'</button></span>';
+  } else if (desp){
+    ph.hidden = false; ph.innerHTML = '<span class="ph-name">Pasta <b>'+esc(perfilLabel(tipoAtual))+'</b></span>';
   } else { ph.hidden = true; ph.innerHTML = ''; }
 
   var shown = a.filter(function(x){
+    if (desp) return cur ? x.page===cur : naRaiz(x);
     if (!cur) return true;
-    var valid = x.page && pages.some(function(p){ return p.id===x.page; });
-    return cur==='none' ? !valid : x.page===cur;
+    return cur==='none' ? naRaiz(x) : x.page===cur;
   });
   $('savedEmpty').hidden = shown.length>0;
-  $('savedEmpty').textContent = a.length ? 'Nenhum extrato nesta página. Use "Mover para" em um extrato para colocá-lo aqui.' : 'Nenhum '+W[0]+' salvo ainda. Envie '+(MODE==='vendas'?'uma planilha':'um extrato')+' com a opção "Salvar para acessar depois" marcada e ele aparece aqui.';
-  var popts = function(sel){ return '<option value=""'+(!sel?' selected':'')+'>Sem página</option>'+pages.map(function(p){ return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>'; }).join(''); };
+  $('savedEmpty').textContent = a.length
+    ? 'Nenhum '+W[0]+' nesta '+(desp && !cur ? 'pasta' : PG)+'. Use "Mover para" no menu de um '+W[0]+' para colocá-lo aqui.'
+    : 'Nenhum '+W[0]+(desp ? ' de '+perfilLabel(tipoAtual) : '')+' salvo ainda. Envie '+(desp?'um extrato':'uma planilha')+' com a opção "Salvar para acessar depois" marcada e ele aparece aqui.';
+  var raizLabel = desp ? perfilLabel(tipoAtual)+' (pasta principal)' : 'Sem página';
+  var popts = function(sel){ return '<option value=""'+(!sel?' selected':'')+'>'+esc(raizLabel)+'</option>'+pages.map(function(p){ return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>'; }).join(''); };
   $('savedList').innerHTML = shown.map(function(x){
     var f = x.first ? keyDate(x.first) : null, l = x.last ? keyDate(x.last) : null;
     var pn = x.page ? pageName(x.page) : null;
     var moveBlock = state.movingSaved===x.id
-      ? '<form class="inline-form move-form" data-id="'+esc(x.id)+'" novalidate><label for="mvX">Mover para a página</label><div class="inline-row"><select id="mvX">'+popts(pn ? x.page : '')+'</select><button type="submit" class="btn primary">Mover</button><button type="button" class="btn ghost" data-mcancel="1">Cancelar</button></div></form>' : '';
+      ? '<form class="inline-form move-form" data-id="'+esc(x.id)+'" novalidate><label for="mvX">Mover para</label><div class="inline-row"><select id="mvX">'+popts(pn ? x.page : '')+'</select><button type="submit" class="btn primary">Mover</button><button type="button" class="btn ghost" data-mcancel="1">Cancelar</button></div></form>' : '';
     var open = state.menuFor===x.id;
     var menu = open ? '<div class="menu" role="menu" aria-label="Opções do extrato">'+
         '<button type="button" role="menuitem" data-xren="'+esc(x.id)+'">'+ICON_PEN+'Renomear</button>'+
-        '<button type="button" role="menuitem" data-xmove="'+esc(x.id)+'"'+(pages.length?'':' disabled')+'>'+ICON_FOLDER+'Mover para outra página'+(pages.length?'':'<small>Crie uma página primeiro</small>')+'</button>'+
+        '<button type="button" role="menuitem" data-xmove="'+esc(x.id)+'"'+(pages.length?'':' disabled')+'>'+ICON_FOLDER+'Mover para outra '+PG+(pages.length?'':'<small>Crie uma '+PG+' primeiro</small>')+'</button>'+
         '<button type="button" role="menuitem" class="danger-item" data-del="'+esc(x.id)+'">'+ICON_TRASH+'Excluir</button>'+
       '</div>' : '';
     var pick = MERGE_ON ? '<label class="sv-pick"><input type="checkbox" class="mg-check" data-mg="'+esc(x.id)+'"'+(MERGE_SEL.indexOf(x.id)!==-1?' checked':'')+' aria-label="Mesclar '+esc(x.name||'extrato')+'"></label>' : '';
@@ -377,7 +404,7 @@ function renderSaved(){
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
       : '<strong>'+esc(x.name||'Extrato')+'</strong>';
     return '<li class="sv">'+pick+'<div class="svi">'+nameBlock+
-      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · '+(MODE==='vendas'?'':esc(perfilLabel(perfilOf(x)))+' · ')+'salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur ? ' · página '+esc(pn) : '')+'</span>'+
+      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · '+(MODE==='vendas'?'':esc(perfilLabel(perfilOf(x)))+' · ')+'salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
       '<div class="sva sva-x"><button type="button" class="btn primary" data-open="'+esc(x.id)+'">Abrir</button>'+
       '<div class="menu-wrap"><button type="button" class="btn icon-btn" data-menu="'+esc(x.id)+'" aria-haspopup="menu" aria-expanded="'+open+'" aria-label="Configurações do extrato '+esc(x.name||'')+'">'+ICON_GEAR+'</button>'+menu+'</div>'+
@@ -386,11 +413,7 @@ function renderSaved(){
 
   posicionarMenu();
 
-  var sp = $('savePage'), keep = sp.value;
-  sp.innerHTML = popts(null);
-  if (keep && pages.some(function(p){ return p.id===keep; })) sp.value = keep;
-  else if (cur && cur!=='none') sp.value = cur;
-  sp.parentNode.hidden = !pages.length;
+  if (desp) return;
   var ssp = $('sSavePage'), keep2 = ssp.value;
   ssp.innerHTML = popts(null);
   if (keep2 && pages.some(function(p){ return p.id===keep2; })) ssp.value = keep2;
@@ -1793,6 +1816,7 @@ $('tipoBg').addEventListener('click', function(e){ if (e.target===$('tipoBg')) f
 
 /* ---------- aviso: extrato salvo de outro tipo de conta ---------- */
 function avisoTipo(x){
+  $('avisoT').textContent = 'Este extrato é de outro tipo de conta';
   $('avisoD').textContent = '"'+(x.name||'Extrato')+'" é um extrato de '+perfilLabel(perfilOf(x))+', e você está usando a conta '+perfilLabel(chosenPerfil())+
     '. Cada tipo de conta usa categorias diferentes, por isso só dá para abrir extratos do mesmo tipo. Para abrir este, troque o tipo de conta nas configurações.';
   $('avisoBg').style.display = 'flex'; hideTip();
@@ -1886,21 +1910,31 @@ $('pMonths').addEventListener('click', function(e){
 });
 document.querySelectorAll('.choice[data-panel]').forEach(function(b){ b.addEventListener('click', function(){ keepScroll(function(){ showPanel(b.dataset.panel); }); }); });
 $('pagesBar').addEventListener('click', function(e){
+  var lk = e.target.closest('[data-lock]');
+  if (lk){ avisoPasta(lk.dataset.lock); return; }
   var b = e.target.closest('[data-page]'); if (!b) return;
-  keepScroll(function(){ state.page = b.dataset.page==='all' ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
+  keepScroll(function(){ state.page = (b.dataset.page==='all' || b.dataset.page==='root') ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
 });
+function avisoPasta(t){
+  $('avisoT').textContent = 'Esta pasta é de outro tipo de conta';
+  $('avisoD').textContent = 'A pasta '+perfilLabel(t)+' guarda os extratos de '+perfilLabel(t)+', e você está usando a conta '+perfilLabel(chosenPerfil())+
+    '. Cada tipo de conta usa categorias diferentes, por isso só dá para abrir a pasta do tipo atual. Para ver esta, troque o tipo de conta nas configurações.';
+  $('avisoBg').style.display = 'flex'; hideTip();
+  $('avisoClose').focus();
+}
 $('newPageBtn').addEventListener('click', function(){ $('newPageForm').hidden = false; $('newPageErr').hidden = true; $('newPageName').value = ''; $('newPageName').focus(); });
 $('newPageCancel').addEventListener('click', function(){ $('newPageForm').hidden = true; });
 $('newPageForm').addEventListener('submit', function(e){
   e.preventDefault();
   var name = $('newPageName').value.replace(/\s+/g,' ').trim(), err = $('newPageErr');
-  if (!name){ err.textContent = 'Dê um nome para a página.'; err.hidden = false; $('newPageName').focus(); return; }
-  if (pageNameTaken(name)){ err.textContent = 'Já existe uma página chamada "'+name+'".'; err.hidden = false; $('newPageName').focus(); return; }
+  if (!name){ err.textContent = 'Dê um nome para a subpasta.'; err.hidden = false; $('newPageName').focus(); return; }
+  if (pageNameTaken(name)){ err.textContent = 'Já existe uma subpasta chamada "'+name+'" nesta pasta.'; err.hidden = false; $('newPageName').focus(); return; }
   err.hidden = true;
-  askX({ kind:'criar-pagina', title:'Criar a página "'+name+'"?', text:'Depois é só usar "Mover para" em cada extrato para colocá-lo nesta página.', yes:'Criar página', cancel:'Voltar', onYes:function(){
-    API.criarPagina(name, kindNow()).then(function(pg){
+  var dentro = MODE==='vendas' ? '' : ' dentro de '+perfilLabel(chosenPerfil());
+  askX({ kind:'criar-pagina', title:'Criar a subpasta "'+name+'"'+dentro+'?', text:'Depois é só usar "Mover para", no menu de cada extrato, para colocá-lo nesta subpasta.', yes:'Criar subpasta', cancel:'Voltar', onYes:function(){
+    API.criarPagina(name, kindNow(), chosenPerfil()).then(function(pg){
       $('newPageForm').hidden = true; state.page = pg.id;
-      return recarregarSalvos().then(function(){ toast('Página "'+name+'" criada.'); });
+      return recarregarSalvos().then(function(){ toast('Subpasta "'+name+'" criada.'); });
     }).catch(falhou);
   } });
 });
@@ -1911,10 +1945,11 @@ $('pageHead').addEventListener('click', function(e){
   var del = e.target.closest('[data-pdel]');
   if (del){
     var n = getSaved().filter(function(x){ return x.page===pid; }).length;
-    askX({ kind:'excluir-pagina', danger:true, title:'Excluir a página "'+pg.name+'"?', text:(n ? 'Os '+n+' extratos dela não serão apagados: eles passam para "Sem página". ' : 'A página está vazia. ')+'Isso não pode ser desfeito.', yes:'Excluir página', back:del, onYes:function(){
+    var raiz = MODE==='vendas' ? '"Sem página"' : 'a pasta '+perfilLabel(chosenPerfil());
+    askX({ kind:'excluir-pagina', danger:true, title:'Excluir a subpasta "'+pg.name+'"?', text:(n ? 'Os '+n+' extratos dela não serão apagados: eles voltam para '+raiz+'. ' : 'A subpasta está vazia. ')+'Isso não pode ser desfeito.', yes:'Excluir subpasta', back:del, onYes:function(){
       API.excluirPagina(pid).then(function(){
         state.page = null;
-        return recarregarSalvos().then(function(){ toast('Página "'+pg.name+'" excluída.'); });
+        return recarregarSalvos().then(function(){ toast('Subpasta "'+pg.name+'" excluída.'); });
       }).catch(falhou);
     } });
   }
@@ -1923,13 +1958,13 @@ $('pageHead').addEventListener('submit', function(e){
   e.preventDefault();
   var pid = state.page, pg = getPages().filter(function(p){ return p.id===pid; })[0]; if (!pg) return;
   var name = $('renPageName').value.replace(/\s+/g,' ').trim(), err = $('renPageErr');
-  if (!name){ err.textContent = 'Dê um nome para a página.'; err.hidden = false; return; }
+  if (!name){ err.textContent = 'Dê um nome para a subpasta.'; err.hidden = false; return; }
   if (name===pg.name){ state.editingPage = null; renderSaved(); return; }
-  if (pageNameTaken(name, pid)){ err.textContent = 'Já existe uma página chamada "'+name+'".'; err.hidden = false; return; }
-  askX({ kind:'renomear-pagina', title:'Renomear a página?', text:'"'+pg.name+'" passa a se chamar "'+name+'".', yes:'Salvar nome', cancel:'Continuar editando', onYes:function(){
+  if (pageNameTaken(name, pid)){ err.textContent = 'Já existe uma subpasta chamada "'+name+'" nesta pasta.'; err.hidden = false; return; }
+  askX({ kind:'renomear-pagina', title:'Renomear a subpasta?', text:'"'+pg.name+'" passa a se chamar "'+name+'".', yes:'Salvar nome', cancel:'Continuar editando', onYes:function(){
     API.renomearPagina(pid, name).then(function(){
       state.editingPage = null;
-      return recarregarSalvos().then(function(){ toast('Página renomeada para "'+name+'".'); });
+      return recarregarSalvos().then(function(){ toast('Subpasta renomeada para "'+name+'".'); });
     }).catch(falhou);
   } });
 });
@@ -1940,12 +1975,14 @@ $('savedList').addEventListener('submit', function(e){
     var to = $('mvX').value || null;
     var mx = getSaved().filter(function(v){ return v.id===id; })[0]; if (!mx) return;
     if ((mx.page||null)===to){ state.movingSaved = null; renderSaved(); return; }
-    var dest = to ? pageName(to) : 'Sem página';
-    askX({ kind:'mover-extrato', title:'Mover o extrato?', text:'"'+(mx.name||'Extrato')+'" vai para '+(to ? 'a página "'+dest+'"' : '"Sem página"')+'.', yes:'Mover extrato', cancel:'Voltar',
+    var desp = MODE!=='vendas';
+    var dest = to ? '"'+pageName(to)+'"' : (desp ? perfilLabel(perfilOf(mx))+' (pasta principal)' : '"Sem página"');
+    var para = to ? (desp ? 'a subpasta ' : 'a página ')+dest : dest;
+    askX({ kind:'mover-extrato', title:'Mover o extrato?', text:'"'+(mx.name||'Extrato')+'" vai para '+para+'.', yes:'Mover extrato', cancel:'Voltar',
       onYes:function(){
         API.alterarExtrato(id, {pagina_id: to}).then(function(){
           state.movingSaved = null;
-          return recarregarSalvos().then(function(){ toast('Extrato movido para '+(to ? '"'+dest+'"' : '"Sem página"')+'.'); });
+          return recarregarSalvos().then(function(){ toast('Extrato movido para '+para+'.'); });
         }).catch(falhou);
       } });
     return;
