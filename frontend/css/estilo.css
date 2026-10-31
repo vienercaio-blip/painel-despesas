@@ -488,3 +488,7 @@ td .in{color:var(--good);font-weight:500}
 .det > summary::before{content:'▸';transition:transform .15s}
 .det[open] > summary::before{transform:rotate(90deg)}
 .det-corpo{display:flex;flex-direction:column;gap:20px;margin-top:16px}
+.acao{cursor:pointer}
+.acao:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* celular: o painel do filtro abre logo abaixo do botão, na largura do card */
+@media (max-width:560px){.filtro-painel{position:static;width:auto;max-height:none;margin-top:8px}.filtro-wrap{position:static;width:100%}}

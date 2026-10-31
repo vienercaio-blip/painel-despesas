@@ -821,13 +821,16 @@ function renderDashboard(){
     return mk.map(function(k){ var o = M[k]; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
   }
   var months = groupMonths(tx), allMonths = groupMonths(state.tx);
-  var nM = months.length;
+  var nM = isWeek ? 1 : months.length;  /* semana: valores da semana inteira, mesmo cruzando dois meses */
   var T = sums(tx), res = T.ins - T.outs;
 
   /* fixos e variáveis */
   var fixed = 0, byCat = {};
   tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
   var variable = T.outs - fixed, fixedM = fixed/nM, varM = variable/nM;
+  /* filtro sem nenhuma categoria com gasto neste período: mostra todas e avisa */
+  var selVazio = !!sel && !sel.some(function(c){ return byCat[c]; });
+  if (selVazio) sel = null;
 
   /* dias */
   var nDays = Math.round((last-first)/864e5)+1;
@@ -877,7 +880,7 @@ function renderDashboard(){
   $('dVerTx').textContent = ver.texto;
   $('dVerPesa').textContent = ver.pesa || '';
   var pp = prevP(), ant = null;
-  if (pp){ var pl = state.tx.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
+  if (pp && (isWeek || state.p.m!=='all')){  /* compara só mês com mês ou semana com semana */ var pl = state.tx.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
   var quandoTxt = isWeek ? 'nesta semana' : nM>1 ? 'média por mês, em '+nM+' meses' : 'neste mês';
   var nums = [
     {l:'Entrou', v:brl.format(T.ins/nM), s:quandoTxt+(ant ? deltaTxt(T.ins, ant.ins, ant.label) : '')},
@@ -894,7 +897,7 @@ function renderDashboard(){
   $('dAcoes').innerHTML = ac.lista.length ? ac.lista.map(function(a){
     var origens = a.cat ? topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===a.cat; }), 3, nM) : [];
     var mais = moreHTML(a.cat ? 'De onde vem: '+a.cat : a.titulo, origens.map(function(o){ return [o.l, brl.format(o.v)+(nM>1?'/mês':'')]; }), '');
-    return '<div class="acao hoverable" data-tip="'+esc('<b>'+esc(a.titulo)+'</b>')+'" data-more="'+esc(mais)+'">'+
+    return '<div class="acao hoverable" tabindex="0" data-tip="'+esc('<b>'+esc(a.titulo)+'</b>')+'" data-more="'+esc(mais)+'">'+
       '<h3>'+esc(a.titulo)+'</h3><p>'+esc(a.motivo)+'</p>'+
       (a.economia ? '<p class="eco">Economia: ~'+brl0.format(a.economia)+'/mês · '+brl0.format(a.economia*12)+'/ano</p>' : '')+
       (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
@@ -915,8 +918,9 @@ function renderDashboard(){
   var fixAn = bar.linhas.filter(function(l){ return l.fixa; }).reduce(function(s2,l){ return s2+l.mes*nM; }, 0);
   $('dFixLinha').textContent = fixAn>0 ? (X.negocio ? 'Custos fixos: ' : 'Contas fixas: ')+brl.format(fixAn/nM)+(nM>1?' por mês':'')+', '+pct.format(bar.total>0 ? fixAn/bar.total : 0)+' das saídas'+(sel?' analisadas':'')+'.' : '';
   var aviso = $('dFiltroAviso');
-  aviso.hidden = !sel;
-  if (sel) aviso.innerHTML = 'Analisando '+bar.linhas.length+' de '+nTodas+' categorias: '+brl.format(bar.total/nM)+(nM>1?'/mês':'')+', '+pct.format(T.outs ? bar.total/T.outs : 0)+' das saídas · <button type="button" data-atalho="todas">Mostrar todas</button>';
+  aviso.hidden = !sel && !selVazio;
+  if (selVazio) aviso.innerHTML = 'Nenhuma das categorias escolhidas tem gastos neste período, por isso estão aparecendo todas. · <button type="button" data-atalho="todas">Limpar a escolha</button>';
+  else if (sel) aviso.innerHTML = 'Analisando '+bar.linhas.length+' de '+nTodas+' categorias: '+brl.format(bar.total/nM)+(nM>1?'/mês':'')+', '+pct.format(T.outs ? bar.total/T.outs : 0)+' das saídas · <button type="button" data-atalho="todas">Mostrar todas</button>';
   $('dFiltroBtn').textContent = (sel ? bar.linhas.length+' de '+nTodas+' categorias' : 'Todas as despesas ('+nTodas+')')+' ▾';
   var ordem = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).sort(function(a,b){
     if (a===OTHER) return 1; if (b===OTHER) return -1; return byCat[b]-byCat[a]; });
@@ -2215,7 +2219,8 @@ $('dOnde').addEventListener('click', function(e){
   if (at){
     var tx = cur(), byCat = {};
     tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; } });
-    state.dashCats = Analise.atalho(at.dataset.atalho, {byCat:byCat, fixas:FIXED, outros:OTHER});
+    var esc2 = Analise.atalho(at.dataset.atalho, {byCat:byCat, fixas:FIXED, outros:OTHER});
+    state.dashCats = esc2 && esc2.length ? esc2 : null;
     renderDashboard(); return;
   }
   if (e.target.closest('[data-classificar]')) return;  /* o link segue para a aba Organizar */
@@ -2223,16 +2228,37 @@ $('dOnde').addEventListener('click', function(e){
   if (b) abrirLancamentos(b.dataset.cat);
 });
 $('dOnde').addEventListener('keydown', function(e){
+  if (e.target.closest('a')) return;
   var b = e.target.closest('.barra');
   if (b && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); abrirLancamentos(b.dataset.cat); }
 });
-$('dFiltroLista').addEventListener('change', function(){
-  var todas = [], marcadas = [];
+$('dFiltroLista').addEventListener('change', function(e){
+  var todas = [], marcadas = [], foco = e.target.value;
   $('dFiltroLista').querySelectorAll('input[type=checkbox]').forEach(function(c){ todas.push(c.value); if (c.checked) marcadas.push(c.value); });
-  state.dashCats = marcadas.length===todas.length ? null : marcadas;
+  /* categorias escolhidas que não têm gasto neste período continuam escolhidas */
+  var escondidas = (state.dashCats||[]).filter(function(c){ return todas.indexOf(c)===-1; });
+  state.dashCats = marcadas.length===todas.length && !escondidas.length ? null : marcadas.concat(escondidas);
   renderDashboard();
+  $('dFiltroLista').querySelectorAll('input[type=checkbox]').forEach(function(c){ if (c.value===foco) c.focus(); });
 });
 $('dDet').addEventListener('toggle', function(){ state.dashDet = $('dDet').open; });
+/* no celular não existe "passar o mouse": tocar (ou Enter) num cartão de ação mostra as origens na hora */
+function mostrarOrigens(el, x, y){
+  clearTimeout(tipTimer); tipEl = el; tipX = x; tipY = y;
+  tip.className = 'tip expanded';
+  tip.innerHTML = el.getAttribute('data-tip') + '<div class="tip-more">' + el.getAttribute('data-more') + '</div>';
+  tip.hidden = false; placeTip();
+}
+$('dAcoes').addEventListener('click', function(e){
+  if (e.target.closest('a')) return;
+  var a = e.target.closest('.acao'); if (!a) return;
+  var r = a.getBoundingClientRect();
+  mostrarOrigens(a, e.clientX || r.left, e.clientY || r.bottom);
+});
+$('dAcoes').addEventListener('keydown', function(e){
+  var a = e.target.closest('.acao');
+  if (a && e.target===a && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); var r = a.getBoundingClientRect(); mostrarOrigens(a, r.left, r.bottom); }
+});
 /* clicar numa barra: abre a aba Lançamentos já filtrada naquela categoria */
 function abrirLancamentos(cat){
   state.fcat = cat; state.filter = 'out';

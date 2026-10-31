@@ -108,7 +108,7 @@ function acoes(c){
 
 /* ---------- Parte 3: barras de "para onde vai o dinheiro" ---------- */
 function seta(c, nome){
-  if (c.meses.length<2) return null;
+  if (c.escopo==='semana' || c.meses.length<2) return null;
   var vals = c.meses.map(function(m){ return m.cat[nome]||0; });
   var media = vals.reduce(function(s,x){ return s+x; },0)/vals.length;
   if (media<=0) return null;

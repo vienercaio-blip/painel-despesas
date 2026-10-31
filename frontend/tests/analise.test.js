@@ -218,3 +218,8 @@ test('semana não sugere nada; sem ações, mensagem verde', () => {
   assert.equal(Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, nomes:N})).vazio, 'Nada urgente: seus custos estão sob controle.');
   assert.equal(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{Delivery:500}, nomes:N})).vazio, null);
 });
+
+test('barras: sem seta na visão de semana', () => {
+  const c = ctx({escopo:'semana', nM:1, byCat:{A:400}, meses:[{name:'set', cat:{A:100}}, {name:'out', cat:{A:300}}]});
+  assert.equal(Analise.barras(c, null).linhas[0].seta, null);
+});
