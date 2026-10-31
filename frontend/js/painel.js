@@ -877,7 +877,7 @@ function renderDashboard(){
       m: moreHTML('De onde vêm as taxas', topOrigins(feeTx, 5, nM).map(function(o){return [o.l, brl.format(o.v)+'/mês'];}), 'Percentual calculado sobre tudo o que entrou na conta no período.')}
     : topCat ? {l:'Onde mais gasta', v:brl.format(byCat[topCat]/nM), s:topCat+' · '+pct.format(T.outs?byCat[topCat]/T.outs:0)+' das saídas',
       m: moreHTML('O que mais pesa em '+topCat, topOrigins(tx.filter(function(t){ return t.value<0 && catOf(t)===topCat; }), 5, nM).map(function(o){return [o.l, brl.format(o.v)+(isWeek?'':'/mês')];}), 'A categoria com mais saídas no período, sem contar "'+OTHER+'".')}
-    : {l:'Onde mais gasta', v:'—', s:'Nenhuma saída classificada', m: moreHTML('Onde mais gasta', [], 'Classifique as saídas na página Categorias para ver onde o dinheiro mais vai.')}
+    : {l:'Onde mais gasta', v:'—', s:'Nenhuma saída classificada', m: moreHTML('Onde mais gasta', [], 'Classifique as saídas na aba Organizar para ver onde o dinheiro mais vai.')}
   ];
   $('dKpis').innerHTML = k.map(function(x){
     return '<div class="kpi hoverable" data-tip="'+esc('<b>'+esc(x.l)+'</b>')+'" data-more="'+esc(x.m)+'"><span class="label">'+esc(x.l)+'</span><span class="value num">'+esc(x.v)+'</span>'+
@@ -1529,7 +1529,7 @@ function renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev){
   var oth = byCat[OTHER];
   if (oth){
     var n = tx.filter(function(t){return t.value<0 && catOf(t)===OTHER;}).length;
-    L.push({w:true, t:n+(n===1?' despesa ficou':' despesas ficaram')+' sem categoria ('+brl.format(oth)+'). Classifique na página Categorias para o painel ficar mais preciso.'});
+    L.push({w:true, t:n+(n===1?' despesa ficou':' despesas ficaram')+' sem categoria ('+brl.format(oth)+'). Classifique na aba Organizar para o painel ficar mais preciso.'});
   }
   if (biggest) L.push({w:false, t:'O maior pagamento individual foi "'+biggest.desc+'", de '+brl.format(-biggest.value)+', em '+fmtDate(biggest.date)+'.'});
   $('insights').innerHTML = L.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
@@ -1657,7 +1657,7 @@ document.addEventListener('keydown', function(e){
   }
 });
 var RECLASS_HELP = 'As próximas mudanças de categoria vão usar esta mesma resposta automaticamente, sem confirmação. Isso pode criar regras sem você perceber.';
-/* troca a categoria de um lançamento (página Categorias e aba Lançamentos) */
+/* troca a categoria de um lançamento (abas Organizar e Lançamentos) */
 function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id], to = s.value;
