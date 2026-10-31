@@ -19,6 +19,20 @@ PASTA_BACKEND = Path(__file__).parent
 PASTA_FRONTEND = PASTA_BACKEND.parent / "frontend"
 PASTA_DADOS = PASTA_BACKEND / "dados"
 
+# Em modo --debug, a página pergunta ao servidor a cada segundo se algum
+# arquivo mudou e, se mudou, recarrega sozinha.
+_SCRIPT_RECARREGAR = """<script>
+(function(){
+  var atual = null;
+  setInterval(function(){
+    fetch('/_versao').then(function(r){ return r.json(); }).then(function(d){
+      if (atual !== null && d.v !== atual) location.reload();
+      atual = d.v;
+    }).catch(function(){});
+  }, 1000);
+})();
+</script>"""
+
 
 def _chave_secreta():
     """Chave que protege os cookies de login. Fica guardada em dados/chave_secreta
@@ -57,7 +71,22 @@ def create_app(config=None):
     @app.get("/")
     @login_obrigatorio
     def inicio():
+        if app.debug:
+            html = (PASTA_FRONTEND / "index.html").read_text(encoding="utf-8")
+            return html.replace("</body>", _SCRIPT_RECARREGAR + "</body>")
         return send_from_directory(PASTA_FRONTEND, "index.html")
+
+    # ----- só em modo --debug: recarrega a página quando um arquivo muda -----
+    if app.debug:
+        @app.get("/_versao")
+        def versao():
+            arquivos = [
+                *PASTA_FRONTEND.rglob("*"),
+                *PASTA_BACKEND.glob("*.py"),
+                *(PASTA_BACKEND / "rotas").glob("*.py"),
+                *(PASTA_BACKEND / "templates").glob("*"),
+            ]
+            return jsonify(v=max(a.stat().st_mtime for a in arquivos if a.is_file()))
 
     @app.get("/css/<path:arquivo>")
     def css(arquivo):
