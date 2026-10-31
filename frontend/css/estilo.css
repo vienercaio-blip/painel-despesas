@@ -419,4 +419,5 @@ td .in{color:var(--good);font-weight:500}
 /* usuário logado e botão Sair */
 .user-area{font-size:13px;color:var(--ink-3);margin-right:24px}
 .user-area b{color:var(--ink-2);font-weight:600}
+.conta-tipo{font-size:12px;color:var(--ink-3);opacity:.85}
 .sair-form{margin:0}

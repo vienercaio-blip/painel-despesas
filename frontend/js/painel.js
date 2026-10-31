@@ -1743,6 +1743,7 @@ $('rPeriod').addEventListener('change', function(){ resRange = this.value; rende
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
 function applyCfg(){
+  $('contaTipo').textContent = ' · ' + perfilLabel(chosenPerfil());
   document.documentElement.classList.toggle('texto-grande', !!cfg.textoGrande);
   document.documentElement.classList.toggle('sem-esteira', cfg.esteira===false);
 }
