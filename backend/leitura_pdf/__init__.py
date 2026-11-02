@@ -7,10 +7,10 @@ confere a leitura (totais ou saldo) e avisa ou recusa quando não fecha.
 import re
 
 from leitura import ErroLeitura
-from leitura_pdf import bb, bradesco, c6, inter, nubank
+from leitura_pdf import bb, bradesco, c6, generico, inter, nubank
 from leitura_pdf.comum import MENSAGENS, abrir
 
-PERFIS = [c6, inter, nubank, bradesco, bb]
+PERFIS = [c6, inter, nubank, bradesco, bb, generico]  # o genérico é sempre o último
 
 _FATURA = re.compile(r"vencimento", re.I)
 _FATURA_2 = re.compile(r"pagamento m[íi]nimo|limite total", re.I)

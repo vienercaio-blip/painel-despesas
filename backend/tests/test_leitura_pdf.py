@@ -279,3 +279,80 @@ def test_bb_pelo_historico_centralizado():
 def test_bb_com_saldo_do_dia_adulterado_avisa():
     lanc, aviso = ler_pdf(_bb(saldo_dia="900,00"))
     assert len(lanc) == 2 and aviso and "08/09/2026" in aviso
+
+
+# ---------- genérico (bancos sem perfil próprio) ----------
+
+def _valores(lanc):
+    return [(l["data"], l["descricao"], l["valor"]) for l in lanc]
+
+
+def test_generico_linha_com_sinais_explicitos_avisa_para_conferir():
+    lanc, aviso = ler_pdf(pdf_linhas([["Banco Exemplo S.A. - Extrato", "Período: 01/08/2026 a 31/08/2026",
+                                       "05/08 PIX JOAO 150,00-", "06/08 SALARIO EMPRESA 3.000,00 C", "07/08 TARIFA PACOTE 10,00 D"]]))
+    assert _valores(lanc) == [("2026-08-05", "PIX JOAO", -150.0), ("2026-08-06", "SALARIO EMPRESA", 3000.0),
+                              ("2026-08-07", "TARIFA PACOTE", -10.0)]
+    assert aviso == MENSAGENS["confira"]
+
+
+def test_generico_virada_de_ano_pelo_periodo():
+    lanc, _ = ler_pdf(pdf_linhas([["Extrato", "Período de 15/12/2025 a 15/01/2026", "20/12 COMPRA LOJA -50,00", "05/01 COMPRA MERCADO -20,00"]]))
+    assert [l["data"] for l in lanc] == ["2025-12-20", "2026-01-05"]
+
+
+def test_generico_coluna_de_saldo_fechando_sem_aviso():
+    lanc, aviso = ler_pdf(pdf_linhas([["Extrato", "Data Histórico Valor Saldo", "01/08/2026 Saldo anterior 100,00",
+                                       "05/08/2026 PIX JOAO -50,00 50,00", "06/08/2026 DEPOSITO 200,00 250,00"]]))
+    assert _valores(lanc) == [("2026-08-05", "PIX JOAO", -50.0), ("2026-08-06", "DEPOSITO", 200.0)]
+    assert aviso is None
+
+
+def test_generico_corrige_sinal_pela_cadeia():
+    lanc, aviso = ler_pdf(pdf_linhas([["Extrato", "Data Histórico Valor Saldo", "05/08/2026 PIX JOAO -50,00 50,00",
+                                       "06/08/2026 SAQUE 30,00 20,00", "07/08/2026 DEPOSITO 10,00 30,00"]]))
+    assert [l["valor"] for l in lanc] == [-50.0, -30.0, 10.0] and aviso is None
+
+
+@pytest.mark.parametrize("linhas", [
+    ["Extrato", "Data Histórico Valor Saldo", "05/08/2026 PIX JOAO -50,00 50,00", "06/08/2026 SAQUE 30,00 99,00"],  # cadeia não fecha
+    ["Extrato", "05/08/2026 PIX JOAO 150,00", "06/08/2026 COMPRA 20,00"],  # sem sinal e sem saldo
+    ["Extrato", "05/08/2026 PIX JOAO -150,00", "06/08/2026 COMPRA -20,00", "07/08/2026 COMPRA 12,34 TEXTO DEPOIS"],  # sobra > 10%
+])
+def test_generico_recusa_quando_nao_da_para_conferir(linhas):
+    with pytest.raises(ErroLeitura) as e:
+        ler_pdf(pdf_linhas([linhas]))
+    assert str(e.value) == MENSAGENS["desconhecido"]
+
+
+def test_generico_por_colunas_credito_debito_saldo():
+    cab = [(40, 40, "Banco Exemplo - Extrato de conta"), (40, 80, "Data"), (110, 80, "Lançamento"),
+           (330, 80, "Crédito"), (400, 80, "Débito"), (480, 80, "Saldo")]
+    linhas = [
+        (40, 100, "01/08/2026"), (110, 100, "SALDO ANTERIOR"), (485, 100, "100,00"),
+        (40, 120, "05/08/2026"), (110, 116, "PIX ENVIADO"), (405, 120, "40,00"), (485, 120, "60,00"),
+        (110, 126, "FULANO DE TAL"),
+        (110, 146, "DEPOSITO"), (335, 146, "15,00"), (485, 146, "75,00"),
+    ]
+    lanc, aviso = ler_pdf(pdf([cab + linhas]))
+    assert _valores(lanc) == [("2026-08-05", "PIX ENVIADO FULANO DE TAL", -40.0), ("2026-08-05", "DEPOSITO", 15.0)]
+    assert aviso is None
+
+
+def _generico_com_saldos(saldo_final="125,00"):
+    return pdf_linhas([["Extrato Exemplo", "Período: 01/09/2026 a 30/09/2026",
+                        "31/08/2026 Saldo Anterior 100,00 (+)",
+                        "08/09/2026 10001 55555 50,00 (+)", "08/09/2026 10002 55556 25,00 (-)",
+                        "08/09/2026 Saldo do dia 125,00 (+)",
+                        f"30/09/2026 S A L D O {saldo_final} (+)"]])
+
+
+def test_generico_linha_confere_pelas_linhas_de_saldo():
+    lanc, aviso = ler_pdf(_generico_com_saldos())
+    assert [l["valor"] for l in lanc] == [50.0, -25.0]   # "S A L D O" não é lançamento
+    assert aviso is None                                   # conferido pelo saldo do dia
+
+
+def test_generico_linha_recusa_se_saldo_nao_bate():
+    with pytest.raises(ErroLeitura) as e:
+        ler_pdf(_generico_com_saldos(saldo_final="999,00"))
+    assert str(e.value) == MENSAGENS["desconhecido"]
