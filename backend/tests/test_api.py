@@ -49,7 +49,7 @@ def test_leitura_de_varios_formatos(cliente, arquivo):
     assert len(arqs["cafe.csv"]["lancamentos"]) == 188
     assert len(arqs["banco-latin1.csv"]["lancamentos"]) == 60
     assert len(arqs["planilha.xlsx"]["lancamentos"]) == 55
-    assert "PDF" in arqs["extrato.pdf"]["erro"]
+    assert arqs["extrato.pdf"]["erro"].startswith("Não consegui ler os lançamentos deste PDF")
     # OFX e CSV do mesmo extrato dão o mesmo resultado
     assert arqs["cafe.ofx"]["lancamentos"] == arqs["cafe.csv"]["lancamentos"]
     aluguel = next(l for l in arqs["cafe.ofx"]["lancamentos"] if "ALUGUEL IMOBILIARIA" in l["descricao"])
@@ -249,3 +249,36 @@ def test_dados_separados_por_usuario(cliente, outro_cliente, arquivo):
     assert outro_cliente.get(f"/api/extratos/{meta['id']}").status_code == 404
     assert outro_cliente.delete(f"/api/extratos/{meta['id']}").status_code == 404
     assert outro_cliente.get("/api/estado").json["regras"] == {}
+
+
+# ---------- extrato em PDF com senha ----------
+
+def _pdf_c6_com_senha():
+    from pdf_falso import pdf_linhas
+    return pdf_linhas([[
+        "Agosto 2026 ( 01/08/2026 - 31/08/2026 ) Entradas: R$ 100,00 • Saídas: R$ 30,00",
+        "01/08 03/08 Saída PIX Pix enviado para LOJA EXEMPLO -R$ 30,00",
+        "02/08 03/08 Entrada PIX Pix recebido de FULANO R$ 100,00",
+        "No app do C6 Bank",
+    ]], senha="segredo-123")
+
+
+def test_pdf_com_senha_pede_senha(cliente):
+    conteudo = _pdf_c6_com_senha()
+
+    def enviar_pdf(senha=None):
+        dados = {"perfil": "empresa", "arquivos": [(io.BytesIO(conteudo), "extrato.pdf")]}
+        if senha is not None:
+            dados["senha"] = senha
+        return cliente.post("/api/leitura", data=dados, content_type="multipart/form-data")
+
+    r = enviar_pdf()
+    item = r.json["arquivos"][0]
+    assert item["codigo"] == "senha" and "lancamentos" not in item
+    r = enviar_pdf("errada")
+    assert r.json["arquivos"][0]["codigo"] == "senha_incorreta"
+    assert "errada" not in r.get_data(as_text=True)
+    r = enviar_pdf("segredo-123")
+    item = r.json["arquivos"][0]
+    assert [l["valor"] for l in item["lancamentos"]] == [-30.0, 100.0] and "codigo" not in item
+    assert "segredo-123" not in r.get_data(as_text=True)

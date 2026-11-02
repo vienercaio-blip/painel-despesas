@@ -1,4 +1,4 @@
-"""Leitura dos arquivos de extrato: OFX, CSV e Excel (.xlsx).
+"""Leitura dos arquivos de extrato: OFX, CSV, Excel (.xlsx) e PDF (pacote leitura_pdf).
 
 Cada leitor devolve uma lista de lançamentos no formato:
     {"data": "2026-08-01", "descricao": "PIX ENVIADO ...", "valor": -120.5}
@@ -233,7 +233,7 @@ def ler_arquivo(nome, conteudo):
     em ordem de data."""
     nome_min = (nome or "").lower()
     if nome_min.endswith(".pdf"):
-        raise ErroLeitura("PDF ainda não é aceito. Exporte em OFX ou CSV.")
+        return ler_arquivo_com_aviso(nome, conteudo)[0]
     if nome_min.endswith((".xlsx", ".xlsm")):
         lista = ler_xlsx(conteudo)
     elif nome_min.endswith((".xls", ".ods")):
@@ -243,3 +243,13 @@ def ler_arquivo(nome, conteudo):
         lista = ler_ofx(texto) if re.search(r"<OFX>|<STMTTRN>", texto, re.I) else ler_csv(texto)
     lista.sort(key=lambda l: l["data"])
     return lista
+
+
+def ler_arquivo_com_aviso(nome, conteudo, senha=None):
+    """Como ler_arquivo, mas devolve (lançamentos, aviso). O aviso vem dos
+    PDFs (ex.: soma que não bateu com os totais do banco); a senha só é
+    usada para abrir PDFs protegidos."""
+    if (nome or "").lower().endswith(".pdf"):
+        from leitura_pdf import ler_pdf  # aqui dentro para evitar import circular
+        return ler_pdf(conteudo, senha)
+    return ler_arquivo(nome, conteudo), None

@@ -198,7 +198,7 @@ def carregar_edicoes(banco, usuario_id):
 
 # Entrada com uma destas palavras é dinheiro de volta de uma despesa (estorno,
 # devolução, reembolso): em vez de contar como renda, desconta da categoria.
-PALAVRAS_ESTORNO = ["estorno", "estornad", "devolucao", "reembolso", "chargeback"]
+PALAVRAS_ESTORNO = ["estorno", "estornad", "devolucao", "devolvid", "reembolso", "chargeback"]
 
 
 def eh_estorno(descricao, valor):

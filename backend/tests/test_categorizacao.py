@@ -80,3 +80,8 @@ def test_entrada_comum_nao_e_estorno(descricao):
 def test_saida_com_palavra_estorno_continua_saida():
     item = _preparar("pf", "TARIFA ESTORNO DEVOLVIDO", -5.0)
     assert item["estorno"] is False and item["categoria_auto"] == "Tarifas bancárias"
+
+
+@pytest.mark.parametrize("descricao", ["Pix enviado devolvido UBER DO BRASIL", "Pix-Envio devolvido 99 TECNOLOGIA"])
+def test_pix_devolvido_e_estorno(descricao):
+    assert _preparar("pf", descricao, 25.0)["estorno"] is True
