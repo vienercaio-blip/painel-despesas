@@ -25,6 +25,7 @@ Cinco formatos foram estudados com **extratos reais**. Eles estão em `backend/d
 | **Nubank** | cabeçalho por dia (`05 OUT 2026 Total de entradas + 1.071,47`); seções "Total de entradas" / "Total de saídas" dão o sinal; valor sem sinal na **primeira** linha da descrição, com a continuação embaixo | soma de cada seção = "Total de…"; total geral = resumo do topo; saldo inicial + entradas − saídas = saldo final | real |
 | **Bradesco** (formato "Bradesco Celular") | tabela Data · Histórico · Docto. · Crédito · Débito · Saldo; **valores sem sinal** (o sinal vem da coluna); **saldo negativo só pela cor vermelha**; data só na primeira linha do dia; histórico centralizado na célula | crédito e débito = linha "Total"; cadeia de saldos usando a cor | real |
 | **Banco do Brasil** (formato "Dia Lote Documento Histórico Valor") | sinal `(+)`/`(-)` depois do valor; histórico centralizado na célula; "Saldo Anterior", "Saldo do dia" e "S A L D O" | Saldo Anterior + lançamentos = cada "Saldo do dia" e o "S A L D O" final | real |
+| **Mercado Pago** (acrescentado depois) | tabela Data · Descrição · ID da operação · Valor · Saldo; data com traço (`01-10-2026`); valor com sinal depois do "R$"; descrição centralizada, às vezes continuando na página seguinte; nem toda página repete o cabeçalho | cadeia de saldos desde o saldo inicial; entradas e saídas do resumo; saldo final | real |
 | **Itaú, Caixa, Santander e outros** | perfil genérico (ver abaixo) | saldo, quando houver coluna de saldo | sem extrato real; recusa se não fechar |
 
 ## Parte 1: o que a pessoa vê na tela

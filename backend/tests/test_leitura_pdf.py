@@ -481,3 +481,48 @@ def test_bradesco_data_um_pouco_desalinhada_fica_na_linha_certa():
               (40, 210, "Total"), (455, 210, "15,00", VERMELHO)]
     lanc, _ = ler_pdf(pdf([cab + linhas]))
     assert [l["data"] for l in lanc] == ["2026-09-08", "2026-09-09"]
+
+
+# ---------- Mercado Pago (célula centralizada, data com traço, resumo no topo) ----------
+
+def _mercadopago(saidas="R$ -45,00", saldo_linha="R$ 80,00"):
+    def cab_tabela(y):
+        return [(40, y, "DDaattaa"), (89, y, "DDeessccrriiççããoo"), (197, y, "IIDD"), (305, y, "VVaalloorr"), (380, y, "SSaallddoo")]
+    p1 = [(40, 30, "EXTRATO DE CONTA"), (40, 42, "Fulano de Tal"), (40, 54, "CPF/CNPJ: 00000000000 Agência: 1 Conta: 1234"),
+          (40, 66, "Periodo: De 01-03-2026 al 31-03-2026"),
+          (40, 90, "Saldo inicial: R$ 100,00"), (300, 84, "Entradas: R$ 20,00"), (300, 96, f"Saidas: {saidas}"), (450, 90, "Saldo final: R$ 75,00"),
+          (200, 120, "DETALHE DOS MOVIMENTOS")] + cab_tabela(140) + [
+        (40, 170, "01-03-2026"), (92, 170, "Rendimentos"), (197, 170, "111111111111"), (300, 170, "R$ 0,00"), (370, 170, "R$ 100,00"),
+        (92, 194, "Pix recebido FULANO"), (40, 200, "02-03-2026"), (197, 200, "222222222222"), (300, 200, "R$ 20,00"), (370, 200, "R$ 120,00"),
+        (92, 206, "DE TAL"),
+        (40, 240, "03-03-2026"), (92, 234, "Pagamento com Pix LOJA"), (197, 240, "333333333333"), (300, 240, "R$ -40,00"), (370, 240, saldo_linha),
+        (92, 246, "EXEMPLO LTDA"),
+        (92, 300, "Reserva por gasto Cofrinho"),   # a célula continua na próxima página
+        (520, 330, "1/2")]
+    p2 = cab_tabela(40) + [
+        (40, 70, "03-03-2026"), (92, 70, "Mercado Livre"), (197, 70, "444444444444"), (300, 70, "R$ -5,00"), (370, 70, "R$ 75,00"),
+        (40, 300, "Data de geração: 01-04-2026"),
+        (40, 312, "Você tem alguma dúvida? Conte com o nosso Portal de ajuda para encontrar informações"),
+        (40, 330, "Mercado Pago Instituição de Pagamento Ltda. CNPJ n.º 00.000.000/0001-00."), (520, 340, "2/2")]
+    return pdf([p1, p2])
+
+
+def test_mercadopago_com_conferencias_certas():
+    lanc, aviso = ler_pdf(_mercadopago())
+    assert aviso is None
+    assert _valores(lanc) == [
+        ("2026-03-01", "Rendimentos", 0.0),
+        ("2026-03-02", "Pix recebido FULANO DE TAL", 20.0),
+        ("2026-03-03", "Pagamento com Pix LOJA EXEMPLO LTDA", -40.0),
+        ("2026-03-03", "Reserva por gasto Cofrinho Mercado Livre", -5.0),
+    ]
+
+
+def test_mercadopago_com_total_adulterado_avisa():
+    _, aviso = ler_pdf(_mercadopago(saidas="R$ -50,00"))
+    assert aviso and "R$ 5,00" in aviso
+
+
+def test_mercadopago_com_saldo_adulterado_avisa():
+    _, aviso = ler_pdf(_mercadopago(saldo_linha="R$ 90,00"))
+    assert aviso and "03/03/2026" in aviso

@@ -156,6 +156,22 @@ def ler_valor_no_topo(linhas, cabecalho, valor=None):
     return saida
 
 
+def agrupar_linhas(palavras, tolerancia=3.0):
+    """Junta em linhas as palavras cujo centro vertical fica a até `tolerancia`
+    pontos do centro da linha (arredondar a altura partia uma linha em duas
+    quando a data ficava meio ponto acima dos números). Cada linha vem
+    ordenada da esquerda para a direita."""
+    linhas = []
+    for p in sorted(palavras, key=lambda p: p.centro_y):
+        if linhas and abs(p.centro_y - linhas[-1]["y"]) <= tolerancia:
+            linhas[-1]["palavras"].append(p)
+            ps = linhas[-1]["palavras"]
+            linhas[-1]["y"] = sum(q.centro_y for q in ps) / len(ps)
+        else:
+            linhas.append({"y": p.centro_y, "palavras": [p]})
+    return [sorted(l["palavras"], key=lambda p: p.x0) for l in linhas]
+
+
 def ler_celulas(pagina, topo, base, eh_linha_valor, eh_texto):
     """Jeito "célula centralizada" (ex.: Bradesco, BB): o texto de cada célula
     fica centralizado na vertical, então parte do histórico sai acima e parte
@@ -163,13 +179,8 @@ def ler_celulas(pagina, topo, base, eh_linha_valor, eh_texto):
     viram registros; cada palavra aceita por eh_texto(palavra), da própria
     linha ou de outra, vai para o registro mais próximo na vertical.
     Devolve [{"y", "palavras", "texto"}] em ordem, com "texto" já montado."""
-    linhas = {}
-    for p in pagina.palavras:
-        if topo < p.top < base:
-            linhas.setdefault(round(p.top / 2), []).append(p)
     registros, soltas = [], []
-    for chave in sorted(linhas):
-        grupo = sorted(linhas[chave], key=lambda p: p.x0)
+    for grupo in agrupar_linhas([p for p in pagina.palavras if topo < p.top < base]):
         if eh_linha_valor(grupo):
             registros.append({"y": sum(p.centro_y for p in grupo) / len(grupo), "palavras": grupo, "_txt": []})
         soltas.append(grupo)

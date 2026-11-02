@@ -79,7 +79,7 @@ node --test frontend/tests
 
 O site lê o extrato **da conta** em PDF, o formato que todo app de banco oferece. A regra é nunca mostrar números errados calado: cada PDF é conferido pelos totais ou pelo saldo que o próprio banco imprime.
 
-- **Com conferência:** C6, Inter, Nubank, Bradesco (formato do app, "Bradesco Celular") e Banco do Brasil. Foram estudados com extratos reais, que ficam só em `backend/dados/pdfs-exemplo/` (ignorada pelo git). Os testes usam PDFs inventados.
+- **Com conferência:** C6, Inter, Nubank, Bradesco (formato do app, "Bradesco Celular"), Banco do Brasil e Mercado Pago. Foram estudados com extratos reais, que ficam só em `backend/dados/pdfs-exemplo/` (ignorada pelo git). Os testes usam PDFs inventados.
 - **Outros bancos:** perfil genérico. Aceita se conseguir conferir pelo saldo; sem saldo, aceita só valores com sinal explícito e avisa "confira". Se não fechar, recusa e orienta exportar em OFX ou CSV.
 - **Senha:** se o PDF tiver senha (o C6 tem), a tela pede. A senha só abre o arquivo naquele envio e não é guardada.
 - **Recusados com mensagem clara:** PDF escaneado ou foto, extrato sem lançamentos, fatura de cartão e arquivos acima de 15 MB ou 300 páginas.
