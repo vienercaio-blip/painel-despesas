@@ -200,59 +200,103 @@ function readFiles(files, perfil){
   showMsg('Enviando '+(files.length===1?'o arquivo':files.length+' arquivos')+' para leitura…', false);
   perfil = perfil || chosenPerfil();
   API.lerArquivos(files, perfil).then(function(resp){
-    var results = resp.arquivos;
-    var good = results.filter(function(r){return !r.erro;});
-    /* lançamentos iguais são contados por arquivo: dois cafés de R$ 5 no mesmo
-       dia ficam os dois; o mesmo período enviado em dois arquivos não duplica */
-    var combined = [], seen = {}, dup = 0;
-    good.forEach(function(r){
-      var noArquivo = {};
-      r.lancamentos.forEach(function(l){
-        var k = l.data+'|'+l.descricao+'|'+l.valor;
-        noArquivo[k] = (noArquivo[k] || 0) + 1;
-        if (noArquivo[k] <= (seen[k] || 0)){ dup++; return; }
-        seen[k] = noArquivo[k]; combined.push(l);
-      });
-    });
-    $('upFiles').innerHTML = results.map(function(r){
-      return '<li class="'+(r.erro?'bad':'')+'"><span class="fn">'+esc(r.nome)+'</span><span class="fc">'+(r.erro ? esc(r.erro) : r.lancamentos.length+' lançamentos')+'</span></li>';
-    }).join('');
-    if (!good.length){
-      $('upResult').hidden = false; $('upResTitle').textContent = 'Não foi possível ler o extrato';
-      $('upSum').textContent = 'Confira o formato do arquivo e tente de novo.';
-      $('upResult').querySelector('.drop-actions').hidden = true;
-      $('msg').hidden = true;
-      return;
-    }
-    var nome = good.map(function(r){return r.nome;}).join(', ');
-    state.perfil = perfil;
-    var salvar = $('saveMode').checked;
-    /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
-       escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
-    var pronto = salvar
-      ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:null, lancamentos:combined })
-          .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
-                function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
-      : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
-    pronto.then(function(saved){
-      var lista = combined.map(doServidor).sort(function(x,y){ return x.date-y.date; });
-      var a = lista[0].date, b = lista[lista.length-1].date;
-      var months = {}; lista.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
-      var nm = Object.keys(months).length;
-      $('upResTitle').textContent = 'Últimos extratos';
-      $('upSum').textContent = lista.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
-        (saved===true ? ' Salvo em Extratos salvos. Abra o extrato na lista para ver o painel.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
-      $('upResult').querySelector('.drop-actions').hidden = saved===true;
-      $('upResult').hidden = false;
-      $('msg').hidden = true;
-      /* extrato salvo: leva o usuário direto para a lista de salvos */
-      if (saved===true){
-        showPanel('salvos');
-        $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
-        toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.');
-      }
-    });
+    state.leitura = { perfil: perfil, itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
+    seguirLeitura();
   }).catch(function(e){ showMsg(e.message, true); });
+}
+/* PDFs com senha: cada um ganha uma caixinha na lista de arquivos. A leitura
+   só conclui quando não sobra nenhum pendente (senha informada ou pulado).
+   A senha vai só no reenvio daquele arquivo e não é guardada. */
+function seguirLeitura(){
+  var L = state.leitura; if (!L) return;
+  var pendentes = L.itens.filter(function(it){ return it.r.codigo; });
+  if (pendentes.length){
+    $('msg').hidden = true;
+    $('upFiles').innerHTML = L.itens.map(function(it, i){ return linhaArquivo(it.r, i); }).join('');
+    var campo = $('upFiles').querySelector('.pdf-senha input'); if (campo) campo.focus();
+    return;
+  }
+  state.leitura = null;
+  concluirLeitura(L.itens.map(function(it){ return it.r; }), L.perfil);
+}
+function linhaArquivo(r, i){
+  var html = '<li class="'+(r.erro?'bad':'')+'"><span class="fn">'+esc(r.nome)+'</span><span class="fc">'+
+    (r.erro ? esc(r.erro) : r.lancamentos.length+' lançamentos'+(r.aviso ? ' · ⚠ '+esc(r.aviso) : ''))+'</span>';
+  if (r.codigo) html += '<form class="pdf-senha" data-i="'+i+'" novalidate><label class="sr-only" for="pdfSenha'+i+'">Senha do PDF</label>'+
+    '<input type="password" id="pdfSenha'+i+'" autocomplete="off" placeholder="Senha do PDF">'+
+    '<button type="submit" class="btn btn-sm primary">Abrir</button><button type="button" class="btn btn-sm ghost" data-pular="'+i+'">Pular este arquivo</button></form>';
+  return html + '</li>';
+}
+$('upFiles').addEventListener('submit', function(e){
+  var f = e.target.closest('.pdf-senha'); if (!f) return;
+  e.preventDefault();
+  var L = state.leitura, it = L && L.itens[+f.dataset.i];
+  var senha = f.querySelector('input').value;
+  if (!it) return;
+  if (!senha){ f.querySelector('input').focus(); return; }
+  f.querySelector('button[type=submit]').disabled = true;
+  API.lerArquivos([it.file], L.perfil, senha).then(function(resp){
+    it.r = resp.arquivos[0];
+    seguirLeitura();
+  }).catch(function(err){ f.querySelector('button[type=submit]').disabled = false; showMsg(err.message, true); });
+});
+$('upFiles').addEventListener('click', function(e){
+  var b = e.target.closest('[data-pular]'); if (!b || !state.leitura) return;
+  state.leitura.itens.splice(+b.dataset.pular, 1);
+  seguirLeitura();
+});
+function concluirLeitura(results, perfil){
+  var good = results.filter(function(r){return !r.erro;});
+  /* lançamentos iguais são contados por arquivo: dois cafés de R$ 5 no mesmo
+     dia ficam os dois; o mesmo período enviado em dois arquivos não duplica */
+  var combined = [], seen = {}, dup = 0;
+  good.forEach(function(r){
+    var noArquivo = {};
+    r.lancamentos.forEach(function(l){
+      var k = l.data+'|'+l.descricao+'|'+l.valor;
+      noArquivo[k] = (noArquivo[k] || 0) + 1;
+      if (noArquivo[k] <= (seen[k] || 0)){ dup++; return; }
+      seen[k] = noArquivo[k]; combined.push(l);
+    });
+  });
+  $('upFiles').innerHTML = results.map(function(r){ return linhaArquivo(r); }).join('');
+  if (!good.length){
+    $('upResult').hidden = false; $('upResTitle').textContent = 'Não foi possível ler o extrato';
+    $('upSum').textContent = 'Confira o formato do arquivo e tente de novo.';
+    $('upResult').querySelector('.drop-actions').hidden = true;
+    $('msg').hidden = true;
+    return;
+  }
+  var nome = good.map(function(r){return r.nome;}).join(', ');
+  state.perfil = perfil;
+  var salvar = $('saveMode').checked;
+  /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
+     escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
+  var pronto = salvar
+    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:null, lancamentos:combined })
+        .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
+              function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
+    : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
+  var avisos = good.filter(function(r){ return r.aviso; });
+  pronto.then(function(saved){
+    if (avisos.length && saved!==true) toast(avisos[0].aviso);
+    var lista = combined.map(doServidor).sort(function(x,y){ return x.date-y.date; });
+    var a = lista[0].date, b = lista[lista.length-1].date;
+    var months = {}; lista.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
+    var nm = Object.keys(months).length;
+    $('upResTitle').textContent = 'Últimos extratos';
+    $('upSum').textContent = lista.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
+      (saved===true ? ' Salvo em Extratos salvos. Abra o extrato na lista para ver o painel.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
+    $('upResult').querySelector('.drop-actions').hidden = saved===true;
+    $('upResult').hidden = false;
+    $('msg').hidden = true;
+    /* extrato salvo: leva o usuário direto para a lista de salvos */
+    if (saved===true){
+      showPanel('salvos');
+      $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
+      toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.');
+    }
+  });
 }
 function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(err?' error':''); m.hidden=false; }
 

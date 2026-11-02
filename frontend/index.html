@@ -67,7 +67,7 @@
           <p>ou escolha o arquivo no computador ou no celular</p>
           <div class="drop-actions">
             <label class="btn primary" for="file">Escolher arquivos</label>
-            <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,text/csv" multiple>
+            <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,.pdf,text/csv,application/pdf" multiple>
           </div>
           <div class="save-row">
             <label class="check" for="saveMode"><input type="checkbox" id="saveMode" checked> Salvar para acessar depois</label>
@@ -109,7 +109,7 @@
             <li><span class="fmt ok">OFX</span><span>Aceito. É o formato mais confiável.</span></li>
             <li><span class="fmt ok">CSV</span><span>Aceito, com colunas de data, descrição e valor.</span></li>
             <li><span class="fmt ok">Excel</span><span>Aceito (.xlsx, .xls, .ods). Cada aba com cabeçalho na primeira linha.</span></li>
-            <li><span class="fmt no">PDF</span><span>Ainda não aceito. Exporte em OFX ou CSV.</span></li>
+            <li><span class="fmt ok">PDF</span><span>Aceito. Lido com conferência no C6, Inter, Nubank, Bradesco e Banco do Brasil; nos outros bancos, em teste.</span></li>
           </ul>
         </section>
       </aside>

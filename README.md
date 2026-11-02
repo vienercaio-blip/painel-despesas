@@ -10,6 +10,7 @@ dados_site/
 │   ├── banco.py            conexão com o banco de dados
 │   ├── schema.sql          as tabelas do banco
 │   ├── leitura.py          lê extratos OFX, CSV e Excel (.xlsx)
+│   ├── leitura_pdf/        lê extratos em PDF (um perfil por banco + genérico)
 │   ├── categorizacao.py    categorias padrão e regras de classificação
 │   ├── rotas/              a API, separada por assunto
 │   ├── templates/          tela de login
@@ -29,7 +30,7 @@ dados_site/
 | Backend (servidor) | Frontend (navegador) |
 |---|---|
 | Login e separação dos dados de cada cliente | Desenhar telas, gráficos e tabelas |
-| Ler os arquivos do banco (OFX, CSV, Excel) | Filtros de período, busca, tooltips |
+| Ler os arquivos do banco (OFX, CSV, Excel, PDF) | Filtros de período, busca, tooltips |
 | Categorizar automaticamente cada despesa | Confirmações antes de cada mudança |
 | Guardar extratos, subpastas, categorias, regras, correções e preferências | Exportar PDF e CSV |
 
@@ -67,12 +68,22 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 56 testes no servidor: leitura dos 4 formatos, salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+São 98 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
 
 As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
 ```
 node --test frontend/tests
 ```
+
+## Extrato em PDF
+
+O site lê o extrato **da conta** em PDF, o formato que todo app de banco oferece. A regra é nunca mostrar números errados calado: cada PDF é conferido pelos totais ou pelo saldo que o próprio banco imprime.
+
+- **Com conferência:** C6, Inter, Nubank, Bradesco (formato do app, "Bradesco Celular") e Banco do Brasil. Foram estudados com extratos reais, que ficam só em `backend/dados/pdfs-exemplo/` (ignorada pelo git). Os testes usam PDFs inventados.
+- **Outros bancos:** perfil genérico. Aceita se conseguir conferir pelo saldo; sem saldo, aceita só valores com sinal explícito e avisa "confira". Se não fechar, recusa e orienta exportar em OFX ou CSV.
+- **Senha:** se o PDF tiver senha (o C6 tem), a tela pede. A senha só abre o arquivo naquele envio e não é guardada.
+- **Recusados com mensagem clara:** PDF escaneado ou foto, extrato sem lançamentos, fatura de cartão e arquivos acima de 15 MB ou 300 páginas.
+- **Para um banco novo:** criar um perfil em `backend/leitura_pdf/` com `reconhece(doc)` e `ler(doc)` e colocá-lo antes do genérico em `PERFIS`.
 
 ## O dashboard
 

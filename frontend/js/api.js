@@ -30,9 +30,10 @@ var API = (function(){
     apagarTudo: function(){ return pedir('DELETE', '/dados'); },
 
     /* arquivos de extrato: o servidor lê e devolve os lançamentos (não salva) */
-    lerArquivos: function(arquivos, perfil){
+    lerArquivos: function(arquivos, perfil, senha){
       var fd = new FormData();
       fd.append('perfil', perfil);
+      if (senha) fd.append('senha', senha);  /* só para abrir PDFs protegidos */
       Array.prototype.forEach.call(arquivos, function(f){ fd.append('arquivos', f, f.name); });
       return pedir('POST', '/leitura', fd);
     },
