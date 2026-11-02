@@ -125,6 +125,34 @@ def cadeia_quebras(itens):
     return [i for i in range(1, len(itens)) if abs(itens[i - 1][1] + itens[i][0] - itens[i][1]) > 0.005]
 
 
+_VALOR_NO_FIM = re.compile(r"^(.*?)\s*(-?R?\$?\s?[\d.]+,\d\d)$")
+
+
+def ler_valor_no_topo(linhas, cabecalho, valor=None):
+    """Jeito "valor no topo" (ex.: Nubank): a linha com valor no fim abre um
+    lançamento, e as linhas sem valor que vêm depois continuam a descrição,
+    até o próximo valor ou cabeçalho (inclusive passando de página).
+    cabecalho(linha) devolve um contexto novo (dia, sinal…) ou None.
+    valor: regex (descrição, valor) — o padrão aceita sinal; quem não usa
+    sinal passa um regex sem ele, para não engolir um "-" da descrição.
+    Devolve [[contexto, descricao, texto_do_valor]]."""
+    valor = valor or _VALOR_NO_FIM
+    saida, ctx = [], None
+    for linha in linhas:
+        novo = cabecalho(linha)
+        if novo is not None:
+            ctx = novo
+            continue
+        if ctx is None:
+            continue
+        m = valor.match(linha)
+        if m:
+            saida.append([ctx, m.group(1).strip(), m.group(2)])
+        elif saida and saida[-1][0] is ctx:
+            saida[-1][1] = (saida[-1][1] + " " + linha).strip()
+    return saida
+
+
 def formatar_reais(v):
     s = f"{abs(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return ("-R$ " if v < 0 else "R$ ") + s

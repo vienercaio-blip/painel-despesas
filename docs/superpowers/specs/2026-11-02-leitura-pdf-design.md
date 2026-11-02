@@ -101,7 +101,7 @@ Cinco formatos foram estudados com **extratos reais**. Eles estão em `backend/d
 - **Nubank:**
   - o sinal vem da seção;
   - ignora o cabeçalho de cada página (até "VALORES EM R$"), o rodapé e "Movimentações";
-  - a descrição é cortada no primeiro ` - ` seguido de CPF/CNPJ (`•••.ddd.ddd-••` ou `dd.ddd.ddd/dddd-dd`). Assim fica "Transferência enviada pelo Pix DISQUE FEIRA", e o banco de destino ("STONE", "PAGSEGURO") não confunde a categorização.
+  - a descrição é cortada no primeiro ` - ` seguido de CPF/CNPJ (`•••.ddd.ddd-••` ou `dd.ddd.ddd/dddd-dd`). Assim fica "Transferência enviada pelo Pix MERCADINHO MODELO", e o banco de destino ("STONE", "PAGSEGURO") não confunde a categorização.
 - **Bradesco:**
   - a data é herdada nas linhas seguintes do mesmo dia;
   - o número do documento sai da descrição;

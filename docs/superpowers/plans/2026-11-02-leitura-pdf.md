@@ -112,7 +112,7 @@
   - **Linha curta:** "Pagamento de fatura 20,00".
   - **Esperado:**
     - 3 lançamentos com os sinais certos;
-    - a descrição "Transferência enviada pelo Pix DISQUE FEIRA", cortada antes de " - 96.714.530/0001-70 - STONE…";
+    - a descrição "Transferência enviada pelo Pix MERCADINHO MODELO", cortada antes de " - 22.333.444/0001-55 - STONE…";
     - o "Pagamento de fatura" com a própria descrição;
     - aviso `None`.
   - **Variações:** com o resumo adulterado, aviso `nao_bateu`; com o total de uma seção adulterado, também.
@@ -121,7 +121,7 @@
   - Reconhece por (`Nu Pagamentos` ou `Nu Financeira`) e `VALORES EM R$`.
   - Dia: `^(\d\d) (JAN|…|DEZ) (\d{4}) Total de (entradas|saídas) ([+-]) ?([\d.]+,\d\d)$`. Seção: `^Total de (entradas|saídas) ([+-]) ?([\d.]+,\d\d)$`.
   - Rodapé: as linhas que começam com os prefixos da sonda e a linha exatamente igual a "Pagamento", que é a quebra de "Nu Pagamentos S.A. - Instituição de / Pagamento".
-  - Corte da descrição: regex ` - (?:•••\.\d{3}\.\d{3}-••|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{2}\.\d{3}\.\d{3}\s*/\d{4}-\d{2}).*$`. O caso `51.382.388 /0001-73`, que quebra a linha no meio do CNPJ, também é cortado.
+  - Corte da descrição: regex ` - (?:•••\.\d{3}\.\d{3}-••|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{2}\.\d{3}\.\d{3}\s*/\d{4}-\d{2}).*$`. O caso `33.444.555 /0001-66`, que quebra a linha no meio do CNPJ, também é cortado.
   - Conferências: soma de cada seção = total da seção; totais = resumo; saldo inicial + entradas − saídas = saldo final.
 - [ ] **Passo 4:** `pytest -q`. Esperado: todos passam.
 - [ ] **Passo 5:** commit "Leitura de PDF: perfil Nubank".
@@ -145,7 +145,7 @@
     - Lançamentos com o histórico em 2 linhas: uma 4 pt acima e outra 4 pt abaixo do valor.
     - O valor na coluna Débito, o saldo em vermelho `(1,0,0)` e a data só na primeira linha do dia.
     - Uma linha "Total" com créditos e débitos.
-    - Esperado: sinais pela coluna, saldo vermelho negativo, cadeia fechando, descrição "PIX QR CODE DINAMICO DES: DISQUE FEIRA 06/09" sem o número do documento, data herdada e aviso `None`. Com "Total" adulterado, aviso `nao_bateu`.
+    - Esperado: sinais pela coluna, saldo vermelho negativo, cadeia fechando, descrição "PIX QR CODE DINAMICO DES: MERCADINHO MODELO 06/09" sem o número do documento, data herdada e aviso `None`. Com "Total" adulterado, aviso `nao_bateu`.
   - **BB:**
     - "Extrato de Conta Corrente" e o cabeçalho "Dia Lote Documento Histórico Valor".
     - "Saldo Anterior 23,66 (+)".

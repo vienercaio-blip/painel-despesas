@@ -141,3 +141,63 @@ def test_inter_com_saldo_adulterado_avisa():
     lanc, aviso = ler_pdf(_inter(saldo_resgate="R$ 50,00"))
     assert len(lanc) == 4
     assert aviso and "17/09/2025" in aviso
+
+
+# ---------- Nubank ----------
+
+def _nubank(resumo_saidas="-80,00", total_secao="- 80,00"):
+    def cab(y0):
+        return [(390, y0, "Fulano de Tal"), (390, y0 + 12, "CPF •••.111.222-•• Agência 0001 Conta"), (450, y0 + 24, "10000001-0"),
+                (40, y0 + 50, "01 DE OUTUBRO DE 2026 a 31 DE OUTUBRO DE 2026"), (470, y0 + 50, "VALORES EM R$")]
+
+    def rodape(y0, pag):
+        return [(40, y0, "Tem alguma dúvida? Mande uma mensagem para nosso time de atendimento pelo chat do app"),
+                (40, y0 + 12, f"Extrato gerado dia 02 de novembro de 2026 às 10:30 {pag} de 2")]
+
+    p1 = cab(40) + [
+        (300, 110, "Saldo inicial"), (500, 110, "4,66"),
+        (300, 124, "Rendimento líquido"), (500, 124, "+0,00"),
+        (40, 138, "Saldo final do período"),
+        (40, 152, "R$ 24,66"), (300, 152, "Total de entradas"), (500, 152, "+100,00"),
+        (300, 166, "Total de saídas"), (500, 166, resumo_saidas),
+        (300, 180, "Saldo final do período"), (500, 180, "24,66"),
+        (40, 200, "Movimentações"),
+        (40, 220, "05 OUT 2026"), (110, 220, "Total de entradas"), (500, 220, "+ 100,00"),
+        (110, 236, "Transferência recebida pelo Pix"), (260, 236, "LOJA EXEMPLO LTDA - 11.222.333/0001-81 - BCO"), (500, 236, "100,00"),
+        (260, 250, "C6 S.A. (0336) Agência: 1 Conta: 1234567-8"),
+        (110, 270, "Total de saídas"), (500, 270, total_secao),
+        # o traço antes do CNPJ fica no fim da linha do valor, e o CNPJ quebra no meio
+        (110, 286, "Transferência enviada pelo Pix"), (260, 286, "MERCADINHO MODELO -"), (500, 286, "40,00"),
+        (260, 300, "22.333.444/0001-"),
+        (260, 314, "55 - STONE IP S.A. (0197) Agência: 1 Conta: 7654321-0"),
+        (110, 330, "Transferência enviada pelo Pix"), (260, 330, "PROVEDOR FICTICIO LTDA - 33.444.555"), (500, 330, "20,00"),
+    ] + rodape(780, 1)
+    p2 = cab(40) + [
+        (260, 110, "/0001-66 - COOPERATIVA EXEMPLO"),
+        (110, 126, "Pagamento de fatura"), (500, 126, "20,00"),
+        (40, 160, "Nu Financeira S.A. - Sociedade de Credito, Financiamento e"), (300, 160, "Nu Pagamentos S.A. - Instituição de"),
+        (40, 172, "Investimento"), (300, 172, "Pagamento"),
+        (40, 184, "CNPJ: 30.680.829/0001-43"), (300, 184, "CNPJ: 18.236.120/0001-58"),
+    ] + rodape(780, 2)
+    return pdf([p1, p2])
+
+
+def test_nubank_com_totais_certos():
+    lanc, aviso = ler_pdf(_nubank())
+    assert aviso is None
+    assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
+        ("2026-10-05", "Transferência recebida pelo Pix LOJA EXEMPLO LTDA", 100.0),
+        ("2026-10-05", "Transferência enviada pelo Pix MERCADINHO MODELO", -40.0),
+        ("2026-10-05", "Transferência enviada pelo Pix PROVEDOR FICTICIO LTDA", -20.0),
+        ("2026-10-05", "Pagamento de fatura", -20.0),
+    ]
+
+
+def test_nubank_com_resumo_adulterado_avisa():
+    _, aviso = ler_pdf(_nubank(resumo_saidas="-90,00"))
+    assert aviso and "R$ 10,00" in aviso
+
+
+def test_nubank_com_total_da_secao_adulterado_avisa():
+    _, aviso = ler_pdf(_nubank(total_secao="- 70,00"))
+    assert aviso and "05/10/2026" in aviso
