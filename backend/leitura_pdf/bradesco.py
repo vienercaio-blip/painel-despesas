@@ -3,7 +3,7 @@ sinal), saldo negativo só pela cor vermelha e histórico centralizado na
 célula. Conferências: linha "Total" e cadeia de saldos."""
 import re
 
-from leitura_pdf.comum import MENSAGENS, cadeia_quebras, formatar_reais, ler_celulas, valor_br
+from leitura_pdf.comum import MENSAGENS, formatar_reais, ler_celulas, valor_br
 
 NUM = re.compile(r"^[\d.]+,\d\d$")
 DATA = re.compile(r"^(\d\d)/(\d\d)/(\d{4})$")
@@ -26,7 +26,7 @@ def _colunas(pagina):
 
 
 def ler(doc):
-    lancamentos, saldos, total, data = [], [], None, None
+    lancamentos, saldos, total, data, ancora = [], [], None, None, None
     for pg in doc.paginas:
         cab = _colunas(pg)
         if not cab:
@@ -37,7 +37,7 @@ def ler(doc):
         numeros = lambda grupo: [p for p in grupo if NUM.match(p.texto) and p.x0 > x_valores]
 
         def eh_linha_valor(grupo):
-            return grupo[0].texto != "Total" and any(coluna(p) in ("Crédito", "Débito") for p in numeros(grupo))
+            return grupo[0].texto != "Total" and bool(numeros(grupo))
 
         def eh_texto(p):
             return cab["Histórico"].x0 - 2 <= p.x0 < cab["Docto."].x0 - 2
@@ -55,28 +55,44 @@ def ler(doc):
                     valor = -valor_br(p.texto)
                 else:
                     saldo = -valor_br(p.texto) if p.cor == VERMELHO else valor_br(p.texto)
-            m = next((DATA.match(p.texto) for p in r["palavras"] if DATA.match(p.texto) and p.x0 < cab["Histórico"].x0), None)
-            if m:
+            # a data é a palavra de data mais próxima da linha, na coluna Data (tolerância de 6pt)
+            perto = [p for p in pg.palavras if DATA.match(p.texto) and p.x0 < cab["Histórico"].x0 and abs(p.centro_y - r["y"]) <= 6]
+            if perto:
+                m = DATA.match(min(perto, key=lambda p: abs(p.centro_y - r["y"])).texto)
                 data = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
-            if data is None or valor is None:
+            if valor is None:
+                if saldo is not None and "SALDO" in r["texto"].upper():
+                    ancora = saldo
+                continue
+            if data is None:
                 continue
             lancamentos.append({"data": data, "descricao": r["texto"], "valor": valor})
             saldos.append(saldo)
 
-    if total:
+    conferido = False
+    if total and "Crédito" in total and "Débito" in total:
         cred = sum(l["valor"] for l in lancamentos if l["valor"] > 0)
         deb = -sum(l["valor"] for l in lancamentos if l["valor"] < 0)
-        dif = max(abs(cred - total.get("Crédito", cred)), abs(deb - total.get("Débito", deb)))
+        dif = max(abs(cred - total["Crédito"]), abs(deb - total["Débito"]))
         if dif > 0.005:
             return lancamentos, MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(dif), onde="o total do extrato")
-    if all(s is not None for s in saldos):
-        itens = [(l["valor"], s) for l, s in zip(lancamentos, saldos)]
-        quebras = cadeia_quebras(itens)
-        if quebras:
-            i = quebras[0]
-            a, m, d = lancamentos[i]["data"].split("-")
-            dif = abs(itens[i - 1][1] + itens[i][0] - itens[i][1])
-            return lancamentos, MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(dif), onde=f"{d}/{m}/{a}")
+        conferido = True
+    # cadeia de saldos: soma os valores entre as linhas que têm saldo
+    corrente, pendente, conferencias = ancora, False, 0
+    for l, s in zip(lancamentos, saldos):
+        if corrente is not None:
+            corrente += l["valor"]
+        pendente = True
+        if s is not None:
+            if corrente is not None:
+                if abs(corrente - s) > 0.005:
+                    a, m, d = l["data"].split("-")
+                    return lancamentos, MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(abs(corrente - s)), onde=f"{d}/{m}/{a}")
+                pendente = False
+                conferencias += 1
+            corrente = s
+    if not conferido and (pendente or conferencias == 0):   # nem Total nem saldo conferiram até o fim
+        return lancamentos, MENSAGENS["sem_conferencia"]
     return lancamentos, None
 
 

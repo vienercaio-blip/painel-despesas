@@ -56,10 +56,13 @@ def _com_sinal(texto, sufixo):
     return v, sufixo in ("(+)", "C")
 
 
-def _conferir(itens, ancora):
+def _conferir(itens, ancora, saldo_verificado=False):
     """itens: [[valor, saldo|None, explicito]]. Devolve o aviso (None ou
-    "confira") ou levanta ErroLeitura se não der para confiar."""
+    "confira") ou levanta ErroLeitura se não der para confiar.
+    saldo_verificado: as linhas de saldo conferiram a soma até o último lançamento."""
     if itens and all(i[1] is not None for i in itens):
+        if ancora is None and not itens[0][2]:
+            raise ErroLeitura(MENSAGENS["desconhecido"])  # o 1º valor não tem com o que ser conferido
         anterior = ancora
         for i in itens:
             if anterior is not None and abs(anterior + i[0] - i[1]) > 0.005:
@@ -70,21 +73,56 @@ def _conferir(itens, ancora):
             anterior = i[1]
         return None
     if itens and all(i[2] for i in itens):
-        return MENSAGENS["confira"]
+        return None if saldo_verificado else MENSAGENS["confira"]
     raise ErroLeitura(MENSAGENS["desconhecido"])
 
-
-# ---------- jeito "linha" ----------
 
 def _eh_saldo(texto):
     return re.search("saldo", texto.replace(" ", ""), re.I) is not None  # pega também "S A L D O"
 
 
+class _Saldos:
+    """Linhas de saldo ("Saldo anterior", "Saldo do dia", "S A L D O")
+    conferindo a soma dos lançamentos entre elas."""
+
+    def __init__(self):
+        self.ancora = self.corrente = None
+        self.pendente = False   # houve lançamento depois da última conferência
+
+    def saldo(self, valor):
+        if self.ancora is None:
+            self.ancora = self.corrente = valor
+        elif self.corrente is not None:
+            if abs(self.corrente - valor) > 0.005:
+                raise ErroLeitura(MENSAGENS["desconhecido"])
+            self.pendente = False
+
+    def lancamento(self, valor):
+        if self.corrente is not None:
+            self.corrente += valor
+        self.pendente = True
+
+    @property
+    def verificado(self):
+        return self.ancora is not None and not self.pendente
+
+
+# ---------- jeito "linha" ----------
+
+VALOR_NO_FIM = re.compile(r"\d,\d\d\s*(?:-|D|C|\(\+\)|\(-\))?$")
+
+
 def _por_linhas(doc, ano_de):
-    itens, lancamentos, ancora, datadas, sobras = [], [], None, 0, 0
-    corrente, conferidas = None, 0   # linhas de saldo ("Saldo do dia") conferem a soma
-    for linha in doc.texto.split("\n"):
-        if not DATA_INICIO.match(linha) or not re.search(r"\d,\d\d", linha):
+    itens, lancamentos, datadas, sobras = [], [], 0, 0
+    saldos = _Saldos()
+    for linha in doc.texto.split(chr(10)):
+        if not DATA_INICIO.match(linha):
+            # linha com valor no fim e sem data, depois do primeiro lançamento: não foi lida
+            if lancamentos and VALOR_NO_FIM.search(linha) and not _eh_saldo(linha):
+                datadas += 1
+                sobras += 1
+            continue
+        if not re.search(r"\d,\d\d", linha):
             continue
         datadas += 1
         m = LINHA.match(linha)
@@ -96,26 +134,19 @@ def _por_linhas(doc, ano_de):
         v, explicito = _com_sinal(m.group(5), m.group(6))
         saldo = _com_sinal(m.group(7), m.group(8))[0] if m.group(7) else None
         if _eh_saldo(desc):
-            valor_saldo = saldo if saldo is not None else v
-            if ancora is None:
-                ancora = corrente = valor_saldo
-            elif corrente is not None:
-                if abs(corrente - valor_saldo) > 0.005:
-                    raise ErroLeitura(MENSAGENS["desconhecido"])
-                conferidas += 1
+            saldos.saldo(saldo if saldo is not None else v)
             continue
         if data is None:
             sobras += 1
             continue
         lancamentos.append({"data": data, "descricao": desc, "valor": v})
         itens.append([v, saldo, explicito])
-        if corrente is not None:
-            corrente += v
+        saldos.lancamento(v)
     if not lancamentos or sobras > 0.10 * datadas:
         raise ErroLeitura(MENSAGENS["desconhecido"])
-    if conferidas and all(i[2] for i in itens) and not any(i[1] is not None for i in itens):
-        return lancamentos, None   # sinais explícitos e soma conferida pelas linhas de saldo
-    aviso = _conferir(itens, ancora)
+    aviso = _conferir(itens, saldos.ancora, saldos.verificado)
+    if sobras and aviso is None:
+        aviso = MENSAGENS["confira"]   # alguma linha ficou de fora: nunca dizer que está tudo certo
     for l, i in zip(lancamentos, itens):
         l["valor"] = i[0]
     return lancamentos, aviso
@@ -124,7 +155,8 @@ def _por_linhas(doc, ano_de):
 # ---------- jeito "colunas" (célula centralizada) ----------
 
 def _por_colunas(doc, ano_de):
-    itens, lancamentos, ancora, data = [], [], None, None
+    itens, lancamentos, data = [], [], None
+    saldos = _Saldos()
     achou = False
     for pg in doc.paginas:
         cab = {}
@@ -171,17 +203,19 @@ def _por_colunas(doc, ano_de):
                     valor, explicito = -abs(valor_br(p.texto)), True
                 else:
                     valor, explicito = _com_sinal(p.texto, sufixo)
+            if _eh_saldo(r["texto"]):
+                saldos.saldo(saldo if saldo is not None else abs(valor) if valor is not None else 0.0)
+                continue
             if valor is None:
-                if saldo is not None and re.search("saldo", r["texto"], re.I):
-                    ancora = saldo
                 continue
             if data is None:
                 raise ErroLeitura(MENSAGENS["desconhecido"])
             lancamentos.append({"data": data, "descricao": r["texto"], "valor": valor})
             itens.append([valor, saldo, explicito])
+            saldos.lancamento(valor)
     if not achou or not lancamentos:
         return None
-    aviso = _conferir(itens, ancora)
+    aviso = _conferir(itens, saldos.ancora, saldos.verificado)
     for l, i in zip(lancamentos, itens):
         l["valor"] = i[0]
     return lancamentos, aviso

@@ -36,7 +36,7 @@ def ler(doc):
         cab = _cabecalho(pg)
         if not cab:
             continue
-        base = next((p.top for p in pg.palavras if p.texto == "Aplicações"), 1e9)
+        base = _inicio_aplicacoes(pg)
         fim = base < 1e9
         x_hist = cab["Histórico"].x0 - 2
 
@@ -48,18 +48,35 @@ def ler(doc):
 
         for r in ler_celulas(pg, cab["Histórico"].bottom, base, eh_linha_valor, eh_texto):
             m = DATA.match(r["palavras"][0].texto)
-            registros.append((f"{m.group(3)}-{m.group(2)}-{m.group(1)}", r["texto"], _valor(r["palavras"])))
+            # o tipo da linha vem das palavras da própria linha do valor: um texto que
+            # sobrou da página anterior não pode transformar um saldo em lançamento
+            linha = " ".join(p.texto for p in r["palavras"])
+            registros.append((f"{m.group(3)}-{m.group(2)}-{m.group(1)}", r["texto"], _valor(r["palavras"]), linha))
 
-    lancamentos, corrente, aviso = [], None, None
-    for data, texto, valor in registros:
-        if texto.startswith("Saldo Anterior"):
+    lancamentos, corrente, aviso, pendente = [], None, None, False
+    for data, texto, valor, linha in registros:
+        if "Saldo Anterior" in linha:
             corrente = valor
-        elif texto.startswith(("Saldo do dia", "S A L D O")):
-            if corrente is not None and aviso is None and abs(corrente - valor) > 0.005:
-                a, m, d = data.split("-")
-                aviso = MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(abs(corrente - valor)), onde=f"{d}/{m}/{a}")
+        elif "Saldo do dia" in linha or "S A L D O" in linha:
+            if corrente is not None:
+                if aviso is None and abs(corrente - valor) > 0.005:
+                    a, m, d = data.split("-")
+                    aviso = MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(abs(corrente - valor)), onde=f"{d}/{m}/{a}")
+                pendente = False
         else:
             lancamentos.append({"data": data, "descricao": texto, "valor": valor})
+            pendente = True
             if corrente is not None:
                 corrente += valor
+    if aviso is None and (corrente is None or pendente):
+        aviso = MENSAGENS["sem_conferencia"]   # nenhum saldo conferiu o fim do extrato
     return lancamentos, aviso
+
+
+def _inicio_aplicacoes(pagina):
+    """Topo da seção "Aplicações Financeiras" (não é lançamento), ou 1e9."""
+    palavras = sorted(pagina.palavras, key=lambda p: (round(p.top), p.x0))
+    for a, b in zip(palavras, palavras[1:]):
+        if a.texto == "Aplicações" and b.texto == "Financeiras" and abs(a.top - b.top) < 3:
+            return a.top
+    return 1e9

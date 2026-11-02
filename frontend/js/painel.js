@@ -199,6 +199,7 @@ function readFiles(files, perfil){
   if (!files.length) return;
   showMsg('Enviando '+(files.length===1?'o arquivo':files.length+' arquivos')+' para leitura…', false);
   perfil = perfil || chosenPerfil();
+  state.leitura = null;   /* um envio novo anula caixinhas de senha pendentes do anterior */
   API.lerArquivos(files, perfil).then(function(resp){
     state.leitura = { perfil: perfil, itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
     seguirLeitura();
@@ -236,6 +237,7 @@ $('upFiles').addEventListener('submit', function(e){
   if (!senha){ f.querySelector('input').focus(); return; }
   f.querySelector('button[type=submit]').disabled = true;
   API.lerArquivos([it.file], L.perfil, senha).then(function(resp){
+    if (state.leitura !== L) return;   /* outro envio começou enquanto a senha ia ao servidor */
     it.r = resp.arquivos[0];
     seguirLeitura();
   }).catch(function(err){ f.querySelector('button[type=submit]').disabled = false; showMsg(err.message, true); });
@@ -294,7 +296,8 @@ function concluirLeitura(results, perfil){
     if (saved===true){
       showPanel('salvos');
       $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
-      toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.');
+      toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.'+
+        (avisos.length ? ' Atenção: '+avisos[0].aviso : ''));
     }
   });
 }

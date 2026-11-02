@@ -38,6 +38,9 @@ def ler(doc):
     ultimo = {}
     for l, s in zip(lancamentos, saldos):
         ultimo[l["data"]] = s
+    sem_lancamento = [d for d in dias if d not in ultimo]
+    if sem_lancamento:   # todo dia do extrato tem ao menos um lançamento: algo ficou sem ler
+        return lancamentos, MENSAGENS["linha_nao_lida"].format(onde=_br(sem_lancamento[0]))
     for d, s in ultimo.items():
         if abs(s - dias[d]) > 0.005:
             return lancamentos, MENSAGENS["nao_bateu"].format(diferenca=formatar_reais(abs(s - dias[d])), onde=_br(d))

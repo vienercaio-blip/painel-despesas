@@ -72,14 +72,14 @@ def test_cadeia_quebras():
 
 def _c6(saidas_dezembro="R$ 30,00"):
     return pdf_linhas([[
-        "Extrato exportado no dia 6 de janeiro de 2026 às 13:44",
+        "Extrato exportado no dia 7 de janeiro de 2026 às 09:15",
         "Período • 1 de dezembro de 2025 até 31 de janeiro de 2026",
         f"Dezembro 2025 ( 01/12/2025 - 31/12/2025 ) Entradas: R$ 100,00 • Saídas: {saidas_dezembro}",
         "Data Data",
         "Tipo Descrição Valor",
         "lançamento contábil",
-        "01/12 02/12 Saída PIX Pix enviado para EMBASA -R$ 20,00",
-        "02/12 02/12 Débito de Cartão MOB PARKING SALVADOR BRA -R$ 10,00",
+        "01/12 02/12 Saída PIX Pix enviado para AGUA E ESGOTO EXEMPLO -R$ 20,00",
+        "02/12 02/12 Débito de Cartão ESTACIONAMENTO MODELO -R$ 10,00",
         "Saldo do dia 02/12/25 -R$ 30,00",
         "03/12 03/12 Entrada PIX Pix recebido de JOAO R$ 100,00",
     ], [
@@ -93,8 +93,8 @@ def test_c6_com_totais_certos():
     lanc, aviso = ler_pdf(_c6())
     assert aviso is None
     assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
-        ("2025-12-01", "Pix enviado para EMBASA", -20.0),
-        ("2025-12-02", "Débito de Cartão MOB PARKING SALVADOR BRA", -10.0),
+        ("2025-12-01", "Pix enviado para AGUA E ESGOTO EXEMPLO", -20.0),
+        ("2025-12-02", "Débito de Cartão ESTACIONAMENTO MODELO", -10.0),
         ("2025-12-03", "Pix recebido de JOAO", 100.0),
         ("2026-01-05", "Outros gastos IOF CHEQUE ESPECIAL", -5.0),
     ]
@@ -110,18 +110,18 @@ def test_c6_com_total_errado_avisa():
 
 def _inter(saldo_resgate="R$ 46,00"):
     return pdf_linhas([[
-        "Solicitado em: 02/11/2026 - 10h54",
+        "Solicitado em: 05/01/2026 - 08h30",
         "CPF/CNPJ: 000.000.000-00, Instituição: Banco Inter, Agência: 0001-9, Conta: 1-0",
-        "Período: 05/08/2025 a 02/11/2026",
-        "11 de Agosto de 2025 Saldo do dia: R$ 0,00 Valor Saldo por transação",
-        'Aplicacao: "CDB POS DI LIQ. BANCO INTER S A" -R$ 334,82 -R$ 334,00',
-        'Pix recebido: "Cp :18236120-JOAO DA SILVA" R$ 334,00 -R$ 0,00',
-        "17 de Setembro de 2025 Saldo do dia: R$ 46,00",
-        'Pix enviado: "Cp :90400888-MC DONALDS" -R$ 54,00 -R$ 54,00',
+        "Período: 01/03/2025 a 31/05/2025",
+        "12 de Março de 2025 Saldo do dia: R$ 0,00 Valor Saldo por transação",
+        'Aplicacao: "INVESTIMENTO EXEMPLO" -R$ 210,50 -R$ 210,00',
+        'Pix recebido: "Cp :12345678-JOAO DA SILVA" R$ 210,00 -R$ 0,00',
+        "20 de Abril de 2025 Saldo do dia: R$ 46,00",
+        'Pix enviado: "Cp :87654321-LANCHONETE MODELO" -R$ 54,00 -R$ 54,00',
         "Fale com a gente",
-        "SAC: 0800 940 9999 (opção 09) Ouvidoria: 0800 940 7772",
+        "SAC: 0800 000 0000",
     ], [
-        f'Resgate: "CDB POS DI LIQ. BANCO INTER S A" R$ 100,00 {saldo_resgate}',
+        f'Resgate: "INVESTIMENTO EXEMPLO" R$ 100,00 {saldo_resgate}',
         "Fale com a gente",
     ]])
 
@@ -130,17 +130,17 @@ def test_inter_com_saldos_certos():
     lanc, aviso = ler_pdf(_inter())
     assert aviso is None
     assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
-        ("2025-08-11", "Aplicacao CDB POS DI LIQ. BANCO INTER S A", -334.82),
-        ("2025-08-11", "Pix recebido JOAO DA SILVA", 334.0),
-        ("2025-09-17", "Pix enviado MC DONALDS", -54.0),
-        ("2025-09-17", "Resgate CDB POS DI LIQ. BANCO INTER S A", 100.0),
+        ("2025-03-12", "Aplicacao INVESTIMENTO EXEMPLO", -210.5),
+        ("2025-03-12", "Pix recebido JOAO DA SILVA", 210.0),
+        ("2025-04-20", "Pix enviado LANCHONETE MODELO", -54.0),
+        ("2025-04-20", "Resgate INVESTIMENTO EXEMPLO", 100.0),
     ]
 
 
 def test_inter_com_saldo_adulterado_avisa():
     lanc, aviso = ler_pdf(_inter(saldo_resgate="R$ 50,00"))
     assert len(lanc) == 4
-    assert aviso and "17/09/2025" in aviso
+    assert aviso and "20/04/2025" in aviso
 
 
 # ---------- Nubank ----------
@@ -148,21 +148,21 @@ def test_inter_com_saldo_adulterado_avisa():
 def _nubank(resumo_saidas="-80,00", total_secao="- 80,00"):
     def cab(y0):
         return [(390, y0, "Fulano de Tal"), (390, y0 + 12, "CPF •••.111.222-•• Agência 0001 Conta"), (450, y0 + 24, "10000001-0"),
-                (40, y0 + 50, "01 DE OUTUBRO DE 2026 a 31 DE OUTUBRO DE 2026"), (470, y0 + 50, "VALORES EM R$")]
+                (40, y0 + 50, "01 DE MARÇO DE 2026 a 31 DE MARÇO DE 2026"), (470, y0 + 50, "VALORES EM R$")]
 
     def rodape(y0, pag):
         return [(40, y0, "Tem alguma dúvida? Mande uma mensagem para nosso time de atendimento pelo chat do app"),
-                (40, y0 + 12, f"Extrato gerado dia 02 de novembro de 2026 às 10:30 {pag} de 2")]
+                (40, y0 + 12, f"Extrato gerado dia 01 de abril de 2026 às 08:00 {pag} de 2")]
 
     p1 = cab(40) + [
-        (300, 110, "Saldo inicial"), (500, 110, "4,66"),
+        (300, 110, "Saldo inicial"), (500, 110, "7,10"),
         (300, 124, "Rendimento líquido"), (500, 124, "+0,00"),
         (40, 138, "Saldo final do período"),
-        (40, 152, "R$ 24,66"), (300, 152, "Total de entradas"), (500, 152, "+100,00"),
+        (40, 152, "R$ 27,10"), (300, 152, "Total de entradas"), (500, 152, "+100,00"),
         (300, 166, "Total de saídas"), (500, 166, resumo_saidas),
-        (300, 180, "Saldo final do período"), (500, 180, "24,66"),
+        (300, 180, "Saldo final do período"), (500, 180, "27,10"),
         (40, 200, "Movimentações"),
-        (40, 220, "05 OUT 2026"), (110, 220, "Total de entradas"), (500, 220, "+ 100,00"),
+        (40, 220, "05 MAR 2026"), (110, 220, "Total de entradas"), (500, 220, "+ 100,00"),
         (110, 236, "Transferência recebida pelo Pix"), (260, 236, "LOJA EXEMPLO LTDA - 11.222.333/0001-81 - BCO"), (500, 236, "100,00"),
         (260, 250, "C6 S.A. (0336) Agência: 1 Conta: 1234567-8"),
         (110, 270, "Total de saídas"), (500, 270, total_secao),
@@ -186,10 +186,10 @@ def test_nubank_com_totais_certos():
     lanc, aviso = ler_pdf(_nubank())
     assert aviso is None
     assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
-        ("2026-10-05", "Transferência recebida pelo Pix LOJA EXEMPLO LTDA", 100.0),
-        ("2026-10-05", "Transferência enviada pelo Pix MERCADINHO MODELO", -40.0),
-        ("2026-10-05", "Transferência enviada pelo Pix PROVEDOR FICTICIO LTDA", -20.0),
-        ("2026-10-05", "Pagamento de fatura", -20.0),
+        ("2026-03-05", "Transferência recebida pelo Pix LOJA EXEMPLO LTDA", 100.0),
+        ("2026-03-05", "Transferência enviada pelo Pix MERCADINHO MODELO", -40.0),
+        ("2026-03-05", "Transferência enviada pelo Pix PROVEDOR FICTICIO LTDA", -20.0),
+        ("2026-03-05", "Pagamento de fatura", -20.0),
     ]
 
 
@@ -200,7 +200,7 @@ def test_nubank_com_resumo_adulterado_avisa():
 
 def test_nubank_com_total_da_secao_adulterado_avisa():
     _, aviso = ler_pdf(_nubank(total_secao="- 70,00"))
-    assert aviso and "05/10/2026" in aviso
+    assert aviso and "05/03/2026" in aviso
 
 
 # ---------- Bradesco Celular (célula centralizada, sinal pela coluna, saldo pela cor) ----------
@@ -208,20 +208,20 @@ def test_nubank_com_total_da_secao_adulterado_avisa():
 VERMELHO, AZUL = (1, 0, 0), (0, 0, 1)
 
 
-def _bradesco(total_debito="26,41"):
-    cab = [(40, 40, "Bradesco Celular"), (40, 55, "Data: 02/11/2026 - 10h58"), (40, 70, "Nome: FULANO DE TAL"),
+def _bradesco(total_debito="22,30"):
+    cab = [(40, 40, "Bradesco Celular"), (40, 55, "Data: 05/01/2026 - 09h00"), (40, 70, "Nome: FULANO DE TAL"),
            (40, 90, "Extrato de: Agência: 1234 | Conta: 99999-9 Folha: 1/1"),
            (40, 120, "Data"), (130, 120, "Histórico"), (300, 120, "Docto."),
            (380, 120, "Crédito (R$)"), (445, 120, "Débito (R$)"), (510, 120, "Saldo (R$)")]
     linhas = [
-        (40, 150, "08/09/2026"), (130, 150, "SERVICO CARTAO PROTEGIDO"), (300, 150, "1111111"), (455, 150, "9,99", VERMELHO), (520, 150, "6,54", VERMELHO),
-        (130, 175, "ENCARGOS LIMITE DE CRED"), (300, 180, "2222222"), (455, 180, "4,42", VERMELHO), (515, 180, "10,96", VERMELHO),
-        (130, 186, "ENCARGO - 08,00%"),
-        (130, 205, "PIX QR CODE DINAMICO"), (300, 210, "3333333"), (452, 210, "12,00", VERMELHO), (515, 210, "22,96", VERMELHO),
-        (130, 216, "DES: MERCADINHO MODELO 06/09"),
-        (40, 240, "11/09/2026"), (130, 235, "PIX RECEBIDO"), (300, 240, "4444444"), (387, 240, "23,29", AZUL), (520, 240, "0,33", AZUL),
-        (130, 246, "REM: FULANO DE TAL 11/09"),
-        (40, 275, "Total"), (387, 275, "23,29", AZUL), (452, 275, total_debito, VERMELHO), (520, 275, "0,33", AZUL),
+        (40, 150, "10/03/2026"), (130, 150, "TARIFA SEGURO CARTAO"), (300, 150, "1111111"), (455, 150, "7,50", VERMELHO), (520, 150, "4,20", VERMELHO),
+        (130, 175, "JUROS CHEQUE ESPECIAL"), (300, 180, "2222222"), (455, 180, "2,80", VERMELHO), (520, 180, "7,00", VERMELHO),
+        (130, 186, "TAXA - 05,00%"),
+        (130, 205, "PIX QR CODE DINAMICO"), (300, 210, "3333333"), (452, 210, "12,00", VERMELHO), (515, 210, "19,00", VERMELHO),
+        (130, 216, "DES: MERCADINHO MODELO 09/03"),
+        (40, 240, "12/03/2026"), (130, 235, "PIX RECEBIDO"), (300, 240, "4444444"), (387, 240, "19,33", AZUL), (520, 240, "0,33", AZUL),
+        (130, 246, "REM: FULANO DE TAL 12/03"),
+        (40, 275, "Total"), (387, 275, "19,33", AZUL), (452, 275, total_debito, VERMELHO), (520, 275, "0,33", AZUL),
     ]
     return pdf([cab + linhas])
 
@@ -230,39 +230,39 @@ def test_bradesco_pelas_colunas_e_cor():
     lanc, aviso = ler_pdf(_bradesco())
     assert aviso is None
     assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
-        ("2026-09-08", "SERVICO CARTAO PROTEGIDO", -9.99),
-        ("2026-09-08", "ENCARGOS LIMITE DE CRED ENCARGO - 08,00%", -4.42),
-        ("2026-09-08", "PIX QR CODE DINAMICO DES: MERCADINHO MODELO 06/09", -12.0),
-        ("2026-09-11", "PIX RECEBIDO REM: FULANO DE TAL 11/09", 23.29),
+        ("2026-03-10", "TARIFA SEGURO CARTAO", -7.5),
+        ("2026-03-10", "JUROS CHEQUE ESPECIAL TAXA - 05,00%", -2.8),
+        ("2026-03-10", "PIX QR CODE DINAMICO DES: MERCADINHO MODELO 09/03", -12.0),
+        ("2026-03-12", "PIX RECEBIDO REM: FULANO DE TAL 12/03", 19.33),
     ]
 
 
 def test_bradesco_com_total_adulterado_avisa():
     lanc, aviso = ler_pdf(_bradesco(total_debito="30,00"))
-    assert len(lanc) == 4 and aviso and "R$ 3,59" in aviso
+    assert len(lanc) == 4 and aviso and "R$ 7,70" in aviso
 
 
 # ---------- Banco do Brasil (célula centralizada, sinal (+)/(-), saldo do dia) ----------
 
-def _bb(saldo_dia="991,66"):
+def _bb(saldo_dia="999,20"):
     def cab():
         return [(40, 30, "Extrato de Conta Corrente"), (40, 42, "Cliente: FULANO DE TAL"),
-                (40, 54, "Período: 01 a 30/09/2026 Agência: 1-0 Conta: 2-0"), (40, 66, "Lançamentos"),
+                (40, 54, "Período: 01 a 31/03/2026 Agência: 1-0 Conta: 2-0"), (40, 66, "Lançamentos"),
                 (40, 80, "Dia"), (110, 80, "Lote"), (160, 80, "Documento"), (280, 80, "Histórico"), (540, 80, "Valor")]
     p1 = cab() + [
-        (40, 100, "31/08/2026"), (280, 100, "Saldo Anterior"), (500, 100, "23,66"), (535, 100, "(+)"),
+        (40, 100, "28/02/2026"), (280, 100, "Saldo Anterior"), (500, 100, "31,20"), (535, 100, "(+)"),
         (280, 120, "Pix - Recebido"),
-        (40, 125, "08/09/2026"), (110, 125, "10001"), (160, 125, "11111111111111"), (490, 125, "1.000,00"), (535, 125, "(+)"),
-        (280, 131, "05/09 09:23 FULANO DE TAL"),
+        (40, 125, "08/03/2026"), (110, 125, "10001"), (160, 125, "11111111111111"), (490, 125, "1.000,00"), (535, 125, "(+)"),
+        (280, 131, "07/03 11:05 FULANO DE TAL"),
         (280, 141, "Pix Open Finance Envio"),
-        (40, 150, "08/09/2026"), (110, 150, "10002"), (160, 150, "55555"), (280, 150, "08/09 10:16 LOJA EXEMPLO"), (500, 150, "32,00"), (535, 150, "(-)"),
+        (40, 150, "08/03/2026"), (110, 150, "10002"), (160, 150, "55555"), (280, 150, "08/03 15:40 LOJA EXEMPLO"), (500, 150, "32,00"), (535, 150, "(-)"),
         (280, 159, "E"),
     ]
     p2 = cab() + [
-        (40, 100, "08/09/2026"), (110, 100, "10001"), (280, 100, "Saldo do dia"), (500, 100, saldo_dia), (535, 100, "(+)"),
-        (40, 120, "30/09/2026"), (280, 120, "S A L D O"), (500, 120, saldo_dia), (535, 120, "(+)"),
+        (40, 100, "08/03/2026"), (110, 100, "10001"), (280, 100, "Saldo do dia"), (500, 100, saldo_dia), (535, 100, "(+)"),
+        (40, 120, "31/03/2026"), (280, 120, "S A L D O"), (500, 120, saldo_dia), (535, 120, "(+)"),
         (40, 150, "Aplicações Financeiras"),
-        (40, 165, "BB Reserva Cofrinho"), (520, 165, "40,21"),
+        (40, 165, "Poupança Exemplo"), (520, 165, "12,00"),
     ]
     return pdf([p1, p2])
 
@@ -271,14 +271,14 @@ def test_bb_pelo_historico_centralizado():
     lanc, aviso = ler_pdf(_bb())
     assert aviso is None
     assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
-        ("2026-09-08", "Pix - Recebido 05/09 09:23 FULANO DE TAL", 1000.0),
-        ("2026-09-08", "Pix Open Finance Envio 08/09 10:16 LOJA EXEMPLO E", -32.0),
+        ("2026-03-08", "Pix - Recebido 07/03 11:05 FULANO DE TAL", 1000.0),
+        ("2026-03-08", "Pix Open Finance Envio 08/03 15:40 LOJA EXEMPLO E", -32.0),
     ]
 
 
 def test_bb_com_saldo_do_dia_adulterado_avisa():
     lanc, aviso = ler_pdf(_bb(saldo_dia="900,00"))
-    assert len(lanc) == 2 and aviso and "08/09/2026" in aviso
+    assert len(lanc) == 2 and aviso and "08/03/2026" in aviso
 
 
 # ---------- genérico (bancos sem perfil próprio) ----------
@@ -356,3 +356,128 @@ def test_generico_linha_recusa_se_saldo_nao_bate():
     with pytest.raises(ErroLeitura) as e:
         ler_pdf(_generico_com_saldos(saldo_final="999,00"))
     assert str(e.value) == MENSAGENS["desconhecido"]
+
+
+# ---------- revisão final: casos que não podem passar calados ----------
+
+def test_generico_primeiro_valor_sem_sinal_e_sem_ancora_recusa():
+    for linhas in (["Extrato", "Data Histórico Valor Saldo", "05/08/2026 PIX JOAO 150,00 850,00",
+                    "06/08/2026 SALARIO 1.000,00 1.850,00", "07/08/2026 TARIFA 10,00 1.840,00"],):
+        with pytest.raises(ErroLeitura) as e:
+            ler_pdf(pdf_linhas([linhas]))
+        assert str(e.value) == MENSAGENS["desconhecido"]
+
+
+def test_generico_colunas_valor_sem_sinal_e_sem_ancora_recusa():
+    cab = [(40, 40, "Banco Exemplo"), (40, 80, "Data"), (110, 80, "Histórico"), (400, 80, "Valor"), (480, 80, "Saldo")]
+    linhas = [(40, 100, "05/08/2026"), (110, 100, "COMPRA"), (405, 100, "40,00"), (485, 100, "60,00"),
+              (40, 120, "06/08/2026"), (110, 120, "DEPOSITO"), (405, 120, "15,00"), (485, 120, "75,00")]
+    with pytest.raises(ErroLeitura):
+        ler_pdf(pdf([cab + linhas]))
+
+
+def test_generico_linha_nao_lida_depois_do_saldo_avisa():
+    linhas = ["Extrato Exemplo", "Período: 01/08/2026 a 31/08/2026", "31/07/2026 Saldo anterior 100,00 (+)"]
+    linhas += [f"{d:02d}/08/2026 PIX ENVIADO {d} 1,00 (-)" for d in range(1, 11)]
+    linhas += ["10/08/2026 Saldo do dia 90,00 (+)", "12/08/2026 COMPRA GRANDE 5.000,00- REF 12"]
+    lanc, aviso = ler_pdf(pdf_linhas([linhas]))
+    assert len(lanc) == 10 and aviso == MENSAGENS["confira"]
+
+
+def test_generico_lancamento_depois_do_ultimo_saldo_avisa():
+    linhas = ["Extrato", "31/07/2026 Saldo anterior 100,00 (+)", "01/08/2026 PIX 10,00 (-)",
+              "01/08/2026 Saldo do dia 90,00 (+)", "02/08/2026 COMPRA 5,00 (-)"]
+    _, aviso = ler_pdf(pdf_linhas([linhas]))
+    assert aviso == MENSAGENS["confira"]
+
+
+def test_generico_linha_sem_data_com_valor_conta_como_nao_lida():
+    with pytest.raises(ErroLeitura):
+        ler_pdf(pdf_linhas([["Extrato", "Período: 01/08/2026 a 31/08/2026", "05/08 PIX JOAO 150,00-",
+                             "PIX MARIA 500,00-", "TARIFA 10,00 D", "06/08 SALARIO 3.000,00 C"]]))
+
+
+def test_generico_colunas_linhas_de_saldo_nao_sao_lancamentos():
+    cab = [(40, 40, "Banco Exemplo"), (40, 80, "Data"), (110, 80, "Lançamento"), (330, 80, "Crédito"), (400, 80, "Débito")]
+    linhas = [(40, 100, "01/08/2026"), (110, 100, "SALDO ANTERIOR"), (335, 100, "1.000,00"),
+              (40, 120, "05/08/2026"), (110, 120, "PIX ENVIADO"), (405, 120, "40,00"),
+              (40, 140, "31/08/2026"), (110, 140, "SALDO FINAL"), (335, 140, "960,00")]
+    lanc, _ = ler_pdf(pdf([cab + linhas]))
+    assert [l["valor"] for l in lanc] == [-40.0]
+
+
+def test_bb_sem_nenhuma_conferencia_avisa():
+    def cab():
+        return [(40, 30, "Extrato de Conta Corrente"), (40, 80, "Dia"), (110, 80, "Lote"), (160, 80, "Documento"),
+                (280, 80, "Histórico"), (540, 80, "Valor")]
+    p = cab() + [(40, 100, "08/09/2026"), (110, 100, "10001"), (280, 100, "Pix - Recebido"), (490, 100, "1.000,00"), (535, 100, "(+)")]
+    lanc, aviso = ler_pdf(pdf([p]))
+    assert len(lanc) == 1 and aviso == MENSAGENS["sem_conferencia"]
+
+
+def test_bb_palavra_aplicacoes_na_descricao_nao_corta_o_extrato():
+    def cab():
+        return [(40, 30, "Extrato de Conta Corrente"), (40, 80, "Dia"), (110, 80, "Lote"), (160, 80, "Documento"),
+                (280, 80, "Histórico"), (540, 80, "Valor")]
+    p = cab() + [
+        (40, 100, "31/08/2026"), (280, 100, "Saldo Anterior"), (500, 100, "50,00"), (535, 100, "(+)"),
+        (40, 120, "08/09/2026"), (110, 120, "10001"), (280, 120, "BB Aplicações Resgate"), (500, 120, "20,00"), (535, 120, "(+)"),
+        (40, 140, "09/09/2026"), (110, 140, "10002"), (280, 140, "Pix - Enviado"), (500, 140, "5,00"), (535, 140, "(-)"),
+        (40, 160, "30/09/2026"), (280, 160, "S A L D O"), (500, 160, "65,00"), (535, 160, "(+)"),
+    ]
+    lanc, aviso = ler_pdf(pdf([p]))
+    assert [l["valor"] for l in lanc] == [20.0, -5.0] and aviso is None
+
+
+def test_bb_continuacao_no_topo_da_pagina_nao_vira_lancamento():
+    def cab():
+        return [(40, 30, "Extrato de Conta Corrente"), (40, 80, "Dia"), (110, 80, "Lote"), (160, 80, "Documento"),
+                (280, 80, "Histórico"), (540, 80, "Valor")]
+    p1 = cab() + [(40, 100, "31/08/2026"), (280, 100, "Saldo Anterior"), (500, 100, "50,00"), (535, 100, "(+)"),
+                  (40, 800, "08/09/2026"), (110, 800, "10001"), (280, 795, "Pix - Enviado"), (500, 800, "5,00"), (535, 800, "(-)"),
+                  (280, 806, "08/09 10:00 LOJA")]
+    p2 = cab() + [(280, 94, "EXEMPLO CONTINUA"),
+                  (40, 100, "08/09/2026"), (110, 100, "10001"), (280, 100, "Saldo do dia"), (500, 100, "45,00"), (535, 100, "(+)")]
+    lanc, aviso = ler_pdf(pdf([p1, p2]))
+    assert [l["valor"] for l in lanc] == [-5.0] and aviso is None
+
+
+def test_inter_dia_sem_lancamento_lido_avisa():
+    lanc, aviso = ler_pdf(pdf_linhas([[
+        "CPF/CNPJ: 000.000.000-00, Instituição: Banco Inter, Agência: 0001-9, Conta: 1-0",
+        "10 de Agosto de 2025 Saldo do dia: R$ 20,00",
+        'Pix recebido: "Cp :00000000-FULANO" R$ 20,00 R$ 20,00',
+        "11 de Agosto de 2025 Saldo do dia: R$ 15,00",
+        'Pix enviado: "Cp :00000000-LOJA COM NOME MUITO',
+        'COMPRIDO" -R$ 5,00 R$ 15,00',
+    ]]))
+    assert aviso and "11/08/2025" in aviso
+
+
+def _bradesco_sem_total(saldo_anterior=True):
+    cab = [(40, 40, "Bradesco Celular"), (40, 120, "Data"), (130, 120, "Histórico"), (300, 120, "Docto."),
+           (380, 120, "Crédito (R$)"), (445, 120, "Débito (R$)"), (510, 120, "Saldo (R$)")]
+    linhas = [(40, 150, "01/09/2026"), (130, 150, "SALDO ANTERIOR"), (520, 150, "50,00", AZUL)] if saldo_anterior else []
+    linhas += [(40, 170, "02/09/2026"), (130, 170, "PIX ENVIADO"), (300, 170, "1111111"), (455, 170, "10,00", VERMELHO),
+               (40, 190, "03/09/2026"), (130, 190, "TARIFA"), (300, 190, "2222222"), (455, 190, "5,00", VERMELHO), (520, 190, "35,00", AZUL)]
+    return pdf([cab + linhas])
+
+
+def test_bradesco_saldo_anterior_confere_e_nao_entra_na_descricao():
+    lanc, aviso = ler_pdf(_bradesco_sem_total())
+    assert [l["descricao"] for l in lanc] == ["PIX ENVIADO", "TARIFA"] and aviso is None
+
+
+def test_bradesco_sem_total_e_sem_saldo_suficiente_avisa():
+    _, aviso = ler_pdf(_bradesco_sem_total(saldo_anterior=False))
+    assert aviso == MENSAGENS["sem_conferencia"]
+
+
+def test_bradesco_data_um_pouco_desalinhada_fica_na_linha_certa():
+    cab = [(40, 40, "Bradesco Celular"), (40, 120, "Data"), (130, 120, "Histórico"), (300, 120, "Docto."),
+           (380, 120, "Crédito (R$)"), (445, 120, "Débito (R$)"), (510, 120, "Saldo (R$)")]
+    linhas = [(40, 150, "08/09/2026"), (130, 150, "COMPRA A"), (455, 150, "10,00", VERMELHO), (520, 150, "10,00", VERMELHO),
+              (40, 182.5, "09/09/2026"), (130, 180, "COMPRA B"), (455, 180, "5,00", VERMELHO), (520, 180, "15,00", VERMELHO),
+              (40, 210, "Total"), (455, 210, "15,00", VERMELHO)]
+    lanc, _ = ler_pdf(pdf([cab + linhas]))
+    assert [l["data"] for l in lanc] == ["2026-09-08", "2026-09-09"]

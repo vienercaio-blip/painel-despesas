@@ -18,6 +18,9 @@ MENSAGENS = {
     "confira": "Lemos este PDF pelo formato geral. Confira se o total de entradas e saídas bate com o seu extrato.",
     "nao_bateu": "A soma não bateu com os totais do banco (diferença de {diferenca} em {onde}). "
                  "Algum lançamento pode ter ficado de fora. Se puder, exporte em OFX.",
+    "sem_conferencia": "Não encontramos no PDF os totais ou o saldo para conferir os valores. "
+                       "Confira se o total de entradas e saídas bate com o seu extrato.",
+    "linha_nao_lida": "Alguma linha de {onde} não foi lida. Confira se os valores batem com o seu extrato.",
     "senha": "Este PDF tem senha. Digite a senha que o banco informou.",
     "senha_incorreta": "Senha incorreta. Tente de novo.",
 }
