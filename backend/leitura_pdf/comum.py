@@ -153,6 +153,35 @@ def ler_valor_no_topo(linhas, cabecalho, valor=None):
     return saida
 
 
+def ler_celulas(pagina, topo, base, eh_linha_valor, eh_texto):
+    """Jeito "célula centralizada" (ex.: Bradesco, BB): o texto de cada célula
+    fica centralizado na vertical, então parte do histórico sai acima e parte
+    abaixo da linha do valor. As linhas aceitas por eh_linha_valor(palavras)
+    viram registros; cada palavra aceita por eh_texto(palavra), da própria
+    linha ou de outra, vai para o registro mais próximo na vertical.
+    Devolve [{"y", "palavras", "texto"}] em ordem, com "texto" já montado."""
+    linhas = {}
+    for p in pagina.palavras:
+        if topo < p.top < base:
+            linhas.setdefault(round(p.top / 2), []).append(p)
+    registros, soltas = [], []
+    for chave in sorted(linhas):
+        grupo = sorted(linhas[chave], key=lambda p: p.x0)
+        if eh_linha_valor(grupo):
+            registros.append({"y": sum(p.centro_y for p in grupo) / len(grupo), "palavras": grupo, "_txt": []})
+        soltas.append(grupo)
+    if not registros:
+        return []
+    for grupo in soltas:
+        for p in grupo:
+            if eh_texto(p):
+                alvo = min(registros, key=lambda r: abs(r["y"] - p.centro_y))
+                alvo["_txt"].append(p)
+    for r in registros:
+        r["texto"] = " ".join(p.texto for p in sorted(r.pop("_txt"), key=lambda p: (round(p.top), p.x0)))
+    return registros
+
+
 def formatar_reais(v):
     s = f"{abs(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return ("-R$ " if v < 0 else "R$ ") + s

@@ -201,3 +201,81 @@ def test_nubank_com_resumo_adulterado_avisa():
 def test_nubank_com_total_da_secao_adulterado_avisa():
     _, aviso = ler_pdf(_nubank(total_secao="- 70,00"))
     assert aviso and "05/10/2026" in aviso
+
+
+# ---------- Bradesco Celular (célula centralizada, sinal pela coluna, saldo pela cor) ----------
+
+VERMELHO, AZUL = (1, 0, 0), (0, 0, 1)
+
+
+def _bradesco(total_debito="26,41"):
+    cab = [(40, 40, "Bradesco Celular"), (40, 55, "Data: 02/11/2026 - 10h58"), (40, 70, "Nome: FULANO DE TAL"),
+           (40, 90, "Extrato de: Agência: 1234 | Conta: 99999-9 Folha: 1/1"),
+           (40, 120, "Data"), (130, 120, "Histórico"), (300, 120, "Docto."),
+           (380, 120, "Crédito (R$)"), (445, 120, "Débito (R$)"), (510, 120, "Saldo (R$)")]
+    linhas = [
+        (40, 150, "08/09/2026"), (130, 150, "SERVICO CARTAO PROTEGIDO"), (300, 150, "1111111"), (455, 150, "9,99", VERMELHO), (520, 150, "6,54", VERMELHO),
+        (130, 175, "ENCARGOS LIMITE DE CRED"), (300, 180, "2222222"), (455, 180, "4,42", VERMELHO), (515, 180, "10,96", VERMELHO),
+        (130, 186, "ENCARGO - 08,00%"),
+        (130, 205, "PIX QR CODE DINAMICO"), (300, 210, "3333333"), (452, 210, "12,00", VERMELHO), (515, 210, "22,96", VERMELHO),
+        (130, 216, "DES: MERCADINHO MODELO 06/09"),
+        (40, 240, "11/09/2026"), (130, 235, "PIX RECEBIDO"), (300, 240, "4444444"), (387, 240, "23,29", AZUL), (520, 240, "0,33", AZUL),
+        (130, 246, "REM: FULANO DE TAL 11/09"),
+        (40, 275, "Total"), (387, 275, "23,29", AZUL), (452, 275, total_debito, VERMELHO), (520, 275, "0,33", AZUL),
+    ]
+    return pdf([cab + linhas])
+
+
+def test_bradesco_pelas_colunas_e_cor():
+    lanc, aviso = ler_pdf(_bradesco())
+    assert aviso is None
+    assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
+        ("2026-09-08", "SERVICO CARTAO PROTEGIDO", -9.99),
+        ("2026-09-08", "ENCARGOS LIMITE DE CRED ENCARGO - 08,00%", -4.42),
+        ("2026-09-08", "PIX QR CODE DINAMICO DES: MERCADINHO MODELO 06/09", -12.0),
+        ("2026-09-11", "PIX RECEBIDO REM: FULANO DE TAL 11/09", 23.29),
+    ]
+
+
+def test_bradesco_com_total_adulterado_avisa():
+    lanc, aviso = ler_pdf(_bradesco(total_debito="30,00"))
+    assert len(lanc) == 4 and aviso and "R$ 3,59" in aviso
+
+
+# ---------- Banco do Brasil (célula centralizada, sinal (+)/(-), saldo do dia) ----------
+
+def _bb(saldo_dia="991,66"):
+    def cab():
+        return [(40, 30, "Extrato de Conta Corrente"), (40, 42, "Cliente: FULANO DE TAL"),
+                (40, 54, "Período: 01 a 30/09/2026 Agência: 1-0 Conta: 2-0"), (40, 66, "Lançamentos"),
+                (40, 80, "Dia"), (110, 80, "Lote"), (160, 80, "Documento"), (280, 80, "Histórico"), (540, 80, "Valor")]
+    p1 = cab() + [
+        (40, 100, "31/08/2026"), (280, 100, "Saldo Anterior"), (500, 100, "23,66"), (535, 100, "(+)"),
+        (280, 120, "Pix - Recebido"),
+        (40, 125, "08/09/2026"), (110, 125, "10001"), (160, 125, "11111111111111"), (490, 125, "1.000,00"), (535, 125, "(+)"),
+        (280, 131, "05/09 09:23 FULANO DE TAL"),
+        (280, 141, "Pix Open Finance Envio"),
+        (40, 150, "08/09/2026"), (110, 150, "10002"), (160, 150, "55555"), (280, 150, "08/09 10:16 LOJA EXEMPLO"), (500, 150, "32,00"), (535, 150, "(-)"),
+        (280, 159, "E"),
+    ]
+    p2 = cab() + [
+        (40, 100, "08/09/2026"), (110, 100, "10001"), (280, 100, "Saldo do dia"), (500, 100, saldo_dia), (535, 100, "(+)"),
+        (40, 120, "30/09/2026"), (280, 120, "S A L D O"), (500, 120, saldo_dia), (535, 120, "(+)"),
+        (40, 150, "Aplicações Financeiras"),
+        (40, 165, "BB Reserva Cofrinho"), (520, 165, "40,21"),
+    ]
+    return pdf([p1, p2])
+
+
+def test_bb_pelo_historico_centralizado():
+    lanc, aviso = ler_pdf(_bb())
+    assert aviso is None
+    assert [(l["data"], l["descricao"], l["valor"]) for l in lanc] == [
+        ("2026-09-08", "Pix - Recebido 05/09 09:23 FULANO DE TAL", 1000.0),
+        ("2026-09-08", "Pix Open Finance Envio 08/09 10:16 LOJA EXEMPLO E", -32.0),
+    ]
+
+
+def test_bb_com_saldo_do_dia_adulterado_avisa():
+    lanc, aviso = ler_pdf(_bb(saldo_dia="900,00"))
+    assert len(lanc) == 2 and aviso and "08/09/2026" in aviso
