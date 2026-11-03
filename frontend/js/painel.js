@@ -1852,6 +1852,7 @@ function irCriarCategoria(t){
   $('ncPara').innerHTML = 'Criando uma categoria para "<b>'+esc(t.desc)+'</b>". Depois de criar, você volta para Lançamentos. '+
     '<button type="button" class="btn btn-sm ghost" data-ncvoltar="1">Cancelar e voltar</button>';
   $('ncPara').hidden = false;
+  showSub('nova');  /* aba "Criar categoria" de Organizar */
   showNc('new');
   state.depois = function(){ $('ncPara').scrollIntoView({block:'center'}); $('ncName').focus({preventScroll:true}); };
   state.irTopo = true;
