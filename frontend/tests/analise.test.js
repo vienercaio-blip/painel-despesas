@@ -320,3 +320,32 @@ test('restos de arredondamento não viram alerta: estornos que zeram os gastos',
   assert.equal(Analise.veredito(ctx(t)).cor, 'neutro');
   assert.deepEqual(Analise.ajustarEstornos({ins:0.1 + 0.2, outs:-0.0000001}), {ins:0.3, outs:0});
 });
+
+// ---------- Dashboard em grade ----------
+
+const linhasN = n => Array.from({length:n}, (_, i) => ({nome:'C'+i, mes:100-i, outros:false}));
+
+test('visiveis: as 5 maiores e quantas ficaram de fora', () => {
+  const r = Analise.visiveis(linhasN(8), false, 5);
+  assert.deepEqual(r.linhas.map(l => l.nome), ['C0','C1','C2','C3','C4']);
+  assert.equal(r.escondidas, 3);
+});
+
+test('visiveis: todas, ou menos de 5', () => {
+  assert.deepEqual([Analise.visiveis(linhasN(8), true, 5).linhas.length, Analise.visiveis(linhasN(8), true, 5).escondidas], [8, 0]);
+  assert.deepEqual([Analise.visiveis(linhasN(3), false, 5).linhas.length, Analise.visiveis(linhasN(3), false, 5).escondidas], [3, 0]);
+});
+
+test('visiveis: Outros (por último) fica de fora quando não está entre as 5', () => {
+  const l = linhasN(5).concat([{nome:'Outros (revisar)', mes:900, outros:true}]);
+  const r = Analise.visiveis(l, false, 5);
+  assert.equal(r.linhas.some(x => x.outros), false);
+  assert.equal(r.escondidas, 1);
+});
+
+test('serieMeses: valores em ordem, mês sem valor vale 0, um mês só não tem série', () => {
+  const meses = [{ins:10, outs:4, res:6}, {ins:20, res:20}, {ins:5, outs:9, res:-4}];
+  assert.deepEqual(Analise.serieMeses(meses, 'outs'), [4, 0, 9]);
+  assert.deepEqual(Analise.serieMeses(meses, 'res'), [6, 20, -4]);
+  assert.deepEqual(Analise.serieMeses([{ins:1}], 'ins'), []);
+});

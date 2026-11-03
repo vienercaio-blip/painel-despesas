@@ -175,6 +175,20 @@ function barras(c, selecionadas){
   }) };
 }
 
+/* ---------- Dashboard em grade ----------
+   "Para onde vai o dinheiro" mostra as n maiores (as linhas já vêm em ordem,
+   com "Outros" por último); "todas" mostra a lista inteira */
+function visiveis(linhas, todas, n){
+  if (todas || linhas.length<=n) return { linhas:linhas, escondidas:0 };
+  return { linhas:linhas.slice(0, n), escondidas:linhas.length-n };
+}
+/* valores de um campo (ins, outs, res) mês a mês, para os minigráficos;
+   com menos de 2 meses não há evolução para mostrar */
+function serieMeses(meses, campo){
+  if (meses.length<2) return [];
+  return meses.map(function(m){ return m[campo] || 0; });
+}
+
 /* ---------- atalhos do filtro de despesas ---------- */
 function atalho(tipo, c){
   if (tipo==='todas') return null;
@@ -185,7 +199,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
+return { visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;
