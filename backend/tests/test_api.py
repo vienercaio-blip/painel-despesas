@@ -276,3 +276,12 @@ def test_pdf_com_senha_pede_senha(cliente):
     item = r.json["arquivos"][0]
     assert [l["valor"] for l in item["lancamentos"]] == [-30.0, 100.0] and "codigo" not in item
     assert "segredo-123" not in r.get_data(as_text=True)
+
+
+def test_entrada_e_nome_reservado(cliente):
+    """"Entrada" é a opção "sem categoria" das entradas: não pode virar nome de categoria."""
+    r = cliente.post("/api/categorias", json={"nome": "entrada", "palavras": []})
+    assert r.status_code == 409 and "Entrada" in r.json["erro"]
+    c = cliente.post("/api/categorias", json={"nome": "Bicos", "palavras": []}).json
+    assert cliente.patch(f"/api/categorias/{c['id']}", json={"nome": "Entrada"}).status_code == 409
+    assert cliente.put("/api/categorias-padrao/lazer", json={"nome": "Entrada", "tipo": "variavel", "palavras": None}).status_code == 409

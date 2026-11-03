@@ -43,10 +43,19 @@ def _renomear_em_tudo(banco, antigo, novo):
     )
 
 
+# "Entrada" é a opção "sem categoria" das entradas (em Lançamentos)
+RESERVADOS = (OUTROS, "Entrada")
+
+
+def _nome_livre(nome):
+    for r in RESERVADOS:
+        if normalizar(nome) == normalizar(r):
+            erro(f'"{r}" é um nome usado pelo sistema. Escolha outro nome.', 409)
+
+
 def _dados_categoria(d):
     nome = texto(d.get("nome"), 40, "Dê um nome para a categoria.")
-    if normalizar(nome) == normalizar(OUTROS):
-        erro(f'"{OUTROS}" é uma categoria do sistema. Escolha outro nome.', 409)
+    _nome_livre(nome)
     tipo = d.get("tipo") if d.get("tipo") in TIPOS_CUSTO else "variavel"
     palavras = d.get("palavras")
     if isinstance(palavras, list):
@@ -146,6 +155,7 @@ def editar_padrao(codigo):
     d = corpo()
     banco = obter_banco()
     nome = texto(d.get("nome"), 40, "Dê um nome para a categoria.")
+    _nome_livre(nome)
     tipo = d.get("tipo") if d.get("tipo") in TIPOS_CUSTO else "variavel"
     palavras = d.get("palavras")
     palavras_json = None if palavras is None else json.dumps(
