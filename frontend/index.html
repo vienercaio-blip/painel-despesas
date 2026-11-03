@@ -17,7 +17,7 @@
       Grão de Dados
     </div>
     <div class="top-right">
-    <span class="user-area">Olá, <b id="userName"></b><span class="conta-tipo" id="contaTipo" data-tip="Tipo de conta. Para trocar, abra as configurações."></span></span>
+    <span class="user-area">Olá, <b id="userName"></b></span>
     <nav class="tabs" aria-label="Seções">
       <a class="tab" href="#inicio" data-view="inicio">Início</a>
       <a class="tab dash-tab" href="#dashboard" data-view="dashboard" hidden>Dashboard</a>
@@ -71,6 +71,7 @@
           </div>
           <div class="save-row">
             <label class="check" for="saveMode"><input type="checkbox" id="saveMode" checked> Salvar para acessar depois</label>
+            <label class="save-page" for="savePage" hidden>na pasta <select id="savePage"></select></label>
           </div>
         </div>
 
@@ -169,16 +170,17 @@
             <h3 id="pgNavT">Pastas</h3>
             <button type="button" class="btn btn-sm" id="newPageBtn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-              Nova subpasta
+              Nova pasta
             </button>
           </div>
           <form class="inline-form" id="newPageForm" hidden novalidate>
-            <label for="newPageName">Nome da nova subpasta</label>
-            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: 2026, Cartão, Loja Centro">
-            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar subpasta</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
+            <label for="newPageName">Nome da nova pasta</label>
+            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: Empresa, Casa, Nubank">
+            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar pasta</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
             <p class="form-err" id="newPageErr" role="alert" hidden></p>
           </form>
           <div class="pages-list" id="pagesBar" role="tablist" aria-orientation="vertical" aria-label="Escolha a pasta de extratos"></div>
+          <div class="pasta-sug" id="pastaSug" hidden></div>
         </nav>
         <div class="pg-main">
           <div class="page-head" id="pageHead" hidden></div>
@@ -222,6 +224,7 @@
       <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span></p>
       <p class="verdict-pesa" id="dVerPesa"></p>
       <div class="kpis kpis3" id="dNums"></div>
+      <p class="aviso-pasta" id="dAvisoPasta" role="status" hidden></p>
     </section>
 
     <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
@@ -509,9 +512,6 @@
       <div class="field"><label for="mgName">Nome do novo extrato</label><input type="text" id="mgName" maxlength="120"></div>
     </div>
     <div class="cfg-sec">
-      <div class="mg-warn" id="mgWarn" hidden>
-        <p id="mgWarnText"></p>
-              </div>
       <fieldset class="perfil-choice" id="mgDelBox"><legend>Deseja excluir os extratos que foram mesclados?</legend>
         <label><input type="radio" name="mgDel" value="nao" checked> Não, manter os originais</label>
         <label><input type="radio" name="mgDel" value="sim"> Sim, excluir os originais</label>
@@ -521,35 +521,9 @@
     <div class="modal-actions"><button type="button" class="btn primary" id="mgGo" disabled>Mesclar</button><button type="button" class="btn ghost" id="mgClose">Cancelar</button></div>
   </div>
 </div>
-<div class="modal-bg" id="tipoBg" style="display:none">
-  <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="tipoT">
-    <div class="card-head"><h2 id="tipoT">De que tipo é esse extrato?</h2></div>
-    <div class="cfg-sec">
-      <p>O tipo fica registrado no extrato e define as categorias usadas.</p>
-      <label class="cfg-row"><input type="radio" name="tipoExt" value="pf"> Pessoa física</label>
-      <label class="cfg-row"><input type="radio" name="tipoExt" value="empresa"> Empresa ou MEI</label>
-      <div class="mg-warn tipo-warn" role="note"><p><b>Atenção:</b> escolha o tipo real do extrato. Se o arquivo for de um tipo diferente do escolhido (por exemplo, um extrato da empresa marcado como Pessoa física), as categorias e os totais do painel podem sair errados.</p></div>
-    </div>
-    <p class="form-err" id="tipoErr" role="alert" hidden></p>
-    <div class="modal-actions"><button type="button" class="btn primary" id="tipoGo">Continuar</button><button type="button" class="btn ghost" id="tipoClose">Cancelar</button></div>
-  </div>
-</div>
-<div class="modal-bg" id="avisoBg" style="display:none">
-  <div class="modal cfg-modal" role="alertdialog" aria-modal="true" aria-labelledby="avisoT" aria-describedby="avisoD">
-    <div class="card-head"><h2 id="avisoT">Este extrato é de outro tipo de conta</h2></div>
-    <p id="avisoD"></p>
-    <div class="modal-actions"><button type="button" class="btn primary" id="avisoCfg">Abrir configurações</button><button type="button" class="btn ghost" id="avisoClose">Entendi</button></div>
-  </div>
-</div>
 <div class="modal-bg" id="cfgBg" style="display:none">
   <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="cfgT">
     <div class="card-head"><h2 id="cfgT">Configurações</h2></div>
-    <div class="cfg-sec">
-      <h3>Tipo de conta</h3>
-      <p>Só dá para enviar e abrir extratos deste tipo. Ao trocar, o site recarrega e volta ao início.</p>
-      <label class="cfg-row"><input type="radio" name="cfgPerfil" value="pf"> Pessoa física</label>
-      <label class="cfg-row"><input type="radio" name="cfgPerfil" value="empresa"> Empresa ou MEI</label>
-    </div>
     <div class="cfg-sec">
       <h3>Aparência e movimento</h3>
       <label class="cfg-row"><input type="checkbox" id="cfgTexto"> Texto maior</label>
@@ -594,6 +568,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/analise.js"></script>
+<script src="/js/pastas.js"></script>
 <script src="/js/painel.js"></script>
 </body>
 </html>

@@ -30,9 +30,8 @@ var API = (function(){
     apagarTudo: function(){ return pedir('DELETE', '/dados'); },
 
     /* arquivos de extrato: o servidor lê e devolve os lançamentos (não salva) */
-    lerArquivos: function(arquivos, perfil, senha){
+    lerArquivos: function(arquivos, senha){
       var fd = new FormData();
-      fd.append('perfil', perfil);
       if (senha) fd.append('senha', senha);  /* só para abrir PDFs protegidos */
       Array.prototype.forEach.call(arquivos, function(f){ fd.append('arquivos', f, f.name); });
       return pedir('POST', '/leitura', fd);
@@ -49,18 +48,20 @@ var API = (function(){
 
     /* páginas */
     listarPaginas: function(tipo){ return pedir('GET', '/paginas' + q({tipo: tipo})); },
-    criarPagina: function(nome, tipo, perfil){ return pedir('POST', '/paginas', {nome: nome, tipo: tipo, perfil: perfil}); },
+    criarPagina: function(nome, tipo){ return pedir('POST', '/paginas', {nome: nome, tipo: tipo}); },
     renomearPagina: function(id, nome){ return pedir('PATCH', '/paginas/' + id, {nome: nome}); },
     excluirPagina: function(id){ return pedir('DELETE', '/paginas/' + id); },
+    abrirPasta: function(id){ return pedir('GET', '/paginas/' + id + '/lancamentos'); },
+    salvarCorrecoesPasta: function(id, correcoes){ return pedir('PUT', '/paginas/' + id + '/correcoes', {correcoes: correcoes}); },
 
     /* categorias e regras */
     criarCategoria: function(c){ return pedir('POST', '/categorias', c); },
     editarCategoria: function(id, c){ return pedir('PATCH', '/categorias/' + id, c); },
     excluirCategoria: function(id){ return pedir('DELETE', '/categorias/' + id); },
-    editarPadrao: function(perfil, posicao, c){ return pedir('PUT', '/categorias-padrao/' + perfil + '/' + posicao, c); },
-    restaurarPadrao: function(perfil, posicao){ return pedir('DELETE', '/categorias-padrao/' + perfil + '/' + posicao); },
+    editarPadrao: function(codigo, c){ return pedir('PUT', '/categorias-padrao/' + codigo, c); },
+    restaurarPadrao: function(codigo){ return pedir('DELETE', '/categorias-padrao/' + codigo); },
     salvarRegra: function(origem, categoria, rotulo){ return pedir('POST', '/regras', {origem: origem, categoria: categoria, rotulo: rotulo}); },
     excluirRegra: function(origem){ return pedir('DELETE', '/regras' + q({origem: origem})); },
-    categorizar: function(perfil, descricoes){ return pedir('POST', '/categorizar', {perfil: perfil, descricoes: descricoes}); }
+    categorizar: function(descricoes){ return pedir('POST', '/categorizar', {descricoes: descricoes}); }
   };
 })();

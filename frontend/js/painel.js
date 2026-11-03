@@ -8,17 +8,10 @@
    servidor e chegam pela API (js/api.js). A leitura dos arquivos e a
    categorização automática também são feitas no servidor. */
 var OTHER = 'Outros (revisar)';
-/* Categorias padrão de cada perfil: preenchido com o que vem de /api/estado. */
-var PROFILES = {};
-function validPerfil(v){
-  if (v==='pme' || v==='cafe') v = 'empresa';  /* nomes antigos: MEI / PME e o protótipo */
-  return PROFILES[v] ? v : 'pf';
-}
-function curPerfil(){ return validPerfil(state.perfil); }
-function curRules(){ return PROFILES[curPerfil()].rules; }
-function bKey(codigo){ return curPerfil()+':'+codigo; }
-/* tipo de conta escolhido nas configurações (vale para os extratos enviados) */
-function chosenPerfil(){ return validPerfil(cfg.perfil); }
+/* Categorias padrão (uma lista só): preenchido com o que vem de /api/estado. */
+var REGRAS_PADRAO = [];
+function curRules(){ return REGRAS_PADRAO; }
+function bKey(codigo){ return 'padrao:'+codigo; }
 function builtinDefs(){
   var ed = state.bEdits || {};
   return curRules().map(function(r){
@@ -34,9 +27,9 @@ function customDefs(){ return (state.custom||[]).map(function(c){ return {id:c.i
 function allDefs(){ return builtinDefs().concat(customDefs()); }
 function allCats(){ return allDefs().map(function(d){ return d.name; }).concat([OTHER]); }
 /* lista de categorias para um seletor; inclui a escolhida mesmo que ela não exista
-   no tipo atual (ex.: regra antiga apontando para "Mercado" num extrato de Empresa) */
+   mais (ex.: regra antiga apontando para uma categoria que foi excluída) */
 function catsCom(sel){ var l = allCats(); if (sel && l.indexOf(sel)===-1) l.push(sel); return l; }
-/* nome atual de uma categoria padrão do tipo atual, pelo código (null se não existir) */
+/* nome atual de uma categoria padrão, pelo código (null se não existir) */
 function catByCode(codigo){ var d = builtinDefs().filter(function(x){ return x.codigo===codigo; })[0]; return d ? d.name : null; }
 function feesName(){ return catByCode('taxas'); }
 function renameCat(orig, name){
@@ -49,7 +42,7 @@ function renameCat(orig, name){
 }
 function parseKws(txt){ return String(txt||'').split(',').map(function(k){ return norm(k).trim(); }).filter(function(k){ return k.length>=2; }); }
 
-var state = { perfil: 'pf', rules: {}, tx: [], overrides: {}, filter: 'out', q: '', source: 'sample', fileName: '', p: {y:'all', m:'all', w:'all'} };
+var state = { rules: {}, tx: [], overrides: {}, filter: 'out', q: '', source: 'sample', fileName: '', p: {y:'all', m:'all', w:'all'} };
 var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function weekStart(d){ var x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
 function weekKey(d){ var w = weekStart(d); return w.getFullYear()+'-'+String(w.getMonth()+1).padStart(2,'0')+'-'+String(w.getDate()).padStart(2,'0'); }
@@ -159,7 +152,8 @@ function doServidor(l){
 }
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
-  state.raw = list; state.savedId = null; state.loaded = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
+  state.raw = list; state.savedId = null; state.pastaId = null; state.loaded = true;
+  $('dAvisoPasta').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
   state.editLanc = false; state.txPor = 10; state.dashCats = null; state.dashDet = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
@@ -167,7 +161,7 @@ function load(list, source, name){
     return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, estorno:!!t.estorno, auto:ehSaida(t) ? t.auto : null, kw:ehSaida(t) ? t.kw : null, origin:t.origin};
   });
   state.overrides = {}; state.source = source; state.fileName = name||''; state.cat = null; state.p = {y:'all', m:'all', w:'all'};
-  refreshFixed();  /* custos fixos do perfil deste extrato (antes ficava sempre o de pessoa física) */
+  refreshFixed();
   render();
 }
 function readText(f, enc){
@@ -194,14 +188,13 @@ function xlsxToCsv(f){
     return parts.join('\n');
   });
 }
-function readFiles(files, perfil){
+function readFiles(files){
   files = Array.prototype.slice.call(files);
   if (!files.length) return;
   showMsg('Enviando '+(files.length===1?'o arquivo':files.length+' arquivos')+' para leitura…', false);
-  perfil = perfil || chosenPerfil();
   state.leitura = null;   /* um envio novo anula caixinhas de senha pendentes do anterior */
-  API.lerArquivos(files, perfil).then(function(resp){
-    state.leitura = { perfil: perfil, itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
+  API.lerArquivos(files).then(function(resp){
+    state.leitura = { itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
     seguirLeitura();
   }).catch(function(e){ showMsg(e.message, true); });
 }
@@ -218,7 +211,7 @@ function seguirLeitura(){
     return;
   }
   state.leitura = null;
-  concluirLeitura(L.itens.map(function(it){ return it.r; }), L.perfil);
+  concluirLeitura(L.itens.map(function(it){ return it.r; }));
 }
 function linhaArquivo(r, i){
   var html = '<li class="'+(r.erro?'bad':'')+'"><span class="fn">'+esc(r.nome)+'</span><span class="fc">'+
@@ -236,7 +229,7 @@ $('upFiles').addEventListener('submit', function(e){
   if (!it) return;
   if (!senha){ f.querySelector('input').focus(); return; }
   f.querySelector('button[type=submit]').disabled = true;
-  API.lerArquivos([it.file], L.perfil, senha).then(function(resp){
+  API.lerArquivos([it.file], senha).then(function(resp){
     if (state.leitura !== L) return;   /* outro envio começou enquanto a senha ia ao servidor */
     it.r = resp.arquivos[0];
     seguirLeitura();
@@ -247,7 +240,7 @@ $('upFiles').addEventListener('click', function(e){
   state.leitura.itens.splice(+b.dataset.pular, 1);
   seguirLeitura();
 });
-function concluirLeitura(results, perfil){
+function concluirLeitura(results){
   var good = results.filter(function(r){return !r.erro;});
   /* lançamentos iguais são contados por arquivo: dois cafés de R$ 5 no mesmo
      dia ficam os dois; o mesmo período enviado em dois arquivos não duplica */
@@ -270,12 +263,11 @@ function concluirLeitura(results, perfil){
     return;
   }
   var nome = good.map(function(r){return r.nome;}).join(', ');
-  state.perfil = perfil;
   var salvar = $('saveMode').checked;
   /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
      escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
   var pronto = salvar
-    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), perfil:perfil, pagina_id:null, lancamentos:combined })
+    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:$('savePage').value||null, lancamentos:combined })
         .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
               function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
     : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
@@ -320,7 +312,7 @@ function deltaTxt(now, before, label){
 var savedCache = {despesas:[], vendas:[]}, pagesCache = {despesas:[], vendas:[]};
 function falhou(e){ toast(e && e.message ? e.message : 'Não foi possível falar com o servidor.'); }
 function metaLocal(m){
-  return { id:m.id, name:m.nome, page:m.pagina_id, perfil:m.perfil, savedAt:m.salvo_em, n:m.quantidade, first:m.inicio, last:m.fim };
+  return { id:m.id, name:m.nome, page:m.pagina_id, savedAt:m.salvo_em, n:m.quantidade, first:m.inicio, last:m.fim };
 }
 function getSaved(){ return savedCache[kindNow()] || []; }
 function getPages(){ return pagesCache[kindNow()] || []; }
@@ -328,13 +320,13 @@ function recarregarSalvos(){
   var k = kindNow();
   return Promise.all([API.listarExtratos(k), API.listarPaginas(k)]).then(function(r){
     savedCache[k] = r[0].map(metaLocal);
-    pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, perfil:p.perfil, at:p.criado_em}; });
+    pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, at:p.criado_em}; });
     renderSaved();
   });
 }
 function isoD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function pageName(id){ var p = getPages().filter(function(x){ return x.id===id; })[0]; return p ? p.name : null; }
-function pageNameTaken(name, exceptId){ return pagesAtuais().some(function(p){ return p.id!==exceptId && norm(p.name)===norm(name); }); }
+function pageNameTaken(name, exceptId){ return getPages().some(function(p){ return p.id!==exceptId && norm(p.name)===norm(name); }); }
 
 /* correções "só neste extrato": mandadas ao servidor quando mudam */
 var lastOv = null;
@@ -344,30 +336,49 @@ function mapaCorrecoes(){
   return map;
 }
 function persistOverrides(){
-  if (MODE==='vendas' || !state.savedId) return;
+  if (MODE==='vendas' || (!state.savedId && !state.pastaId)) return;
   var map = mapaCorrecoes(), s = JSON.stringify(map);
   if (s===lastOv) return;
   lastOv = s;
-  API.salvarCorrecoes(state.savedId, map).catch(falhou);
+  (state.pastaId ? API.salvarCorrecoesPasta(state.pastaId, map) : API.salvarCorrecoes(state.savedId, map)).catch(falhou);
+}
+/* as correções que vieram do servidor ({id no banco: categoria}) viram state.overrides */
+function aplicarCorrecoes(correcoes){
+  var porDb = {};
+  state.tx.forEach(function(t){ if (t.dbId) porDb[t.dbId] = t.id; });
+  state.overrides = {};
+  Object.keys(correcoes || {}).forEach(function(dbId){ if (porDb[dbId]!==undefined) state.overrides[porDb[dbId]] = correcoes[dbId]; });
+  lastOv = JSON.stringify(mapaCorrecoes());
 }
 /* busca o extrato salvo no servidor e mostra nas telas */
 function carregarSalvo(id){
   return API.abrirExtrato(id).then(function(x){
-    state.perfil = validPerfil(x.perfil);
     load(x.lancamentos.map(doServidor), 'file', x.nome);
-    var porDb = {};
-    state.tx.forEach(function(t){ if (t.dbId) porDb[t.dbId] = t.id; });
-    state.overrides = {};
-    Object.keys(x.correcoes || {}).forEach(function(dbId){ if (porDb[dbId]!==undefined) state.overrides[porDb[dbId]] = x.correcoes[dbId]; });
     state.savedId = id;
-    lastOv = JSON.stringify(mapaCorrecoes());
+    aplicarCorrecoes(x.correcoes);
     render(); renderSaved();
   });
 }
+/* busca a pasta inteira (os extratos dela somados, sem os repetidos) e mostra nas telas */
+function carregarPasta(id){
+  return API.abrirPasta(id).then(function(x){
+    load(x.lancamentos.map(doServidor), 'file', x.nome);
+    state.pastaId = id;
+    aplicarCorrecoes(x.correcoes);
+    var aviso = Pastas.avisoRepetidos(x.repetidos);
+    $('dAvisoPasta').textContent = aviso || '';
+    $('dAvisoPasta').hidden = !aviso;
+    render(); renderSaved();
+  });
+}
+function openPasta(id){
+  carregarPasta(id).then(function(){
+    $('upResult').hidden = true;
+    location.hash = 'dashboard';
+  }).catch(falhou);
+}
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
-  var x = getSaved().filter(function(v){ return v.id===id; })[0];
-  if (x && perfilOf(x)!==chosenPerfil()){ avisoTipo(x); return; }
   carregarSalvo(id).then(function(){
     $('upResult').hidden = true;
     location.hash = 'dashboard';
@@ -391,23 +402,15 @@ var ICON_GEAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" str
 var ICON_PEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>';
 var ICON_FOLDER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M12 11v5M9.5 13.5 12 16l2.5-2.5"></path></svg>';
 var ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg>';
-var ICON_LOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>';
 var ICON_FOLDER_S ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
-/* Extratos: 2 pastas principais (os tipos de conta) com subpastas dentro.
-   Só a pasta do tipo de conta atual abre; as outras aparecem com cadeado.
-   state.page = id da subpasta aberta, ou null = pasta principal.
+/* Extratos: pastas livres, todas no mesmo nível, criadas pelo cliente.
+   state.page = id da pasta aberta, ou null = "Sem pasta".
    Vendas (em pausa) continua com a lista simples de páginas. */
-var PASTAS = ['pf', 'empresa'];
-function pagesAtuais(){
-  var p = getPages();
-  return MODE==='vendas' ? p : p.filter(function(x){ return x.perfil===chosenPerfil(); });
-}
 function renderSaved(){
-  var desp = MODE!=='vendas', tipoAtual = chosenPerfil();
-  var todos = getSaved(), pages = pagesAtuais();
-  var a = desp ? todos.filter(function(x){ return perfilOf(x)===tipoAtual; }) : todos;
+  var desp = MODE!=='vendas';
+  var todos = getSaved(), pages = getPages(), a = todos;
   var W = desp ? ['extrato','extratos','lançamentos'] : ['planilha','planilhas','vendas'];
-  var PG = desp ? 'subpasta' : 'página';
+  var PG = desp ? 'pasta' : 'página';
   $('svTitle').textContent = desp ? 'Extratos salvos' : 'Planilhas de vendas salvas';
   if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
   var cur = state.page || null;
@@ -417,12 +420,14 @@ function renderSaved(){
   var cnt = function(pid){ return a.filter(function(x){ return pid==='none' ? naRaiz(x) : x.page===pid; }).length; };
   var tab = function(id, label, n, on, extra){ return '<button type="button" role="tab" class="ptab'+(extra||'')+'" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
   if (desp){
-    $('pagesBar').innerHTML = PASTAS.map(function(t){
-      var n = todos.filter(function(x){ return perfilOf(x)===t; }).length;
-      if (t!==tipoAtual) return '<button type="button" class="ptab locked" data-lock="'+t+'" aria-disabled="true" data-tip="Disponível só no tipo de conta '+esc(perfilLabel(t))+'">'+ICON_LOCK+'<span class="pn">'+esc(perfilLabel(t))+'</span><span class="cnt">'+n+'</span></button>';
-      return tab('root', perfilLabel(t), n, !cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id, ' sub'); }).join('');
-    }).join('');
+    $('pagesBar').innerHTML = tab('none', 'Sem pasta', cnt('none'), !cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('');
+    var sug = Pastas.sugerir(pages.map(function(p){ return p.name; }), cfg.sugestaoPastas==='dispensada');
+    $('pastaSug').hidden = !sug.length;
+    $('pastaSug').innerHTML = sug.length ? '<p>Tem empresa ou MEI? Crie as pastas Pessoal e Empresa com um toque.</p>'+
+      '<div class="inline-row"><button type="button" class="btn btn-sm primary" data-sug="1">Criar '+(sug.length>1 ? 'as pastas' : 'a pasta '+esc(sug[0]))+'</button>'+
+      '<button type="button" class="btn btn-sm ghost" data-sugno="1">Agora não</button></div>' : '';
   } else {
+    $('pastaSug').hidden = true;
     $('pagesBar').innerHTML = tab('all','Todos',a.length,!cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('') + (pages.length ? tab('none','Sem página',cnt('none'),cur==='none') : '');
   }
 
@@ -432,9 +437,11 @@ function renderSaved(){
     ph.hidden = false;
     ph.innerHTML = state.editingPage===cur
       ? '<form class="inline-form" id="renPageForm" novalidate><label for="renPageName">Novo nome da '+PG+'</label><div class="inline-row"><input id="renPageName" maxlength="40" autocomplete="off" value="'+esc(pg.name)+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-pcancel="1">Cancelar</button></div><p class="form-err" id="renPageErr" role="alert" hidden></p></form>'
-      : '<span class="ph-name">'+(desp ? esc(perfilLabel(tipoAtual))+' › ' : 'Página ')+'<b>'+esc(pg.name)+'</b></span><span class="sva"><button type="button" class="btn" data-pren="1">Renomear '+PG+'</button><button type="button" class="btn" data-pdel="1">Excluir '+PG+'</button></span>';
+      : '<span class="ph-name">'+(desp ? 'Pasta ' : 'Página ')+'<b>'+esc(pg.name)+'</b></span><span class="sva">'+
+        (desp && cnt(cur) ? '<button type="button" class="btn primary" data-pver="1">Ver a pasta inteira</button>' : '')+
+        '<button type="button" class="btn" data-pren="1">Renomear '+PG+'</button><button type="button" class="btn" data-pdel="1">Excluir '+PG+'</button></span>';
   } else if (desp){
-    ph.hidden = false; ph.innerHTML = '<span class="ph-name">Pasta <b>'+esc(perfilLabel(tipoAtual))+'</b></span>';
+    ph.hidden = false; ph.innerHTML = '<span class="ph-name"><b>Sem pasta</b></span>';
   } else { ph.hidden = true; ph.innerHTML = ''; }
 
   var shown = a.filter(function(x){
@@ -443,10 +450,11 @@ function renderSaved(){
     return cur==='none' ? naRaiz(x) : x.page===cur;
   });
   $('savedEmpty').hidden = shown.length>0;
-  $('savedEmpty').textContent = a.length
-    ? 'Nenhum '+W[0]+' nesta '+(desp && !cur ? 'pasta' : PG)+'. Use "Mover para" no menu de um '+W[0]+' para colocá-lo aqui.'
-    : 'Nenhum '+W[0]+(desp ? ' de '+perfilLabel(tipoAtual) : '')+' salvo ainda. Envie '+(desp?'um extrato':'uma planilha')+' com a opção "Salvar para acessar depois" marcada e ele aparece aqui.';
-  var raizLabel = desp ? perfilLabel(tipoAtual)+' (pasta principal)' : 'Sem página';
+  if (desp && cur) $('savedEmpty').innerHTML = 'Esta pasta ainda não tem extratos. <button type="button" class="btn btn-sm" data-enviar="1">Enviar um extrato</button>';
+  else $('savedEmpty').textContent = a.length
+    ? 'Nenhum '+W[0]+' '+(desp ? 'sem pasta' : 'nesta '+PG)+'. Use "Mover para" no menu de um '+W[0]+' para colocá-lo aqui.'
+    : 'Nenhum '+W[0]+' salvo ainda. Envie '+(desp?'um extrato':'uma planilha')+' com a opção "Salvar para acessar depois" marcada e ele aparece aqui.';
+  var raizLabel = desp ? 'Sem pasta' : 'Sem página';
   var popts = function(sel){ return '<option value=""'+(!sel?' selected':'')+'>'+esc(raizLabel)+'</option>'+pages.map(function(p){ return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>'; }).join(''); };
   $('savedList').innerHTML = shown.map(function(x){
     var f = x.first ? keyDate(x.first) : null, l = x.last ? keyDate(x.last) : null;
@@ -464,7 +472,7 @@ function renderSaved(){
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
       : '<strong>'+esc(x.name||'Extrato')+'</strong>';
     return '<li class="sv">'+pick+'<div class="svi">'+nameBlock+
-      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · '+(MODE==='vendas'?'':esc(perfilLabel(perfilOf(x)))+' · ')+'salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
+      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
       '<div class="sva sva-x"><button type="button" class="btn primary" data-open="'+esc(x.id)+'">Abrir</button>'+
       '<div class="menu-wrap"><button type="button" class="btn icon-btn" data-menu="'+esc(x.id)+'" aria-haspopup="menu" aria-expanded="'+open+'" aria-label="Configurações do extrato '+esc(x.name||'')+'">'+ICON_GEAR+'</button>'+menu+'</div>'+
@@ -473,7 +481,13 @@ function renderSaved(){
 
   posicionarMenu();
 
-  if (desp) return;
+  if (desp){
+    var sp = $('savePage'), keep = sp.value;
+    sp.innerHTML = popts(null);
+    if (keep && pages.some(function(p){ return p.id===keep; })) sp.value = keep;
+    sp.parentNode.hidden = !pages.length;
+    return;
+  }
   var ssp = $('sSavePage'), keep2 = ssp.value;
   ssp.innerHTML = popts(null);
   if (keep2 && pages.some(function(p){ return p.id===keep2; })) ssp.value = keep2;
@@ -530,7 +544,7 @@ function render(){
   $('srcBadge').textContent = state.source==='sample' ? 'Exemplo · dados fictícios' : 'Seu extrato';
   $('srcBadge').className = 'badge' + (state.source==='sample' ? '' : ' real');
   var isSample = state.source==='sample';
-  $('pageTitle').textContent = isSample ? 'Para onde vai o seu dinheiro' : 'Extrato de '+fmtDate(first)+' a '+fmtDate(last)+', a partir do arquivo "'+state.fileName+'".';
+  $('pageTitle').textContent = isSample ? 'Para onde vai o seu dinheiro' : state.pastaId ? 'Pasta "'+state.fileName+'": todos os extratos somados, de '+fmtDate(first)+' a '+fmtDate(last)+'.' : 'Extrato de '+fmtDate(first)+' a '+fmtDate(last)+', a partir do arquivo "'+state.fileName+'".';
   $('pageTitle').className = isSample ? '' : 'extrato-title';
   $('srcText').textContent = isSample ? 'Este é um extrato de exemplo, de agosto a outubro de 2026. Envie o extrato do seu banco para ver os seus números.' : '';
 
@@ -695,7 +709,7 @@ function reclassify(){
   var uniq = [];
   state.tx.forEach(function(t){ if (ehSaida(t) && uniq.indexOf(t.desc)===-1) uniq.push(t.desc); });
   if (!uniq.length) return Promise.resolve();
-  return API.categorizar(curPerfil(), uniq).then(function(r){
+  return API.categorizar(uniq).then(function(r){
     var porDesc = {};
     uniq.forEach(function(d,i){ porDesc[d] = r.resultados[i]; });
     state.tx.forEach(function(t){ if (ehSaida(t)){ var a = porDesc[t.desc]; t.auto = a.categoria; t.kw = a.palavra; } });
@@ -832,18 +846,10 @@ function lineSVG(pts, o){
 var resRange = 'ult12';
 /* Textos do dashboard que mudam conforme o tipo de conta. */
 var TEXTOS = {
-  pf: {
-    diasEntradas:function(n, fixedM){ return 'Suas contas fixas ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de renda. Ou seja, o salário dos primeiros '+n+' dias do mês vai só para as contas fixas.'; },
-    caixaTitulo:'Saldo acumulado',
-    mostraDiaSemana:false, negocio:false
-  },
-  empresa: {
-    diasEntradas:function(n, fixedM){ return 'Os custos fixos ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de entradas. Ou seja, o que entra nos primeiros '+n+' dias do mês serve só para pagar os custos fixos.'; },
-    caixaTitulo:'Caixa acumulado',
-    mostraDiaSemana:true, negocio:true
-  }
+  diasEntradas:function(n, fixedM){ return 'Suas contas fixas ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de renda. Ou seja, o salário dos primeiros '+n+' dias do mês vai só para as contas fixas.'; },
+  caixaTitulo:'Saldo acumulado'
 };
-function textos(){ return TEXTOS[curPerfil()]; }
+function textos(){ return TEXTOS; }
 
 function renderDashboard(){
   var X = textos();
@@ -913,7 +919,7 @@ function renderDashboard(){
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
 
   /* contexto para as contas do dashboard (js/analise.js) */
-  var ctx = { perfil:curPerfil(), escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
+  var ctx = { escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
     ins:T.ins, outs:T.outs, byCat:byCat, fixas:FIXED, outros:OTHER,
     meses: months.map(function(o){ return {name:MESES[o.m], cat:o.cat}; }),
     nomes: {delivery:catByCode('delivery'), tarifas:catByCode('tarifas'), assinaturas:catByCode('assinaturas'),
@@ -963,7 +969,7 @@ function renderDashboard(){
         (l.outros?' <a href="#categorias" data-classificar="1">classificar →</a>':'')+'</span></li>';
   }).join('') : '<li class="barras-vazio">Nenhuma saída neste período.</li>';
   var fixAn = bar.linhas.filter(function(l){ return l.fixa; }).reduce(function(s2,l){ return s2+l.mes*nM; }, 0);
-  $('dFixLinha').textContent = fixAn>0 ? (X.negocio ? 'Custos fixos: ' : 'Contas fixas: ')+brl.format(fixAn/nM)+(nM>1?' por mês':'')+', '+pct.format(bar.total>0 ? fixAn/bar.total : 0)+' das saídas'+(sel?' analisadas':'')+'.' : '';
+  $('dFixLinha').textContent = fixAn>0 ? 'Contas fixas: '+brl.format(fixAn/nM)+(nM>1?' por mês':'')+', '+pct.format(bar.total>0 ? fixAn/bar.total : 0)+' das saídas'+(sel?' analisadas':'')+'.' : '';
   var aviso = $('dFiltroAviso');
   aviso.hidden = !sel && !selVazio;
   if (selVazio) aviso.innerHTML = 'Nenhuma das categorias escolhidas tem gastos neste período, por isso estão aparecendo todas. · <button type="button" data-atalho="todas">Limpar a escolha</button>';
@@ -1029,8 +1035,7 @@ function renderDashboard(){
   $('dCumT').textContent = X.caixaTitulo;
   $('dCum').innerHTML = lineSVG(pts, {aria:X.caixaTitulo+' ao longo do extrato', marks:marks});
 
-  /* dia da semana (escondido em Pessoa física: o salário cai uma vez por mês) */
-  $('dWeekCard').hidden = !X.mostraDiaSemana;
+  /* dia da semana */
   var bestD = 0, worstD = 0;
   dowAvg.forEach(function(v,i){ if (v>dowAvg[bestD]) bestD = i; if (v<dowAvg[worstD]) worstD = i; });
   $('dWeek').innerHTML = barSVG(dowAvg.map(function(v,i){
@@ -1670,11 +1675,11 @@ function renderTable(){
 }
 
 /* ---------- events ---------- */
-$('file').addEventListener('change', function(e){ pedirTipo(e.target.files); e.target.value=''; });
+$('file').addEventListener('change', function(e){ readFiles(e.target.files); e.target.value=''; });
 var drop = $('drop');
 ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
-drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) pedirTipo(e.dataTransfer.files); });
+drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
 document.querySelectorAll('.table-tools .seg button').forEach(function(b){
   b.addEventListener('click', function(){
     state.filter = b.dataset.f;
@@ -1863,7 +1868,7 @@ function doEdit(d, id, orig, name, type, kwTxt){
     var prev = state.bEdits[bKey(d.codigo)] || {};
     var kwsChanged = kwTxt.trim() !== d.kws.join(', ');
     var ed = { name:name, type:type, kws: kwsChanged ? parseKws(kwTxt) : (prev.kws || null) };
-    pedido = API.editarPadrao(curPerfil(), d.codigo, { nome:ed.name, tipo:ed.type, palavras:ed.kws })
+    pedido = API.editarPadrao(d.codigo, { nome:ed.name, tipo:ed.type, palavras:ed.kws })
       .then(function(){ state.bEdits[bKey(d.codigo)] = ed; });
   } else {
     pedido = API.editarCategoria(id, { nome:name, tipo:type, palavras:parseKws(kwTxt) })
@@ -1890,7 +1895,7 @@ $('customList').addEventListener('click', function(e){
     if (norm(cur)!==norm(def) && allCats().some(function(c){ return c!==cur && norm(c)===norm(def); })){ ruleMsg('Não dá para restaurar: já existe outra categoria chamada "'+def+'".'); return; }
     askX({ kind:'restaurar', title:'Restaurar "'+cur+'" ao padrão?', text:'O nome volta a ser "'+def+'", e o tipo de custo e as palavras-chave voltam aos originais do sistema.',
       yes:'Restaurar padrão', back:rs, onYes:function(){
-        API.restaurarPadrao(curPerfil(), bd.codigo).then(function(){
+        API.restaurarPadrao(bd.codigo).then(function(){
           delete state.bEdits[bKey(bd.codigo)];
           renameCat(cur, def); refreshFixed();
           return reclassify();
@@ -1953,12 +1958,10 @@ $('rPeriod').addEventListener('change', function(){ resRange = this.value; rende
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
 function applyCfg(){
-  $('contaTipo').textContent = ' · ' + perfilLabel(chosenPerfil());
   document.documentElement.classList.toggle('texto-grande', !!cfg.textoGrande);
   document.documentElement.classList.toggle('sem-esteira', cfg.esteira===false);
 }
 function openCfg(){
-  document.querySelectorAll('input[name="cfgPerfil"]').forEach(function(r){ r.checked = r.value===validPerfil(cfg.perfil); });
   $('cfgTexto').checked = !!cfg.textoGrande;
   $('cfgEsteira').checked = cfg.esteira!==false;
   var keys = Object.keys(state.askPrefs || {});
@@ -1970,52 +1973,6 @@ function closeCfg(){ $('cfgBg').style.display = 'none'; $('cfgBtn').focus(); }
 $('cfgBtn').addEventListener('click', openCfg);$('cfgClose').addEventListener('click', closeCfg);
 $('cfgBg').addEventListener('click', function(e){ if (e.target===$('cfgBg')) closeCfg(); });
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && $('cfgBg').style.display!=='none') closeCfg(); });
-/* trocar o tipo de conta recomeça tudo: salva, volta ao Início e recarrega o site */
-document.querySelectorAll('input[name="cfgPerfil"]').forEach(function(r){ r.addEventListener('change', function(){
-  cfg.perfil = this.value;
-  API.salvarPreferencia('config', cfg).then(function(){ location.hash = 'inicio'; location.reload(); }).catch(falhou);
-}); });
-
-/* ---------- tipo do extrato: perguntado a cada envio ---------- */
-var tipoFiles = null;
-function pedirTipo(files){
-  tipoFiles = Array.prototype.slice.call(files || []);
-  if (!tipoFiles.length) return;
-  document.querySelectorAll('input[name="tipoExt"]').forEach(function(r){ r.checked = false; });
-  $('tipoErr').hidden = true;
-  $('tipoBg').style.display = 'flex'; hideTip();
-  document.querySelector('input[name="tipoExt"]').focus();
-}
-function fecharTipo(){ $('tipoBg').style.display = 'none'; tipoFiles = null; }
-$('tipoGo').addEventListener('click', function(){
-  var r = document.querySelector('input[name="tipoExt"]:checked'), err = $('tipoErr');
-  if (!r){ err.textContent = 'Escolha o tipo do extrato.'; err.hidden = false; return; }
-  if (r.value!==chosenPerfil()){
-    err.textContent = 'Você está usando a conta '+perfilLabel(chosenPerfil())+'. Para enviar um extrato de '+perfilLabel(r.value)+', troque o tipo de conta nas configurações.';
-    err.hidden = false; return;
-  }
-  var files = tipoFiles; fecharTipo(); readFiles(files, r.value);
-});
-$('tipoClose').addEventListener('click', fecharTipo);
-$('tipoBg').addEventListener('click', function(e){ if (e.target===$('tipoBg')) fecharTipo(); });
-
-/* ---------- aviso: extrato salvo de outro tipo de conta ---------- */
-function avisoTipo(x){
-  $('avisoT').textContent = 'Este extrato é de outro tipo de conta';
-  $('avisoD').textContent = '"'+(x.name||'Extrato')+'" é um extrato de '+perfilLabel(perfilOf(x))+', e você está usando a conta '+perfilLabel(chosenPerfil())+
-    '. Cada tipo de conta usa categorias diferentes, por isso só dá para abrir extratos do mesmo tipo. Para abrir este, troque o tipo de conta nas configurações.';
-  $('avisoBg').style.display = 'flex'; hideTip();
-  $('avisoClose').focus();
-}
-function fecharAviso(){ $('avisoBg').style.display = 'none'; }
-$('avisoClose').addEventListener('click', fecharAviso);
-$('avisoCfg').addEventListener('click', function(){ fecharAviso(); openCfg(); });
-$('avisoBg').addEventListener('click', function(e){ if (e.target===$('avisoBg')) fecharAviso(); });
-document.addEventListener('keydown', function(e){
-  if (e.key!=='Escape') return;
-  if ($('tipoBg').style.display!=='none') fecharTipo();
-  if ($('avisoBg').style.display!=='none') fecharAviso();
-});
 $('cfgTexto').addEventListener('change', function(){ cfg.textoGrande = this.checked; saveCfg(); applyCfg(); });
 $('cfgEsteira').addEventListener('change', function(){ cfg.esteira = this.checked; saveCfg(); applyCfg(); });
 $('cfgClear').addEventListener('click', function(){
@@ -2025,18 +1982,10 @@ $('cfgClear').addEventListener('click', function(){
 });
 /* ---------- mesclar extratos salvos ---------- */
 var MERGE_ON = false, MERGE_SEL = [];
-function perfilOf(x){ return validPerfil(x.perfil); }
-function perfilLabel(p){ return PROFILES[p] ? PROFILES[p].label : p; }
 function updateMergeBar(){
   var n = MERGE_SEL.length;
-  var all = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  var perfis = all.map(function(x){ return perfilOf(x); });
-  var uniq = perfis.filter(function(p,i){ return perfis.indexOf(p)===i; });
-  var mixed = uniq.length>1;
-  var txt = n ? n+(n===1?' extrato marcado':' extratos marcados')+(n<2?' (marque mais um)':'') : 'Marque os extratos que quer mesclar (mínimo 2).';
-  if (mixed) txt = 'Só é possível mesclar extratos do mesmo perfil. Desmarque os de '+uniq.slice(1).map(perfilLabel).join(' ou ')+'.';
-  $('mergeCount').textContent = txt;
-  $('mergeGo').disabled = n<2 || mixed;
+  $('mergeCount').textContent = n ? n+(n===1?' extrato marcado':' extratos marcados')+(n<2?' (marque mais um)':'') : 'Marque os extratos que quer mesclar (mínimo 2).';
+  $('mergeGo').disabled = n<2;
 }
 function setMerge(on){
   MERGE_ON = on; if (!on) MERGE_SEL = [];
@@ -2054,7 +2003,7 @@ $('savedList').addEventListener('change', function(e){
 });
 function openMerge(){
   var sel = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  $('mgList').innerHTML = sel.map(function(x){ return '<li>'+esc(x.name||'Extrato')+' · '+esc(perfilLabel(perfilOf(x)))+'</li>'; }).join('');
+  $('mgList').innerHTML = sel.map(function(x){ return '<li>'+esc(x.name||'Extrato')+'</li>'; }).join('');
   $('mgErr').hidden = true;
   document.querySelector('input[name="mgDel"][value="nao"]').checked = true;
   $('mgName').value = 'Mesclado: '+sel.map(function(x){ return x.name||'Extrato'; }).join(' + ');
@@ -2064,12 +2013,7 @@ function openMerge(){
 }
 function mgRefresh(){
   var sel = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  var perfis = sel.map(function(x){ return perfilOf(x); });
-  var uniq = perfis.filter(function(p,i){ return perfis.indexOf(p)===i; });
-  var mixed = uniq.length>1;
-  $('mgWarn').hidden = !mixed;
-  $('mgWarnText').textContent = mixed ? 'Não é possível mesclar extratos de perfis diferentes ('+uniq.map(perfilLabel).join(' e ')+'). Desmarque os extratos de um dos perfis para continuar.' : '';
-  $('mgGo').disabled = !(sel.length>=2 && !mixed);
+  $('mgGo').disabled = sel.length<2;
 }
 $('mgName').addEventListener('input', function(){ this.classList.remove('is-suggest'); });
 $('mgClose').addEventListener('click', function(){ $('mergeBg').style.display = 'none'; });
@@ -2095,46 +2039,51 @@ $('pMonths').addEventListener('click', function(e){
 });
 document.querySelectorAll('.choice[data-panel]').forEach(function(b){ b.addEventListener('click', function(){ keepScroll(function(){ showPanel(b.dataset.panel); }); }); });
 $('pagesBar').addEventListener('click', function(e){
-  var lk = e.target.closest('[data-lock]');
-  if (lk){ avisoPasta(lk.dataset.lock); return; }
   var b = e.target.closest('[data-page]'); if (!b) return;
-  keepScroll(function(){ state.page = (b.dataset.page==='all' || b.dataset.page==='root') ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
+  keepScroll(function(){ state.page = (b.dataset.page==='all' || (MODE!=='vendas' && b.dataset.page==='none')) ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
 });
-function avisoPasta(t){
-  $('avisoT').textContent = 'Esta pasta é de outro tipo de conta';
-  $('avisoD').textContent = 'A pasta '+perfilLabel(t)+' guarda os extratos de '+perfilLabel(t)+', e você está usando a conta '+perfilLabel(chosenPerfil())+
-    '. Cada tipo de conta usa categorias diferentes, por isso só dá para abrir a pasta do tipo atual. Para ver esta, troque o tipo de conta nas configurações.';
-  $('avisoBg').style.display = 'flex'; hideTip();
-  $('avisoClose').focus();
-}
+/* sugestão "Pessoal e Empresa": um toque cria as pastas que faltam */
+$('pastaSug').addEventListener('click', function(e){
+  if (e.target.closest('[data-sugno]')){ cfg.sugestaoPastas = 'dispensada'; saveCfg(); renderSaved(); return; }
+  var b = e.target.closest('[data-sug]'); if (!b) return;
+  b.disabled = true;
+  var faltam = Pastas.sugerir(getPages().map(function(p){ return p.name; }), false);
+  faltam.reduce(function(pr, nome){ return pr.then(function(){ return API.criarPagina(nome, 'despesas'); }); }, Promise.resolve())
+    .then(recarregarSalvos)
+    .then(function(){ toast('Pastas criadas. Use "Mover para", no menu de cada extrato, para guardar os extratos nelas.'); })
+    .catch(function(err){ b.disabled = false; falhou(err); });
+});
+$('savedEmpty').addEventListener('click', function(e){
+  if (e.target.closest('[data-enviar]')) keepScroll(function(){ showPanel('novo'); });
+});
 $('newPageBtn').addEventListener('click', function(){ $('newPageForm').hidden = false; $('newPageErr').hidden = true; $('newPageName').value = ''; $('newPageName').focus(); });
 $('newPageCancel').addEventListener('click', function(){ $('newPageForm').hidden = true; });
 $('newPageForm').addEventListener('submit', function(e){
   e.preventDefault();
   var name = $('newPageName').value.replace(/\s+/g,' ').trim(), err = $('newPageErr');
-  if (!name){ err.textContent = 'Dê um nome para a subpasta.'; err.hidden = false; $('newPageName').focus(); return; }
-  if (pageNameTaken(name)){ err.textContent = 'Já existe uma subpasta chamada "'+name+'" nesta pasta.'; err.hidden = false; $('newPageName').focus(); return; }
+  if (!name){ err.textContent = 'Dê um nome para a pasta.'; err.hidden = false; $('newPageName').focus(); return; }
+  if (pageNameTaken(name)){ err.textContent = 'Já existe uma pasta chamada "'+name+'".'; err.hidden = false; $('newPageName').focus(); return; }
   err.hidden = true;
-  var dentro = MODE==='vendas' ? '' : ' dentro de '+perfilLabel(chosenPerfil());
-  askX({ kind:'criar-pagina', title:'Criar a subpasta "'+name+'"'+dentro+'?', text:'Depois é só usar "Mover para", no menu de cada extrato, para colocá-lo nesta subpasta.', yes:'Criar subpasta', cancel:'Voltar', onYes:function(){
-    API.criarPagina(name, kindNow(), chosenPerfil()).then(function(pg){
+  askX({ kind:'criar-pagina', title:'Criar a pasta "'+name+'"?', text:'Depois é só usar "Mover para", no menu de cada extrato, para colocá-lo nesta pasta.', yes:'Criar pasta', cancel:'Voltar', onYes:function(){
+    API.criarPagina(name, kindNow()).then(function(pg){
       $('newPageForm').hidden = true; state.page = pg.id;
-      return recarregarSalvos().then(function(){ toast('Subpasta "'+name+'" criada.'); });
+      return recarregarSalvos().then(function(){ toast('Pasta "'+name+'" criada.'); });
     }).catch(falhou);
   } });
 });
 $('pageHead').addEventListener('click', function(e){
   var pid = state.page, pg = getPages().filter(function(p){ return p.id===pid; })[0]; if (!pg) return;
+  if (e.target.closest('[data-pver]')){ openPasta(pid); return; }
   if (e.target.closest('[data-pren]')){ state.editingPage = pid; renderSaved(); var i = $('renPageName'); if (i){ i.focus(); i.select(); } return; }
   if (e.target.closest('[data-pcancel]')){ state.editingPage = null; renderSaved(); return; }
   var del = e.target.closest('[data-pdel]');
   if (del){
     var n = getSaved().filter(function(x){ return x.page===pid; }).length;
-    var raiz = MODE==='vendas' ? '"Sem página"' : 'a pasta '+perfilLabel(chosenPerfil());
-    askX({ kind:'excluir-pagina', danger:true, title:'Excluir a subpasta "'+pg.name+'"?', text:(n ? 'Os '+n+' extratos dela não serão apagados: eles voltam para '+raiz+'. ' : 'A subpasta está vazia. ')+'Isso não pode ser desfeito.', yes:'Excluir subpasta', back:del, onYes:function(){
+    var raiz = MODE==='vendas' ? '"Sem página"' : '"Sem pasta"';
+    askX({ kind:'excluir-pagina', danger:true, title:'Excluir a pasta "'+pg.name+'"?', text:(n ? 'Os '+n+' extratos dela não serão apagados: eles voltam para '+raiz+'. ' : 'A pasta está vazia. ')+'Isso não pode ser desfeito.', yes:'Excluir pasta', back:del, onYes:function(){
       API.excluirPagina(pid).then(function(){
         state.page = null;
-        return recarregarSalvos().then(function(){ toast('Subpasta "'+pg.name+'" excluída.'); });
+        return recarregarSalvos().then(function(){ toast('Pasta "'+pg.name+'" excluída.'); });
       }).catch(falhou);
     } });
   }
@@ -2143,13 +2092,13 @@ $('pageHead').addEventListener('submit', function(e){
   e.preventDefault();
   var pid = state.page, pg = getPages().filter(function(p){ return p.id===pid; })[0]; if (!pg) return;
   var name = $('renPageName').value.replace(/\s+/g,' ').trim(), err = $('renPageErr');
-  if (!name){ err.textContent = 'Dê um nome para a subpasta.'; err.hidden = false; return; }
+  if (!name){ err.textContent = 'Dê um nome para a pasta.'; err.hidden = false; return; }
   if (name===pg.name){ state.editingPage = null; renderSaved(); return; }
-  if (pageNameTaken(name, pid)){ err.textContent = 'Já existe uma subpasta chamada "'+name+'" nesta pasta.'; err.hidden = false; return; }
-  askX({ kind:'renomear-pagina', title:'Renomear a subpasta?', text:'"'+pg.name+'" passa a se chamar "'+name+'".', yes:'Salvar nome', cancel:'Continuar editando', onYes:function(){
+  if (pageNameTaken(name, pid)){ err.textContent = 'Já existe uma pasta chamada "'+name+'".'; err.hidden = false; return; }
+  askX({ kind:'renomear-pagina', title:'Renomear a pasta?', text:'"'+pg.name+'" passa a se chamar "'+name+'".', yes:'Salvar nome', cancel:'Continuar editando', onYes:function(){
     API.renomearPagina(pid, name).then(function(){
       state.editingPage = null;
-      return recarregarSalvos().then(function(){ toast('Subpasta renomeada para "'+name+'".'); });
+      return recarregarSalvos().then(function(){ toast('Pasta renomeada para "'+name+'".'); });
     }).catch(falhou);
   } });
 });
@@ -2161,8 +2110,8 @@ $('savedList').addEventListener('submit', function(e){
     var mx = getSaved().filter(function(v){ return v.id===id; })[0]; if (!mx) return;
     if ((mx.page||null)===to){ state.movingSaved = null; renderSaved(); return; }
     var desp = MODE!=='vendas';
-    var dest = to ? '"'+pageName(to)+'"' : (desp ? perfilLabel(perfilOf(mx))+' (pasta principal)' : '"Sem página"');
-    var para = to ? (desp ? 'a subpasta ' : 'a página ')+dest : dest;
+    var dest = to ? '"'+pageName(to)+'"' : (desp ? '"Sem pasta"' : '"Sem página"');
+    var para = to ? (desp ? 'a pasta ' : 'a página ')+dest : dest;
     askX({ kind:'mover-extrato', title:'Mover o extrato?', text:'"'+(mx.name||'Extrato')+'" vai para '+para+'.', yes:'Mover extrato', cancel:'Voltar',
       onYes:function(){
         API.alterarExtrato(id, {pagina_id: to}).then(function(){
@@ -2322,10 +2271,7 @@ function abrirLancamentos(cat){
 /* ---------- inicialização: busca tudo no servidor ---------- */
 state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};
 API.estado().then(function(e){
-  Object.keys(e.perfis).forEach(function(k){
-    var p = e.perfis[k];
-    PROFILES[k] = { label:p.rotulo, rules:p.regras };
-  });
+  REGRAS_PADRAO = e.categorias_padrao;
   OTHER = e.outros || OTHER;
   state.custom = e.categorias.map(categoriaLocal);
   Object.keys(e.edicoes).forEach(function(k){ var x = e.edicoes[k]; state.bEdits[k] = { name:x.nome, type:x.tipo, kws:x.palavras }; });
