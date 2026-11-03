@@ -3,7 +3,7 @@
 
 
 
-/* Painel de Despesas: telas.
+/* sobrou.: telas.
    Os dados (extratos, categorias, regras, páginas, preferências) ficam no
    servidor e chegam pela API (js/api.js). A leitura dos arquivos e a
    categorização automática também são feitas no servidor. */
@@ -1434,7 +1434,7 @@ function exportPdf(){
   var months = all('#pMonths .mchip:not([aria-hidden])').map(function(c){ return {l: txt(c.querySelector('.ml')), v: txt(c.querySelector('.mv'))}; });
   var now = new Date();
   var doc = makePdf();
-  doc.line('Relatório de despesas', 18, true, 4);
+  doc.line('sobrou. · Relatório de despesas', 18, true, 4);
   doc.line('Extrato: '+pdfText(file), 10);
   doc.line('Período: '+periodName(state.p)+(txt($('dSpan')) ? ' · '+txt($('dSpan')) : ''), 10);
   doc.line('Gerado em '+fmtDate(now)+' às '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'), 9, false, 6);

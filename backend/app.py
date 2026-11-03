@@ -88,6 +88,10 @@ def create_app(config=None):
             ]
             return jsonify(v=max(a.stat().st_mtime for a in arquivos if a.is_file()))
 
+    @app.get("/favicon.svg")
+    def favicon():
+        return send_from_directory(PASTA_FRONTEND, "favicon.svg", mimetype="image/svg+xml")
+
     @app.get("/css/<path:arquivo>")
     def css(arquivo):
         return send_from_directory(PASTA_FRONTEND / "css", arquivo)

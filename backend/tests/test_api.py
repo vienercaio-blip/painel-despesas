@@ -312,3 +312,8 @@ def test_pasta_inteira_mostra_os_avisos(cliente):
     cliente.post("/api/extratos", json={"nome": "nubank.pdf", "aviso": AVISO, "pagina_id": p, "lancamentos": [CAFE_5]})
     cliente.post("/api/extratos", json={"nome": "inter.pdf", "pagina_id": p, "lancamentos": [PAO_7]})
     assert cliente.get(f"/api/paginas/{p}/lancamentos").json["avisos"] == [{"nome": "nubank.pdf", "aviso": AVISO}]
+
+
+def test_favicon_sem_login(app):
+    r = app.test_client().get("/favicon.svg")
+    assert r.status_code == 200 and r.mimetype == "image/svg+xml" and b"<svg" in r.data

@@ -52,12 +52,12 @@ Os nomes das variáveis de `:root` em `estilo.css` **continuam os mesmos**, para
 | `--line` | `#23314A` | `#E8DFCB` |
 | `--ink` | `#E8ECF3` | `#1A2233` |
 | `--ink-2` | `#B4C0D3` | `#4A5466` |
-| `--ink-3` | `#8E9BB0` | `#6A7385` |
+| `--ink-3` | `#8E9BB0` | `#606979` |
 | `--accent` (dourado) | `#E2B04A` | `#8A6516` (texto) |
 | `--accent-ink` (texto sobre dourado) | `#0E1420` | `#F3EBD9` |
 | `--accent-soft` | `#3A2E12` | `#FBEBC5` |
 | `--good` | `#4CC38A` | `#17804B` |
-| `--warn` | `#E3B341` | `#B07A00` |
+| `--warn` | `#E3B341` | `#8F6400` |
 | `--bad` | `#FF8A80` | `#B42318` |
 | `--note-bg`, `--note-ink` e `--note-line` | `#3A2E12`, `#F3D27F` e `#584520` | `#FBEBC5`, `#6B4A00` e `#E8D29A` |
 | `--s1` (série principal dos gráficos) | `#E2B04A` | `#C8952F` |
