@@ -25,18 +25,23 @@ _REGRA = {codigo: (nome, palavras) for codigo, nome, palavras in REGRAS}
 
 
 # Versão dos dados, guardada no próprio banco (PRAGMA user_version).
-# 1 = sem perfil. Um banco já convertido nunca passa de novo pela conversão:
-# nomes que o cliente escolher depois (mesmo iguais aos antigos) ficam como estão.
-VERSAO = 1
+# 1 = sem perfil; 2 = movimento interno ("Investimentos e reservas").
+# Cada conversão roda uma vez só por banco: nomes que o cliente escolher
+# depois (mesmo iguais aos antigos) ficam como estão.
+VERSAO = 2
 
 
 def converter(con, caminho_banco):
-    if con.execute("PRAGMA user_version").fetchone()[0] >= VERSAO:
-        return
-    _converter_tipos_de_conta(con)
-    if _ha_algo_para_converter(con):
-        _copia_de_seguranca(con, caminho_banco)
-    _converter_sem_perfil(con)
+    versao = con.execute("PRAGMA user_version").fetchone()[0]
+    if versao < 1:
+        _converter_tipos_de_conta(con)
+        if _ha_algo_para_converter(con):
+            _copia_de_seguranca(con, caminho_banco, "sem-perfil")
+        _converter_sem_perfil(con)
+    if versao < 2:
+        if _movimento_interno_tem_algo(con):
+            _copia_de_seguranca(con, caminho_banco, "movimento-interno")
+        _converter_movimento_interno(con)
     con.execute(f"PRAGMA user_version = {VERSAO}")
 
 
@@ -51,12 +56,12 @@ def _ha_algo_para_converter(con):
     )
 
 
-def _copia_de_seguranca(con, caminho_banco):
+def _copia_de_seguranca(con, caminho_banco, motivo):
     """Copia o banco inteiro para um arquivo ao lado dele, com a data no nome."""
     if str(caminho_banco) == ":memory:":
         return
     con.commit()
-    destino = Path(caminho_banco).with_name(f"painel-antes-sem-perfil-{datetime.now():%Y%m%d-%H%M%S}.db")
+    destino = Path(caminho_banco).with_name(f"painel-antes-{motivo}-{datetime.now():%Y%m%d-%H%M%S}.db")
     copia = sqlite3.connect(destino)
     try:
         con.backup(copia)
@@ -229,3 +234,35 @@ def _pastas_sem_perfil(con, usuario_id):
             (usuario_id, datetime.now().isoformat(timespec="seconds")),
         ).lastrowid
     con.executemany("UPDATE extratos SET pagina_id = ? WHERE id = ?", [(pasta, i) for i in soltos])
+
+
+# ---------- versão 2: movimento interno ----------
+
+NOMES_INTERNOS = ("Investimentos e reservas", "Transferências entre suas contas")
+
+
+def _movimento_interno_tem_algo(con):
+    internas = {normalizar(n) for n in NOMES_INTERNOS}
+    return bool(
+        any(normalizar(r[0]) in internas for r in con.execute("SELECT nome FROM categorias"))
+        or con.execute("SELECT 1 FROM regras WHERE categoria = 'Investimentos' LIMIT 1").fetchone()
+        or con.execute("SELECT 1 FROM correcoes WHERE categoria = 'Investimentos' LIMIT 1").fetchone()
+    )
+
+
+def _converter_movimento_interno(con):
+    """"Investimentos" virou "Investimentos e reservas" (agora inclui cofrinho e
+    reservas) e surgiu "Transferências entre suas contas". Regras e correções
+    passam ao nome novo, a menos que o cliente tenha renomeado a categoria."""
+    internas = {normalizar(n) for n in NOMES_INTERNOS}
+    for cid, usuario_id, nome in con.execute("SELECT id, usuario_id, nome FROM categorias").fetchall():
+        if normalizar(nome) in internas:
+            novo = nome + " (sua)"
+            con.execute("UPDATE categorias SET nome = ? WHERE id = ?", (novo, cid))
+            _renomear_em_tudo(con, usuario_id, nome, novo)
+    for (usuario_id,) in con.execute("SELECT id FROM usuarios").fetchall():
+        editada = con.execute(
+            "SELECT 1 FROM edicoes_padrao WHERE usuario_id = ? AND chave = 'padrao:investimentos'", (usuario_id,)
+        ).fetchone()
+        if not editada:
+            _renomear_em_tudo(con, usuario_id, "Investimentos", "Investimentos e reservas")

@@ -234,3 +234,85 @@ def test_banco_ja_convertido_nao_muda_mais(app):
     con = sqlite3.connect(app.config["BANCO"])
     assert (sorted(con.execute("SELECT * FROM regras")), sorted(con.execute("SELECT nome FROM categorias"))) == antes
     con.close()
+
+
+# ---------- versão 2: movimento interno ----------
+
+def _como_versao_1(con):
+    con.commit()
+    con.execute("PRAGMA user_version = 1")  # banco já sem perfil, antes do movimento interno
+    con.close()
+
+
+def _lancamento_com_correcao(con, uid, categoria):
+    e = _extrato(con, uid, "unico")
+    lanc = con.execute("INSERT INTO lancamentos (extrato_id, data, descricao, valor) VALUES (?, '2026-01-01', 'X', -1)", (e,)).lastrowid
+    con.execute("INSERT INTO correcoes VALUES (?, ?)", (lanc, categoria))
+
+
+def test_investimentos_vira_investimentos_e_reservas(app):
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    con.execute("INSERT INTO regras VALUES (?, 'tesouro x', 'Investimentos', 'TESOURO X', 'x')", (ana,))
+    _lancamento_com_correcao(con, ana, "Investimentos")
+    _como_versao_1(con)
+
+    con = _converter(app)
+    assert con.execute("SELECT categoria FROM regras").fetchone()[0] == "Investimentos e reservas"
+    assert con.execute("SELECT categoria FROM correcoes").fetchone()[0] == "Investimentos e reservas"
+    assert con.execute("PRAGMA user_version").fetchone()[0] == 2
+    con.close()
+
+
+def test_investimentos_renomeada_nao_muda(app):
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    _edicao(con, ana, "padrao:investimentos", "Poupança", "variavel", None)
+    con.execute("INSERT INTO regras VALUES (?, 'p', 'Poupança', 'P', 'x')", (ana,))
+    con.execute("INSERT INTO regras VALUES (?, 'q', 'Investimentos', 'Q', 'x')", (ana,))
+    _como_versao_1(con)
+
+    con = _converter(app)
+    assert dict(con.execute("SELECT origem, categoria FROM regras")) == {"p": "Poupança", "q": "Investimentos"}
+    con.close()
+
+
+def test_categoria_criada_com_nome_de_categoria_interna(app):
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    con.execute("INSERT INTO categorias (usuario_id, nome, palavras, criada_em) VALUES (?, 'Transferências entre suas contas', '[]', 'x')", (ana,))
+    con.execute("INSERT INTO regras VALUES (?, 'pix eu', 'Transferências entre suas contas', 'PIX EU', 'x')", (ana,))
+    _como_versao_1(con)
+
+    con = _converter(app)
+    assert con.execute("SELECT nome FROM categorias").fetchone()[0] == "Transferências entre suas contas (sua)"
+    assert con.execute("SELECT categoria FROM regras").fetchone()[0] == "Transferências entre suas contas (sua)"
+    con.close()
+
+
+def test_versao_2_uma_vez_so(app):
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    con.execute("INSERT INTO regras VALUES (?, 'q', 'Investimentos', 'Q', 'x')", (ana,))
+    con.commit()
+    con.close()  # banco já na versão 2: a regra nova fica como está
+
+    con = _converter(app)
+    assert con.execute("SELECT categoria FROM regras").fetchone()[0] == "Investimentos"
+    con.close()
+
+
+def test_copia_movimento_interno_so_quando_precisa(app):
+    pasta = Path(app.config["BANCO"]).parent
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    con.execute("INSERT INTO regras VALUES (?, 'm', 'Mercado', 'M', 'x')", (ana,))
+    _como_versao_1(con)
+    _converter(app).close()
+    assert list(pasta.glob("painel-antes-movimento-interno-*.db")) == []
+
+    con = sqlite3.connect(app.config["BANCO"])
+    con.execute("INSERT INTO regras VALUES (?, 'q', 'Investimentos', 'Q', 'x')", (ana,))
+    _como_versao_1(con)
+    _converter(app).close()
+    assert len(list(pasta.glob("painel-antes-movimento-interno-*.db"))) == 1
