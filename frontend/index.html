@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Painel de Despesas</title>
+<script>/* aparência escolhida (atalho do localStorage): evita piscar a cor errada ao carregar */
+try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.documentElement.setAttribute('data-theme','light'); else if (t==='escuro') document.documentElement.setAttribute('data-theme','dark'); } catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="/css/estilo.css">
@@ -505,6 +508,9 @@
     <div class="card-head"><h2 id="cfgT">Configurações</h2></div>
     <div class="cfg-sec">
       <h3>Aparência e movimento</h3>
+      <label class="cfg-row" for="cfgTema">Aparência
+        <select id="cfgTema"><option value="auto">Automática (segue o aparelho)</option><option value="claro">Clara</option><option value="escuro">Escura</option></select>
+      </label>
       <label class="cfg-row"><input type="checkbox" id="cfgTexto"> Texto maior</label>
       <label class="cfg-row"><input type="checkbox" id="cfgEsteira"> Faixa de meses se movendo sozinha</label>
     </div>
@@ -548,6 +554,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/analise.js"></script>
 <script src="/js/pastas.js"></script>
+<script src="/js/tema.js"></script>
 <script src="/js/painel.js"></script>
 </body>
 </html>

@@ -2071,10 +2071,14 @@ $('rPeriod').addEventListener('change', function(){ resRange = this.value; rende
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
 function applyCfg(){
+  var at = Tema.atributo(cfg.tema);
+  if (at) document.documentElement.setAttribute('data-theme', at); else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem(Tema.CHAVE, cfg.tema || 'auto'); } catch (e) {}
   document.documentElement.classList.toggle('texto-grande', !!cfg.textoGrande);
   document.documentElement.classList.toggle('sem-esteira', cfg.esteira===false);
 }
 function openCfg(){
+  $('cfgTema').value = Tema.atributo(cfg.tema) ? cfg.tema : 'auto';
   $('cfgTexto').checked = !!cfg.textoGrande;
   $('cfgEsteira').checked = cfg.esteira!==false;
   var keys = Object.keys(state.askPrefs || {});
@@ -2088,6 +2092,7 @@ $('cfgBg').addEventListener('click', function(e){ if (e.target===$('cfgBg')) clo
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && $('cfgBg').style.display!=='none') closeCfg(); });
 $('cfgTexto').addEventListener('change', function(){ cfg.textoGrande = this.checked; saveCfg(); applyCfg(); });
 $('cfgEsteira').addEventListener('change', function(){ cfg.esteira = this.checked; saveCfg(); applyCfg(); });
+$('cfgTema').addEventListener('change', function(){ cfg.tema = this.value; saveCfg(); applyCfg(); });
 $('cfgClear').addEventListener('click', function(){
   closeCfg();
   askX({ kind:'apagar-dados', danger:true, title:'Apagar todos os seus dados?', text:'Extratos salvos, páginas, categorias, regras e configurações serão apagados da sua conta. O seu login continua existindo. Isso não pode ser desfeito.', yes:'Apagar tudo', cancel:'Cancelar', back:$('cfgBtn'),
