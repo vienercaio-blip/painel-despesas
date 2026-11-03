@@ -1736,7 +1736,8 @@ $('cats').addEventListener('click', function(e){
 });
 $('catList').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
-  keepScroll(function(){ state.cat = b.dataset.cat; renderCategorias(); });
+  /* escolher uma categoria sempre mostra "De onde veio" */
+  keepScroll(function(){ state.cat = b.dataset.cat; showSub('origem'); renderCategorias(); });
 });
 var askState = null;
 var KIND_LABEL = {'criar-pagina':'criar página', 'renomear-pagina':'renomear página', 'excluir-pagina':'excluir página', 'mover-extrato':'mover extrato de página', 'renomear-extrato':'renomear extrato', 'reclass-local':'mudar a categoria só neste extrato', reclass:'mudar a categoria de lançamentos', criar:'criar categoria', editar:'editar categoria', 'excluir-categoria':'excluir categoria', restaurar:'restaurar categoria padrão', 'excluir-regra':'excluir regra', 'excluir-extrato':'excluir extrato salvo', 'excluir-vendas':'remover vendas da planilha', 'apagar-dados':'apagar todos os seus dados'};
