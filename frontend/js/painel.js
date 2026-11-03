@@ -16,7 +16,7 @@ function builtinDefs(){
   var ed = state.bEdits || {};
   return curRules().map(function(r){
     var e = ed[bKey(r.codigo)];
-    return { id:'b:'+r.codigo, codigo:r.codigo, builtin:true, edited:!!e,
+    return { id:'b:'+r.codigo, codigo:r.codigo, builtin:true, edited:!!e, interna:!!r.interna,
       name: (e && e.name) || r.nome,
       type: (e && e.type) || (r.fixa ? 'fixo' : 'variavel'),
       kws: (e && e.kws) ? e.kws : r.palavras.map(function(k){ return k.trim(); }),
@@ -34,6 +34,7 @@ function catByCode(codigo){ var d = builtinDefs().filter(function(x){ return x.c
 function feesName(){ return catByCode('taxas'); }
 function renameCat(orig, name){
   if (orig===name) return;
+  state.tx.forEach(function(t){ if (t.auto===orig) t.auto = name; });
   Object.keys(state.rules).forEach(function(k){ if (state.rules[k].cat===orig) state.rules[k].cat = name; });
   Object.keys(state.overrides).forEach(function(k){ if (state.overrides[k]===orig) state.overrides[k] = name; });
   if (state.cat===orig) state.cat = name;
@@ -80,13 +81,26 @@ function shortDate(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.ge
 
 /* Entrada = dinheiro que entrou. Estorno, devolução e reembolso têm valor
    positivo, mas contam como saída negativa: descontam da categoria da despesa. */
+/* direção do lançamento (entrada de dinheiro ou saída). Para as contas do
+   painel use entraNaConta / saiDaConta, que deixam de fora o movimento interno */
 function ehEntrada(t){ return t.value>0 && !t.estorno; }
 function ehSaida(t){ return !ehEntrada(t); }
 function catOf(tx){
   if (state.overrides[tx.id]) return state.overrides[tx.id];
-  if (ehSaida(tx) && state.rules && state.rules[tx.origin]) return state.rules[tx.origin].cat;
+  var r = state.rules && state.rules[tx.origin];
+  if (r){
+    /* regra de despesa nunca muda uma entrada; regra "Entrada" nunca muda uma despesa */
+    if (ehSaida(tx) && r.cat!==ENTRADA) return r.cat;
+    if (ehEntrada(tx) && INTERNOS.indexOf(r.cat)!==-1) return r.cat;
+  }
   return tx.auto;
 }
+/* movimento interno: dinheiro guardado e transferências entre as contas do cliente.
+   Fica fora de Entrou e Saiu (mas entra no saldo acumulado) */
+var ENTRADA = 'Entrada', INTERNOS = [];
+function ehInterno(t){ var c = catOf(t); return !!c && INTERNOS.indexOf(c)!==-1; }
+function entraNaConta(t){ return ehEntrada(t) && !ehInterno(t); }
+function saiDaConta(t){ return ehSaida(t) && !ehInterno(t); }
 function ruleMsg(t){ var m = $('ruleMsg'); m.textContent = t; m.hidden = false; }
 function setRule(origin, label, cat){
   return API.salvarRegra(origin, cat, label).then(function(r){
@@ -158,7 +172,7 @@ function load(list, source, name){
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
-    return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, estorno:!!t.estorno, auto:ehSaida(t) ? t.auto : null, kw:ehSaida(t) ? t.kw : null, origin:t.origin};
+    return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, estorno:!!t.estorno, auto:t.auto||null, kw:t.kw||null, origin:t.origin};
   });
   state.overrides = {}; state.source = source; state.fileName = name||''; state.cat = null; state.p = {y:'all', m:'all', w:'all'};
   refreshFixed();
@@ -298,7 +312,7 @@ function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(er
 /* ---------- rendering ---------- */
 function sums(list){
   var ins = 0, outs = 0;
-  list.forEach(function(t){ if (ehEntrada(t)) ins += t.value; else outs -= t.value; });
+  list.forEach(function(t){ if (entraNaConta(t)) ins += t.value; else if (saiDaConta(t)) outs -= t.value; });
   return {ins:ins, outs:outs};
 }
 function deltaTxt(now, before, label){
@@ -531,6 +545,7 @@ function render(){
   if (!tx.length){ state.p = {y:'all', m:'all', w:'all'}; tx = all; }
   var ins = 0, outs = 0, byCat = {}, biggest = null;
   tx.forEach(function(t){
+    if (ehInterno(t)) return;
     if (ehEntrada(t)) ins += t.value;
     else { var a=-t.value; outs += a; var c=catOf(t); byCat[c]=(byCat[c]||0)+a; if(!biggest||a>-biggest.value) biggest=t; }
   });
@@ -648,7 +663,7 @@ window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira()
 
 function renderCategorias(){
   var base = state.tx, outs = 0, byC = {};
-  base.forEach(function(t){ if (ehSaida(t)){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; } });
+  base.forEach(function(t){ if (saiDaConta(t)){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; } });
   var S = { outs: outs, cats: Object.keys(byC).map(function(k){return {name:k, v:byC[k]};}).sort(function(a,b){
     if (a.name===OTHER) return 1; if (b.name===OTHER) return -1; return b.v-a.v; }) };
   if (!state.cat || !byC[state.cat]) state.cat = S.cats.length ? S.cats[0].name : null;
@@ -702,7 +717,10 @@ function renderCategorias(){
 
 /* ---------- dashboard ---------- */
 var FIXED = [];
-function refreshFixed(){ FIXED = allDefs().filter(function(d){ return d.type==='fixo'; }).map(function(d){ return d.name; }); }
+function refreshFixed(){
+  FIXED = allDefs().filter(function(d){ return d.type==='fixo'; }).map(function(d){ return d.name; });
+  INTERNOS = builtinDefs().filter(function(d){ return d.interna; }).map(function(d){ return d.name; });
+}
 /* refaz a categoria automática dos lançamentos (no servidor) depois de mudar categorias */
 function reclassify(){
   var uniq = [];
@@ -720,7 +738,7 @@ function renderCustom(){
   $('customEmpty').hidden = true;
   $('cntCustom').textContent = defs.length+1;
   var row = function(d){
-    var n = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===d.name; }).length;
+    var n = state.tx.filter(function(t){ return (d.interna || ehSaida(t)) && catOf(t)===d.name; }).length;
     if (state.editingCat===d.id){
       return '<li class="sv editing"><form class="ncform ec-form" data-id="'+esc(d.id)+'" novalidate>'+
         '<div class="nfield"><label for="ecName">Nome da categoria</label><input id="ecName" maxlength="40" autocomplete="off" value="'+esc(d.name)+'"></div>'+
@@ -735,7 +753,7 @@ function renderCustom(){
     var tag = d.builtin ? (d.edited ? '<span class="ctag">Padrão, editada</span>' : '<span class="ctag">Padrão</span>') : '<span class="ctag mine">Criada por você</span>';
     var kw = d.kws.length ? 'palavras: '+esc(d.kws.slice(0,8).join(', '))+(d.kws.length>8?' e mais '+(d.kws.length-8):'') : 'sem palavras-chave';
     return '<li class="sv"><div class="svi"><strong>'+esc(d.name)+' '+tag+'</strong>'+
-      '<span>'+(d.type==='fixo'?'Custo fixo':'Custo variável')+' · '+kw+' · '+n+(n===1?' lançamento':' lançamentos')+' neste extrato</span></div>'+
+      '<span>'+(d.interna ? 'não conta como entrada nem saída' : d.type==='fixo'?'Custo fixo':'Custo variável')+' · '+kw+' · '+n+(n===1?' lançamento':' lançamentos')+' neste extrato</span></div>'+
       '<div class="sva"><button type="button" class="btn" data-cedit="'+esc(d.id)+'">Editar</button>'+
       (d.builtin ? (d.edited ? '<button type="button" class="btn" data-creset="'+esc(d.id)+'">Restaurar padrão</button>' : '')
                  : '<button type="button" class="btn" data-cdel="'+esc(d.id)+'">Excluir</button>')+'</div></li>';
@@ -867,6 +885,7 @@ function renderDashboard(){
       var k = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
       if (!M[k]){ M[k] = {k:k, y:t.date.getFullYear(), m:t.date.getMonth(), ins:0, outs:0, cat:{}}; mk.push(k); }
       var o = M[k];
+      if (ehInterno(t)) return;
       if (ehEntrada(t)) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
     });
     mk.sort();
@@ -878,7 +897,7 @@ function renderDashboard(){
 
   /* fixos e variáveis */
   var fixed = 0, byCat = {};
-  tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
+  tx.forEach(function(t){ if (saiDaConta(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; if (FIXED.indexOf(c)!==-1) fixed -= t.value; } });
   var variable = T.outs - fixed, fixedM = fixed/nM, varM = variable/nM;
   /* filtro sem nenhuma categoria com gasto neste período: mostra todas e avisa */
   var selVazio = !!sel && !sel.some(function(c){ return byCat[c]; });
@@ -890,8 +909,8 @@ function renderDashboard(){
   for (var i=0;i<nDays;i++){ var d = new Date(first); d.setDate(d.getDate()+i); dowCount[(d.getDay()+6)%7]++; }
   var domOut = []; for (var j=0;j<31;j++) domOut.push(0);
   tx.forEach(function(t){
-    if (ehEntrada(t)) dowIns[(t.date.getDay()+6)%7] += t.value;
-    else if (noFiltro(t)) domOut[t.date.getDate()-1] -= t.value;
+    if (entraNaConta(t)) dowIns[(t.date.getDay()+6)%7] += t.value;
+    else if (saiDaConta(t) && noFiltro(t)) domOut[t.date.getDate()-1] -= t.value;
   });
   var dowAvg = dowIns.map(function(v,i){ return dowCount[i] ? v/dowCount[i] : 0; });
   var domAvg = domOut.map(function(v){ return v/nM; });
@@ -913,7 +932,7 @@ function renderDashboard(){
     var mkk = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
     (monthTx[mkk] = monthTx[mkk] || []).push(t);
     var dk = isoD(t.date); (dayTx[dk] = dayTx[dk] || []).push(t);
-    if (ehEntrada(t)) dowTx[(t.date.getDay()+6)%7].push(t); else if (noFiltro(t)) domTx[t.date.getDate()-1].push(t);
+    if (entraNaConta(t)) dowTx[(t.date.getDay()+6)%7].push(t); else if (saiDaConta(t) && noFiltro(t)) domTx[t.date.getDate()-1].push(t);
   });
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
 
@@ -942,6 +961,15 @@ function renderDashboard(){
   $('dNums').innerHTML = nums.map(function(x){
     return '<div class="kpi"><span class="label">'+x.rotulo+'</span><span class="value num'+(x.neg?' neg':'')+'">'+esc(x.valor)+'</span><span class="sub">'+x.sub+'</span></div>';
   }).join('');
+  var nInv = catByCode('investimentos'), nEc = catByCode('entre_contas'), aplicado = 0, resgatado = 0, transferido = 0;
+  tx.forEach(function(t){
+    var c = catOf(t);
+    if (c===nInv){ if (ehEntrada(t)) resgatado += t.value; else aplicado -= t.value; }
+    else if (c===nEc) transferido += Math.abs(t.value);
+  });
+  var linhaI = Analise.linhaInterno({aplicado:aplicado, resgatado:resgatado, transferido:transferido, brl:function(n){ return brl.format(n); }});
+  $('dInterno').textContent = linhaI || '';
+  $('dInterno').hidden = !linhaI;
 
   /* Parte 2: o que fazer agora */
   var ac = Analise.acoes(ctx);
@@ -1575,7 +1603,7 @@ function renderFlow(tx, mode){
     else if (mode==='month') g = add(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0'), MESES[d.getMonth()].slice(0,3)+'/'+String(d.getFullYear()).slice(2));
     else if (mode==='week'){ var k = weekKey(d); g = add(k, 'sem. '+shortDate(keyDate(k))); }
     else g = add(weekKey(d)+'-'+((d.getDay()+6)%7), '');
-    if (ehEntrada(t)) g.inn += t.value; else g.out -= t.value;
+    if (entraNaConta(t)) g.inn += t.value; else if (saiDaConta(t)) g.out -= t.value;
   });
   order.sort();
   var data = order.map(function(k){return groups[k];});
@@ -1662,7 +1690,10 @@ function renderTable(){
   $('txPrev').disabled = state.txPag===0; $('txNext').disabled = state.txPag>=nPag-1;
   $('rows').innerHTML = shown.map(function(t){
     var c = ehEntrada(t) ? null : catOf(t);
-    var catCell = ehEntrada(t) ? '<span class="in">Entrada</span>' :
+    var ci = ehInterno(t) ? catOf(t) : ENTRADA;
+    var catCell = ehEntrada(t) ? (ed
+      ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+[ENTRADA].concat(INTERNOS).map(function(x){ return '<option'+(x===ci?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>'
+      : ci===ENTRADA ? '<span class="in">Entrada</span>' : '<span class="why">'+esc(ci)+'</span>') :
       ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>' :
       '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
     if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
@@ -1769,7 +1800,7 @@ function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id], to = s.value;
   /* mesma origem = mesma descrição, ignorando números (datas, códigos) */
-  var mesma = state.tx.filter(function(x){ return ehSaida(x) && x.origin===t.origin; });
+  var mesma = state.tx.filter(function(x){ return ehEntrada(x)===ehEntrada(t) && x.origin===t.origin; });
   var n = mesma.length;
   askX({ kind:'reclass', title:'Mudar a categoria de quais lançamentos?',
     text:'Você mudou "'+t.desc+'" para '+to+'.'+(n>1 ? ' Neste extrato há '+n+' lançamentos dessa mesma origem.' : '')+' Se escolher os próximos extratos, sempre que essa origem aparecer ela já vem como '+to+'.',
@@ -2165,7 +2196,7 @@ $('dOnde').addEventListener('click', function(e){
   var at = e.target.closest('[data-atalho]');
   if (at){
     var tx = cur(), byCat = {};
-    tx.forEach(function(t){ if (ehSaida(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; } });
+    tx.forEach(function(t){ if (saiDaConta(t)){ var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; } });
     var esc2 = Analise.atalho(at.dataset.atalho, {byCat:byCat, fixas:FIXED, outros:OTHER});
     state.dashCats = esc2 && esc2.length ? esc2 : null;
     renderDashboard(); return;
