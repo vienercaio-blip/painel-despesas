@@ -5,7 +5,7 @@ from flask import g, jsonify
 
 from auth import login_obrigatorio
 from banco import obter_banco
-from categorizacao import FIXAS, OUTROS, REGRAS, carregar_edicoes
+from categorizacao import FIXAS, INTERNAS, OUTROS, REGRAS, carregar_edicoes
 from rotas import api
 from rotas.categorias import listar_categorias, listar_regras
 from rotas.util import corpo, erro, uid
@@ -26,7 +26,7 @@ def estado():
         usuario={"nome": g.usuario["nome"], "email": g.usuario["email"]},
         outros=OUTROS,
         categorias_padrao=[
-            {"codigo": c, "nome": n, "palavras": pal, "fixa": c in FIXAS} for c, n, pal in REGRAS
+            {"codigo": c, "nome": n, "palavras": pal, "fixa": c in FIXAS, "interna": c in INTERNAS} for c, n, pal in REGRAS
         ],
         categorias=listar_categorias(banco, uid()),
         edicoes=carregar_edicoes(banco, uid()),

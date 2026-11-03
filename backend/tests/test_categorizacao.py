@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from categorizacao import FIXAS, REGRAS, Categorizador, definicoes_padrao
+from categorizacao import FIXAS, INTERNAS, REGRAS, Categorizador, definicoes_padrao, eh_resgate, preparar_lancamentos
 
 DADOS = Path(__file__).parent / "dados"
 
@@ -43,7 +43,8 @@ def test_transferencias_e_sempre_a_ultima():
 
 def test_codigos_unicos_e_contagem():
     cods = [r[0] for r in REGRAS]
-    assert len(REGRAS) == 25 and len(cods) == len(set(cods))
+    assert len(REGRAS) == 26 and len(cods) == len(set(cods))
+    assert INTERNAS == {"investimentos", "entre_contas"} and INTERNAS <= set(cods)
     assert FIXAS <= set(cods)
 
 
@@ -99,6 +100,7 @@ TROCAS = {
     "Moradia": "Moradia e aluguel", "Aluguel": "Moradia e aluguel",
     "Contas da casa": "Água, luz e internet",
     "Transporte": "Transporte e combustível", "Combustível e entregas": "Transporte e combustível",
+    "Investimentos": "Investimentos e reservas",
 }
 # Mudanças esperadas com a lista única: descrição → (antes, depois, motivo).
 _EMPRESA = "gasto de empresa que antes caía em Outros para quem era pessoa física"
@@ -187,3 +189,36 @@ def test_saida_com_palavra_estorno_continua_saida():
 @pytest.mark.parametrize("descricao", ["Pix enviado devolvido UBER DO BRASIL", "Pix-Envio devolvido 99 TECNOLOGIA"])
 def test_pix_devolvido_e_estorno(descricao):
     assert _preparar(descricao, 25.0)["estorno"] is True
+
+
+# ---------- movimento interno: dinheiro guardado e resgates ----------
+
+@pytest.mark.parametrize("descricao, valor, esperado", [
+    ("RESGATE TESOURO SELIC", 100.0, True),
+    ("DINHEIRO RETIRADO COFRINHO", 50.0, True),
+    ("RENDIMENTO POUPANCA", 3.0, False),  # juros ganhos: dinheiro novo
+    ("RESGATE TESOURO", -100.0, False),
+])
+def test_resgate(descricao, valor, esperado):
+    assert eh_resgate(descricao, valor) is esperado
+
+
+@pytest.mark.parametrize("descricao, esperado", [
+    ("RESERVA POR GASTO CHAO", "Investimentos e reservas"),
+    ("APLICACAO CDB", "Investimentos e reservas"),
+    ("COFRINHO", "Investimentos e reservas"),
+    ("CAIXINHA TURBO", "Investimentos e reservas"),
+    ("RESERVA HOTEL PRAIA", "Lazer"),
+])
+def test_guardado_e_reservas(descricao, esperado):
+    assert _cat(descricao) == esperado
+
+
+def test_preparar_resgate_e_rendimento():
+    lanc = [{"data": "2026-01-10", "descricao": "RESGATE TESOURO SELIC", "valor": 500.0},
+            {"data": "2026-01-10", "descricao": "RENDIMENTO POUPANCA", "valor": 3.0}]
+    resgate, rendimento = preparar_lancamentos(lanc, Categorizador([], {}))
+    assert resgate["categoria_auto"] == "Investimentos e reservas" and resgate["palavra"] == "resgate"
+    assert rendimento["categoria_auto"] is None
+    editada = {"padrao:investimentos": {"nome": "Reserva", "tipo": "variavel", "palavras": None}}
+    assert preparar_lancamentos(lanc[:1], Categorizador([], editada))[0]["categoria_auto"] == "Reserva"

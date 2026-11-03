@@ -35,7 +35,8 @@ def test_senha_errada(app):
 def test_estado_inicial(cliente):
     e = cliente.get("/api/estado").json
     assert e["usuario"]["nome"] == "Ana"
-    assert "perfis" not in e and len(e["categorias_padrao"]) == 25
+    assert "perfis" not in e and len(e["categorias_padrao"]) == 26
+    assert {c["codigo"] for c in e["categorias_padrao"] if c["interna"]} == {"investimentos", "entre_contas"}
     moradia = [c for c in e["categorias_padrao"] if c["codigo"] == "moradia"][0]
     assert (moradia["nome"], moradia["fixa"]) == ("Moradia e aluguel", True)
     assert e["categorias"] == [] and e["regras"] == {}

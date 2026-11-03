@@ -48,9 +48,15 @@ REGRAS = [
     ("educacao", "Educação", ["escola", "faculdade", "curso", "mensalidade", "livro", "udemy", "alura"]),
     ("lazer", "Lazer", ["cinema", "restaurante", " bar ", "show", "viagem", "hotel", "ingresso", "lanchonete"]),
     ("presentes", "Presentes", ["presente", "floricultura"]),
-    ("investimentos", "Investimentos", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo"]),
+    ("investimentos", "Investimentos e reservas", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo", "cofrinho", "caixinha", " reserva", " rdb "]),
+    ("entre_contas", "Transferências entre suas contas", []),  # sem palavras: só o que o cliente marcar
     ("transferencias", "Transferências para pessoas", ["pix enviado", "pix transf", "transferencia", " transf ", " ted ", " doc "]),
 ]
+
+# Categorias de movimento interno: dinheiro guardado (aplicação, resgate, cofrinho)
+# e transferências entre as contas do próprio cliente. Não contam como entrada
+# nem como saída no painel.
+INTERNAS = {"investimentos", "entre_contas"}
 
 FIXAS = {"dividas", "tarifas", "impostos", "folha", "moradia", "casa", "contabilidade", "seguros", "assinaturas", "educacao"}
 
@@ -129,6 +135,10 @@ class Categorizador:
         self.personalizadas = categorias_cliente  # [{"nome", "palavras": [...]}]
         self.padrao = definicoes_padrao(edicoes)
 
+    def nome_por_codigo(self, codigo):
+        """Nome atual (editado pelo cliente ou original) da categoria padrão."""
+        return next(c["nome"] for c in self.padrao if c["codigo"] == codigo)
+
     def categorizar(self, descricao):
         t = normalizar(descricao)
         for cat in self.personalizadas:
@@ -181,17 +191,33 @@ def eh_estorno(descricao, valor):
     return valor > 0 and any(" " + p in t for p in PALAVRAS_ESTORNO)
 
 
+# Entrada com uma destas palavras é dinheiro guardado voltando (resgate de
+# aplicação, retirada do cofrinho): vai para "Investimentos e reservas".
+# Rendimento (juros) não está aqui: é dinheiro novo e conta como entrada.
+PALAVRAS_RESGATE = ["resgate", "resg ", "dinheiro retirado"]
+
+
+def eh_resgate(descricao, valor):
+    t = normalizar(descricao)
+    return valor > 0 and any(" " + p in t for p in PALAVRAS_RESGATE)
+
+
 def preparar_lancamentos(lancamentos, categorizador):
     """Acrescenta a cada lançamento a categoria automática, a palavra que
     decidiu a categoria e a chave de origem. Entradas (valor positivo) não
     recebem categoria, exceto os estornos, que vão para a categoria da
-    despesa (ou "Outros (revisar)", para o cliente classificar)."""
+    despesa (ou "Outros (revisar)", para o cliente classificar), e os
+    resgates, que vão para "Investimentos e reservas"."""
     saida = []
     for lanc in lancamentos:
         item = dict(lanc)
         item["estorno"] = eh_estorno(item["descricao"], item["valor"])
         if item["valor"] < 0 or item["estorno"]:
             cat, palavra = categorizador.categorizar(item["descricao"])
+        elif eh_resgate(item["descricao"], item["valor"]):
+            t = normalizar(item["descricao"])
+            cat = categorizador.nome_por_codigo("investimentos")
+            palavra = next(p for p in PALAVRAS_RESGATE if " " + p in t).strip()
         else:
             cat, palavra = None, None
         item["categoria_auto"] = cat
