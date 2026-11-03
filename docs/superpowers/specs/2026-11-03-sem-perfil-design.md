@@ -54,6 +54,7 @@ Critério de sucesso: quem usa o site hoje não perde nenhum dado, nenhuma pasta
 ### Textos
 - Os textos passam a ser sempre os de pessoa física: "Contas fixas" e "Saldo acumulado". O objeto `TEXTOS` por perfil deixa de existir.
 - O cartão "Gastos por dia da semana", que hoje é só de empresa, passa a aparecer para todos dentro de "Ver mais detalhes".
+- **Veredito e "O que fazer agora"** (`analise.js`): o veredito usa sempre os textos de pessoa física. As ações das duas listas passam a valer para todos, e cada uma só aparece quando a categoria dela tem gasto. São elas: delivery, tarifas, assinaturas, compras online, dívidas, taxa da maquininha e contratos fixos. A ação de tarifas da empresa ("Negociar o pacote do banco") sai, porque repete "Trocar para uma conta sem tarifa".
 
 ## 2. Lista única de categorias
 
@@ -113,7 +114,7 @@ Ela roda sozinha quando o servidor liga, em `banco.py`, no mesmo estilo de `_con
    - Se as duas existirem para o mesmo código novo, ficam o **nome e o tipo da de `pf`**, e as **palavras são somadas**, sem repetição.
    - Uma edição com `palavras NULL` (manteve as originais) somada a uma com palavras próprias resulta nas palavras próprias mais as originais da outra categoria.
 3. Depois disso, tudo o que se refere à categoria pelo nome (regras e correções) é atualizado para o nome final, usando a mesma lógica de `rotas/categorias.py`.
-4. Se a pessoa criou uma categoria com o mesmo nome de uma categoria padrão nova (por exemplo, "Fornecedores" criada por quem era `pf`), a criada pela pessoa continua existindo, e a padrão com o mesmo nome **não aparece** para essa pessoa. Ninguém fica com duas categorias iguais na tela.
+4. Se a pessoa criou uma categoria com o mesmo nome de uma categoria padrão da lista nova (por exemplo, "Fornecedores" criada por quem era `pf`), a dela ganha o sufixo **" (sua)"**, e as regras e correções vão junto. É a mesma regra que a conversão anterior já usa. Ninguém fica com duas categorias iguais na tela. Este passo roda **antes** do passo 1.
 
 ### Colunas
 - `paginas.perfil` e `extratos.perfil` continuam na tabela para não exigir reconstruir as tabelas no SQLite. O código para de ler essas colunas, exceto a própria conversão.
