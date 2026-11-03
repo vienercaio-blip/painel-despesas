@@ -79,7 +79,7 @@ Critério de sucesso: Entrou, Saiu e Sobrou respondem "estou gastando mais do qu
     1. vale a correção, se houver;
     2. senão, vale a regra, mas só se ela apontar para uma categoria interna;
     3. senão, vale `t.auto`, que só é preenchido nos resgates.
-  - As somas do painel (Entrou e Saiu, por categoria, por mês, por dia do mês, por dia da semana) passam a ignorar `ehInterno`. O saldo acumulado e a projeção de saldo continuam com tudo.
+  - As somas do painel (Entrou e Saiu, por categoria, por mês, por dia do mês, por dia da semana e a projeção, que é uma média de quanto sobra por mês) passam a ignorar `ehInterno`. Só o saldo acumulado e as listas de lançamentos de cada dia, mostradas nele, continuam com tudo.
 - **`analise.js`:** `linhaInterno({aplicado, resgatado, transferido, brl})` devolve o texto da linha `dInterno`, ou `null` quando não há nada a mostrar.
   - `aplicado` é a soma, em valor absoluto, das saídas internas de investimento;
   - `resgatado` é a soma das entradas internas de investimento;
