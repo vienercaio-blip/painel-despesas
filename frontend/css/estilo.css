@@ -13,6 +13,7 @@ img{max-width:100%}
   --good:#17804B; --bad:#B42318; --warn:#8F6400;
   --note-bg:#FBEBC5; --note-ink:#6B4A00; --note-line:#E8D29A;
   --menu-bg:#0E1420; --menu-ink:#E8ECF3;
+  --btn-bg:#0E1420; --btn-ink:#F3EBD9;
   --font-display:'Fraunces',Georgia,serif;
   --font-body:'Manrope',system-ui,-apple-system,sans-serif;
   --font-mono:'Manrope',system-ui,sans-serif;
@@ -25,7 +26,7 @@ img{max-width:100%}
     --s1:#E2B04A; --s2:#5B6B85; --grid:#1F2A3B;
     --good:#4CC38A; --bad:#FF8A80; --warn:#E3B341;
     --note-bg:#3A2E12; --note-ink:#F3D27F; --note-line:#584520;
-    --menu-bg:#0A0F18; --menu-ink:#E8ECF3;
+    --menu-bg:#0A0F18; --menu-ink:#E8ECF3; --btn-bg:#E2B04A; --btn-ink:#0E1420;
     color-scheme:dark;
   }
 }
@@ -36,7 +37,7 @@ img{max-width:100%}
   --s1:#E2B04A; --s2:#5B6B85; --grid:#1F2A3B;
   --good:#4CC38A; --bad:#FF8A80; --warn:#E3B341;
   --note-bg:#3A2E12; --note-ink:#F3D27F; --note-line:#584520;
-  --menu-bg:#0A0F18; --menu-ink:#E8ECF3;
+  --menu-bg:#0A0F18; --menu-ink:#E8ECF3; --btn-bg:#E2B04A; --btn-ink:#0E1420;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -329,7 +330,7 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .drop p{margin:0;color:var(--ink-2);font-size:14px}
 .drop-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-ink)}
 .btn:hover{border-color:var(--ink-3)}
 .btn.primary:hover{filter:brightness(1.08)}
 .privacy{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-3)}
@@ -501,3 +502,9 @@ td .in{color:var(--good);font-weight:500}
   .lateral .tab{width:auto;flex:none}
   .lateral .ico{display:none}
 }
+
+/* ---------- componentes no estilo "sobrou." ---------- */
+#dVerT{font-family:var(--font-display);font-weight:700}
+.cfg-row select{min-height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+input,select,textarea{border-radius:10px}
+.why.estorno{background:var(--note-bg);color:var(--note-ink)}

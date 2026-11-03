@@ -3,31 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Entrar · Painel de Despesas</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<title>Entrar · sobrou.</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>/* mesma aparência escolhida no site (atalho do localStorage) */
+try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.documentElement.setAttribute('data-theme','light'); else if (t==='escuro') document.documentElement.setAttribute('data-theme','dark'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Manrope:wght@400;600;700&display=swap">
 <style>
+/* cópia mínima da identidade "sobrou." (esta página é independente do site) */
 :root{
-  --bg:#F3F5F7; --surface:#FFFFFF; --line:#DCE1E7; --ink:#16202B; --ink-2:#465260;
-  --accent:#1D5FB0; --accent-ink:#FFFFFF; --bad:#B42318;
+  --bg:#F7F3EA; --surface:#FFFDF8; --line:#E8DFCB; --ink:#1A2233; --ink-2:#4A5466;
+  --accent:#8A6516; --btn-bg:#0E1420; --btn-ink:#F3EBD9; --bad:#B42318;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#11161C; --surface:#18202A; --line:#2C3743; --ink:#EDF1F5; --ink-2:#BAC4CF;
-         --accent:#6EA8F0; --accent-ink:#0C1A2B; --bad:#FF8A80; color-scheme:dark; }
+  :root:not([data-theme="light"]){ --bg:#0E1420; --surface:#151E2E; --line:#23314A; --ink:#E8ECF3; --ink-2:#B4C0D3;
+         --accent:#E2B04A; --btn-bg:#E2B04A; --btn-ink:#0E1420; --bad:#FF8A80; color-scheme:dark; }
 }
+:root[data-theme="dark"]{ --bg:#0E1420; --surface:#151E2E; --line:#23314A; --ink:#E8ECF3; --ink-2:#B4C0D3;
+       --accent:#E2B04A; --btn-bg:#E2B04A; --btn-ink:#0E1420; --bad:#FF8A80; color-scheme:dark; }
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
-  background:var(--bg);color:var(--ink);font:15px/1.55 'Instrument Sans',system-ui,sans-serif}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 16px;
+  background:var(--bg);color:var(--ink);font:15px/1.55 'Manrope',system-ui,sans-serif}
+.marca{text-align:center}
+.logo{font:700 44px/1 'Fraunces',Georgia,serif;letter-spacing:-.5px}
+.logo span{color:#E2B04A}
+.slogan{margin:8px 0 0;color:var(--ink-2)}
 .card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:16px}
-h1{margin:0;font:700 26px/1.15 'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-.01em}
+h1{margin:0;font:700 24px/1.15 'Fraunces',Georgia,serif;letter-spacing:-.01em}
 p{margin:0;color:var(--ink-2)}
 label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
 input{min-height:46px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
 input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button{min-height:46px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:600 15px inherit;font-family:inherit;cursor:pointer}
-.erro{color:var(--bad);font-weight:500}
+button{min-height:46px;border:0;border-radius:10px;background:var(--btn-bg);color:var(--btn-ink);font:700 15px inherit;font-family:inherit;cursor:pointer}
+.erro{color:var(--bad);font-weight:600}
 </style>
 </head>
 <body>
+<div class="marca">
+  <div class="logo" aria-label="sobrou.">sobrou<span>.</span></div>
+  <p class="slogan">Veja para onde vai o seu dinheiro e quanto sobra no mês.</p>
+</div>
 <main class="card">
   <h1>Entrar</h1>
   <p>Use o e-mail e a senha da sua conta para abrir o painel.</p>
