@@ -285,3 +285,30 @@ def test_entrada_e_nome_reservado(cliente):
     c = cliente.post("/api/categorias", json={"nome": "Bicos", "palavras": []}).json
     assert cliente.patch(f"/api/categorias/{c['id']}", json={"nome": "Entrada"}).status_code == 409
     assert cliente.put("/api/categorias-padrao/lazer", json={"nome": "Entrada", "tipo": "variavel", "palavras": None}).status_code == 409
+
+
+# ---------- aviso da conferência guardado com o extrato ----------
+
+AVISO = "Lemos este PDF pelo formato geral. Confira se o total de entradas e saídas bate com o seu extrato."
+
+
+def test_aviso_fica_guardado_com_o_extrato(cliente):
+    r = cliente.post("/api/extratos", json={"nome": "x.pdf", "aviso": AVISO, "lancamentos": [CAFE_5]})
+    assert r.status_code == 201 and r.json["aviso"] == AVISO
+    assert cliente.get("/api/extratos").json[0]["aviso"] == AVISO
+    assert cliente.get(f"/api/extratos/{r.json['id']}").json["aviso"] == AVISO
+    sem = salvar(cliente, [PAO_7])
+    assert sem["aviso"] is None
+
+
+def test_aviso_vazio_ou_grande(cliente):
+    assert cliente.post("/api/extratos", json={"nome": "x", "aviso": "  ", "lancamentos": [CAFE_5]}).json["aviso"] is None
+    grande = cliente.post("/api/extratos", json={"nome": "x", "aviso": "a" * 5000, "lancamentos": [CAFE_5]}).json["aviso"]
+    assert len(grande) == 1000
+
+
+def test_pasta_inteira_mostra_os_avisos(cliente):
+    p = cliente.post("/api/paginas", json={"nome": "Bancos"}).json["id"]
+    cliente.post("/api/extratos", json={"nome": "nubank.pdf", "aviso": AVISO, "pagina_id": p, "lancamentos": [CAFE_5]})
+    cliente.post("/api/extratos", json={"nome": "inter.pdf", "pagina_id": p, "lancamentos": [PAO_7]})
+    assert cliente.get(f"/api/paginas/{p}/lancamentos").json["avisos"] == [{"nome": "nubank.pdf", "aviso": AVISO}]

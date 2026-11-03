@@ -46,6 +46,8 @@ def _atualizar(con, caminho_banco):
     colunas = {r[1] for r in con.execute("PRAGMA table_info(paginas)")}
     if "perfil" not in colunas:
         con.execute("ALTER TABLE paginas ADD COLUMN perfil TEXT NOT NULL DEFAULT 'pf'")
+    if "aviso" not in {r[1] for r in con.execute("PRAGMA table_info(extratos)")}:
+        con.execute("ALTER TABLE extratos ADD COLUMN aviso TEXT")
     conversoes.converter(con, caminho_banco)
 
 

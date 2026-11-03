@@ -316,3 +316,18 @@ def test_copia_movimento_interno_so_quando_precisa(app):
     _como_versao_1(con)
     _converter(app).close()
     assert len(list(pasta.glob("painel-antes-movimento-interno-*.db"))) == 1
+
+
+def test_coluna_aviso_em_banco_antigo(tmp_path):
+    """Banco criado antes da coluna "aviso" ganha a coluna ao ligar o servidor."""
+    caminho = str(tmp_path / "antigo.db")
+    con = sqlite3.connect(caminho)
+    con.execute("CREATE TABLE extratos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, pagina_id INTEGER, "
+                "tipo TEXT NOT NULL DEFAULT 'despesas', nome TEXT NOT NULL, perfil TEXT NOT NULL DEFAULT 'pf', linhas_json TEXT, salvo_em TEXT NOT NULL)")
+    con.execute("INSERT INTO extratos (nome, salvo_em) VALUES ('E', 'x')")
+    con.commit()
+    con.close()
+    criar_tabelas(caminho)
+    con = sqlite3.connect(caminho)
+    assert con.execute("SELECT nome, aviso FROM extratos").fetchone() == ("E", None)
+    con.close()

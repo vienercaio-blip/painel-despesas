@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS extratos (
   nome        TEXT NOT NULL,
   perfil      TEXT NOT NULL DEFAULT 'unico',      -- não é mais usado (antes: 'pf' ou 'empresa')
   linhas_json TEXT,                               -- só para planilhas de vendas (recurso em pausa)
+  aviso       TEXT,                               -- aviso da conferência da leitura (ex.: PDF lido pelo formato geral)
   salvo_em    TEXT NOT NULL
 );
 

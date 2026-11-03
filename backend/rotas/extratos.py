@@ -37,6 +37,7 @@ def _meta(banco, linha):
         "nome": linha["nome"],
         "tipo": linha["tipo"],
         "pagina_id": str(linha["pagina_id"]) if linha["pagina_id"] is not None else None,
+        "aviso": linha["aviso"],
         "salvo_em": linha["salvo_em"],
         "quantidade": qtd,
         "inicio": inicio,
@@ -146,6 +147,7 @@ def salvar_extrato():
     banco = obter_banco()
     nome = texto(d.get("nome"), 120) or "Extrato"
     pagina_id = _validar_pagina(banco, id_ou_none(d.get("pagina_id")), tipo)
+    aviso = texto(d.get("aviso"), 1000) or None  # aviso da conferência da leitura, guardado para reabrir
 
     linhas_json = None
     if tipo == "vendas":
@@ -159,8 +161,8 @@ def salvar_extrato():
             erro("O extrato não tem lançamentos.")
 
     cur = banco.execute(
-        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, linhas_json, salvo_em) VALUES (?, ?, ?, ?, 'unico', ?, ?)",
-        (uid(), pagina_id, tipo, nome, linhas_json, agora()),
+        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, linhas_json, aviso, salvo_em) VALUES (?, ?, ?, ?, 'unico', ?, ?, ?)",
+        (uid(), pagina_id, tipo, nome, linhas_json, aviso, agora()),
     )
     if tipo == "despesas":
         _inserir_lancamentos(banco, cur.lastrowid, lancamentos)

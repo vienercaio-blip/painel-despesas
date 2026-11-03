@@ -155,6 +155,11 @@ def abrir_pasta(pagina_id):
         lancamentos=preparar_lancamentos(lancamentos, carregar_categorizador(banco, uid())),
         correcoes=correcoes,
         repetidos=repetidos,
+        avisos=[
+            {"nome": r["nome"], "aviso": r["aviso"]}
+            for eid in ids for r in banco.execute("SELECT nome, aviso FROM extratos WHERE id = ?", (eid,))
+            if r["aviso"]
+        ],
     )
 
 
