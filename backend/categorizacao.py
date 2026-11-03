@@ -48,7 +48,7 @@ REGRAS = [
     ("educacao", "Educação", ["escola", "faculdade", "curso", "mensalidade", "livro", "udemy", "alura"]),
     ("lazer", "Lazer", ["cinema", "restaurante", " bar ", "show", "viagem", "hotel", "ingresso", "lanchonete"]),
     ("presentes", "Presentes", ["presente", "floricultura"]),
-    ("investimentos", "Investimentos e reservas", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo", "cofrinho", "caixinha", " reserva", " rdb "]),
+    ("investimentos", "Investimentos e reservas", ["investimento", "aplicacao", "tesouro", "cdb", "corretora", "poupanca", "fundo", "cofrinho", "caixinha", "reserva por", "reserva de emergencia", "reserva emergencia", " rdb "]),
     ("entre_contas", "Transferências entre suas contas", []),  # sem palavras: só o que o cliente marcar
     ("transferencias", "Transferências para pessoas", ["pix enviado", "pix transf", "transferencia", " transf ", " ted ", " doc "]),
 ]

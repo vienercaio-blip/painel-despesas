@@ -91,7 +91,7 @@ function catOf(tx){
   if (r){
     /* regra de despesa nunca muda uma entrada; regra "Entrada" nunca muda uma despesa */
     if (ehSaida(tx) && r.cat!==ENTRADA) return r.cat;
-    if (ehEntrada(tx) && INTERNOS.indexOf(r.cat)!==-1) return r.cat;
+    if (ehEntrada(tx) && (r.cat===ENTRADA || INTERNOS.indexOf(r.cat)!==-1)) return r.cat;
   }
   return tx.auto;
 }
@@ -968,8 +968,10 @@ function renderDashboard(){
     else if (c===nEc) transferido += Math.abs(t.value);
   });
   var linhaI = Analise.linhaInterno({aplicado:aplicado, resgatado:resgatado, transferido:transferido, brl:function(n){ return brl.format(n); }});
-  $('dInterno').textContent = linhaI || '';
+  var catI = Math.abs(aplicado-resgatado)>0.005 ? nInv : nEc;
+  $('dInterno').innerHTML = linhaI ? esc(linhaI)+' <a href="#lancamentos" data-interno="'+esc(catI)+'">Ver lançamentos</a>' : '';
   $('dInterno').hidden = !linhaI;
+  $('dInterno').dataset.texto = linhaI || '';
 
   /* Parte 2: o que fazer agora */
   var ac = Analise.acoes(ctx);
@@ -1423,6 +1425,7 @@ function exportPdf(){
   if (txt($('dVerPesa'))) doc.para(txt($('dVerPesa')), 10, false, 92);
   doc.gap(4);
   nums.forEach(function(k){ doc.kv(k.l, k.v); });
+  if ($('dInterno').dataset.texto) doc.para($('dInterno').dataset.texto, 10, false, 92);
   doc.gap(10);
   doc.line('O que fazer agora', 13, true, 4);
   if (acoes.length) acoes.forEach(function(a){ doc.para('- '+a[0]+': '+a[1]+(a[2] ? ' '+a[2] : ''), 10, false, 92); doc.gap(3); });
@@ -1667,8 +1670,9 @@ function renderTable(){
   $('fCat').innerHTML = opts; $('fCat').value = fc;
   var list = cur().filter(function(t){
     if (fc==='__in' && ehSaida(t)) return false;
-    if (fc!=='all' && fc!=='__in' && (ehEntrada(t) || catOf(t)!==fc)) return false;
-    if (state.filter==='out' && ehEntrada(t)) return false;
+    var fcInterna = INTERNOS.indexOf(fc)!==-1;  /* categoria interna: entradas (resgates) e saídas juntas */
+    if (fc!=='all' && fc!=='__in' && ((ehEntrada(t) && !fcInterna) || catOf(t)!==fc)) return false;
+    if (state.filter==='out' && ehEntrada(t) && !fcInterna) return false;
     if (state.filter==='in' && ehSaida(t)) return false;
     return !q || norm(t.desc).indexOf(q)!==-1;
   });
@@ -1734,7 +1738,7 @@ $('catList').addEventListener('click', function(e){
   keepScroll(function(){ state.cat = b.dataset.cat; renderCategorias(); });
 });
 var askState = null;
-var KIND_LABEL = {'criar-pagina':'criar página', 'renomear-pagina':'renomear página', 'excluir-pagina':'excluir página', 'mover-extrato':'mover extrato de página', 'renomear-extrato':'renomear extrato', reclass:'mudar a categoria de lançamentos', criar:'criar categoria', editar:'editar categoria', 'excluir-categoria':'excluir categoria', restaurar:'restaurar categoria padrão', 'excluir-regra':'excluir regra', 'excluir-extrato':'excluir extrato salvo', 'excluir-vendas':'remover vendas da planilha', 'apagar-dados':'apagar todos os seus dados'};
+var KIND_LABEL = {'criar-pagina':'criar página', 'renomear-pagina':'renomear página', 'excluir-pagina':'excluir página', 'mover-extrato':'mover extrato de página', 'renomear-extrato':'renomear extrato', 'reclass-local':'mudar a categoria só neste extrato', reclass:'mudar a categoria de lançamentos', criar:'criar categoria', editar:'editar categoria', 'excluir-categoria':'excluir categoria', restaurar:'restaurar categoria padrão', 'excluir-regra':'excluir regra', 'excluir-extrato':'excluir extrato salvo', 'excluir-vendas':'remover vendas da planilha', 'apagar-dados':'apagar todos os seus dados'};
 function savePrefs(){ API.salvarPreferencia('confirmacoes', state.askPrefs).catch(falhou); }
 var toastTimer = null;
 function toast(t){ var el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 6000); }
@@ -1802,6 +1806,21 @@ function mudarCategoria(e){
   /* mesma origem = mesma descrição, ignorando números (datas, códigos) */
   var mesma = state.tx.filter(function(x){ return ehEntrada(x)===ehEntrada(t) && x.origin===t.origin; });
   var n = mesma.length;
+  var regraAtual = state.rules[t.origin] ? state.rules[t.origin].cat : null;
+  var pode = Analise.regraProximos({ entrada:ehEntrada(t), para:to, regraAtual:regraAtual, internos:INTERNOS,
+    outroSentido: state.tx.some(function(x){ return x.origin===t.origin && ehEntrada(x)!==ehEntrada(t); }) });
+  if (!pode){
+    /* a regra mudaria (ou apagaria) a dos lançamentos do outro sentido: só neste extrato */
+    var soEste = function(){ state.overrides[t.id] = to; ruleMsg('"'+t.desc+'" mudou para '+to+' só neste extrato.'); render(); };
+    var todos = function(){ mesma.forEach(function(x){ state.overrides[x.id] = to; }); ruleMsg(n+' lançamentos de "'+t.desc+'" mudaram para '+to+' só neste extrato.'); render(); };
+    askX({ kind:'reclass-local', title:'Mudar a categoria de quais lançamentos?',
+      text:'Você mudou "'+t.desc+'" para '+to+'. Essa origem também tem '+(ehEntrada(t) ? 'saídas' : 'entradas')+', então a mudança vale só neste extrato, para não mudar as '+(ehEntrada(t) ? 'saídas' : 'entradas')+' sem você ver.',
+      yes: n>1 ? 'Todos dessa origem, só neste extrato ('+n+')' : 'Só este lançamento',
+      no: n>1 ? 'Só este lançamento' : null,
+      cancel:'Cancelar mudança', back:s,
+      onYes: n>1 ? todos : soEste, onNo: n>1 ? soEste : null, onCancel:render });
+    return;
+  }
   askX({ kind:'reclass', title:'Mudar a categoria de quais lançamentos?',
     text:'Você mudou "'+t.desc+'" para '+to+'.'+(n>1 ? ' Neste extrato há '+n+' lançamentos dessa mesma origem.' : '')+' Se escolher os próximos extratos, sempre que essa origem aparecer ela já vem como '+to+'.',
     yes:'Todos dessa origem, também nos próximos extratos',
@@ -1825,6 +1844,13 @@ $('origins').addEventListener('change', function(e){
   var s = e.target.closest('select'); if (!s) return;
   var key = s.dataset.origin, from = state.cat, to = s.value;
   var sample = state.tx.filter(function(t){return t.origin===key;})[0], label = sample ? sample.desc : key;
+  var podeO = Analise.regraProximos({ entrada:false, para:to, regraAtual: state.rules[key] ? state.rules[key].cat : null, internos:INTERNOS,
+    outroSentido: state.tx.some(function(t){ return t.origin===key && ehEntrada(t); }) });
+  if (!podeO){
+    state.tx.forEach(function(t){ if (ehSaida(t) && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
+    ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato: essa origem também tem entradas, que não foram mudadas.'); render();
+    return;
+  }
   askX({ kind:'reclass', title:'Manter esta mudança nos próximos extratos?',
     text:'Você moveu todos os pagamentos de "'+label+'" para '+to+'. Se manter, os próximos extratos também vão classificar essa origem como '+to+'.',
     yes:'Sim, manter nos próximos extratos', no:'Não, só neste extrato', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
@@ -2236,6 +2262,11 @@ $('dAcoes').addEventListener('click', function(e){
 $('dAcoes').addEventListener('keydown', function(e){
   var a = e.target.closest('.acao');
   if (a && e.target===a && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); var r = a.getBoundingClientRect(); mostrarOrigens(a, r.left, r.bottom); }
+});
+/* "Ver lançamentos" da linha do dinheiro guardado: abre Lançamentos nessa categoria */
+$('dInterno').addEventListener('click', function(e){
+  var a = e.target.closest('[data-interno]'); if (!a) return;
+  e.preventDefault(); abrirLancamentos(a.dataset.interno);
 });
 /* clicar numa barra: abre a aba Lançamentos já filtrada naquela categoria */
 function abrirLancamentos(cat){

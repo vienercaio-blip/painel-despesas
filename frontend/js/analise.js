@@ -67,6 +67,22 @@ function linhaInterno(c){
   return partes.length ? partes.join(' ') : null;
 }
 
+/* ---------- "também nos próximos": pode criar a regra? ----------
+   Uma regra vale para a origem inteira: despesas usam qualquer categoria (menos
+   "Entrada"); entradas só usam "Entrada" ou uma categoria interna. Então a regra
+   nova não pode mudar lançamentos do outro sentido, nem apagar a regra que eles
+   usam. c = { entrada, para, regraAtual, outroSentido, internos } */
+function regraProximos(c){
+  function interna(x){ return c.internos.indexOf(x)!==-1; }
+  if (interna(c.para) && c.outroSentido) return false;
+  var a = c.regraAtual;
+  if (a && a!==c.para){
+    if (c.entrada && a!=='Entrada' && !interna(a)) return false;   /* apagaria a regra das despesas */
+    if (!c.entrada && (a==='Entrada' || interna(a))) return false;  /* apagaria a regra das entradas */
+  }
+  return true;
+}
+
 /* ---------- Parte 2: o que fazer agora ---------- */
 function acoes(c){
   if (c.escopo==='semana') return { lista:[], vazio:'Escolha um mês ou mais para ver sugestões.' };
@@ -157,7 +173,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, numeros:numeros, linhaInterno:linhaInterno, acoes:acoes, barras:barras, atalho:atalho };
+return { veredito:veredito, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

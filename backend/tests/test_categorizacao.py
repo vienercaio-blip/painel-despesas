@@ -209,6 +209,8 @@ def test_resgate(descricao, valor, esperado):
     ("COFRINHO", "Investimentos e reservas"),
     ("CAIXINHA TURBO", "Investimentos e reservas"),
     ("RESERVA HOTEL PRAIA", "Lazer"),
+    ("RESERVA DE EMERGENCIA", "Investimentos e reservas"),
+    ("BOOKING RESERVA 123", "Outros (revisar)"),  # reserva de viagem não é dinheiro guardado
 ])
 def test_guardado_e_reservas(descricao, esperado):
     assert _cat(descricao) == esperado

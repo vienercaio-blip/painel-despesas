@@ -273,3 +273,29 @@ test('linha interna: nada a mostrar', () => {
   assert.equal(Analise.linhaInterno({aplicado:0, resgatado:0, transferido:0, brl}), null);
   assert.equal(Analise.linhaInterno({aplicado:100, resgatado:100, transferido:0, brl}), null);
 });
+
+// ---------- "também nos próximos": a regra vale para a origem nos dois sentidos ----------
+
+const INT = ['Investimentos e reservas', 'Transferências entre suas contas'];
+const regra = o => Analise.regraProximos(Object.assign({entrada:false, para:'Mercado', regraAtual:null, outroSentido:false, internos:INT}, o));
+
+test('próximos: sem conflito, pode', () => {
+  assert.equal(regra({}), true);
+  assert.equal(regra({entrada:true, para:'Entrada'}), true);
+  assert.equal(regra({entrada:true, para:'Entrada', outroSentido:true}), true);   // "Entrada" não muda saídas
+});
+
+test('próximos: categoria interna numa origem que tem o outro sentido não pode', () => {
+  assert.equal(regra({entrada:true, para:INT[1], outroSentido:true}), false);
+  assert.equal(regra({entrada:false, para:INT[0], outroSentido:true}), false);
+  assert.equal(regra({entrada:true, para:INT[1]}), true);
+});
+
+test('próximos: não pode apagar a regra do outro sentido', () => {
+  assert.equal(regra({entrada:true, para:INT[1], regraAtual:'Família'}), false);   // regra de despesa
+  assert.equal(regra({entrada:true, para:'Entrada', regraAtual:'Família'}), false);
+  assert.equal(regra({entrada:false, para:'Lazer', regraAtual:'Entrada'}), false);
+  assert.equal(regra({entrada:false, para:'Lazer', regraAtual:INT[0]}), false);
+  assert.equal(regra({entrada:false, para:'Lazer', regraAtual:'Mercado'}), true);   // mesmo sentido: troca normal
+  assert.equal(regra({entrada:true, para:INT[0], regraAtual:INT[1]}), true);
+});
