@@ -389,14 +389,14 @@ function carregarPasta(id){
 function openPasta(id){
   carregarPasta(id).then(function(){
     $('upResult').hidden = true;
-    location.hash = 'dashboard';
+    irPara('dashboard');
   }).catch(falhou);
 }
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
   carregarSalvo(id).then(function(){
     $('upResult').hidden = true;
-    location.hash = 'dashboard';
+    irPara('dashboard');
   }).catch(falhou);
 }
 function saveCurrentSales(name, pg){
@@ -410,7 +410,7 @@ function openSavedSales(id){
     salesFile = x.nome || 'Planilha'; salesP = {y:'all', m:'all', w:'all'};
     state.savedId = id;
     renderSales(); renderSaved(); refreshTabs();
-    if (location.hash==='#dashboard') setView(); else location.hash = 'dashboard';
+    irPara('dashboard');
   }).catch(falhou);
 }
 var ICON_GEAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>';
@@ -1732,7 +1732,7 @@ $('fCat').addEventListener('change', function(e){
 $('cats').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
   state.cat = b.dataset.cat; renderCategorias(); tip.hidden = true;
-  keepScroll(function(){ location.hash = 'categorias'; setView(); });
+  irPara('categorias');
 });
 $('catList').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
@@ -1856,8 +1856,7 @@ function irCriarCategoria(t){
   showSub('nova');  /* aba "Criar categoria" de Organizar */
   showNc('new');
   state.depois = function(){ $('ncPara').scrollIntoView({block:'center'}); $('ncName').focus({preventScroll:true}); };
-  state.irTopo = true;
-  location.hash = 'categorias';
+  irPara('categorias');
 }
 function esquecerCriacao(){ CRIAR_PARA = null; $('ncPara').hidden = true; $('ncPara').innerHTML = ''; }
 function voltarParaLancamentos(categoria){
@@ -1869,8 +1868,7 @@ function voltarParaLancamentos(categoria){
     var t = state.tx[p.id], linha = document.querySelector('#rows select[data-id="'+p.id+'"]');
     if (categoria && t) perguntarMudanca(t, categoria, linha);
   };
-  state.irTopo = true;
-  location.hash = 'lancamentos';
+  irPara('lancamentos');
 }
 $('ncPara').addEventListener('click', function(e){ if (e.target.closest('[data-ncvoltar]')) voltarParaLancamentos(null); });
 $('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
@@ -2212,15 +2210,17 @@ document.addEventListener('keydown', function(e){
   else if (e.key==='ArrowDown' && items.length){ e.preventDefault(); items[(i+1)%items.length].focus({preventScroll:true}); }
   else if (e.key==='ArrowUp' && items.length){ e.preventDefault(); items[(i-1+items.length)%items.length].focus({preventScroll:true}); }
 });
-window.addEventListener('hashchange', function(){
-  /* trocar de aba mantém a rolagem; vindo de um clique numa barra do dashboard, abre no topo */
-  if (state.irTopo){
-    state.irTopo = false; setView(); window.scrollTo(0, 0);
-    if (state.depois){ var f = state.depois; state.depois = null; f(); }
-    return;
-  }
-  keepScroll(setView);
-});
+/* mudar de página sempre abre no topo. state.depois roda logo depois (ex.: a volta
+   da criação de categoria rola de novo até o lançamento de onde a pessoa saiu) */
+function chegou(){
+  setView(); window.scrollTo(0, 0);
+  if (state.depois){ var f = state.depois; state.depois = null; f(); }
+}
+function irPara(v){
+  if (location.hash==='#'+v) chegou();
+  else location.hash = v;  /* o hashchange chama chegou() */
+}
+window.addEventListener('hashchange', chegou);
 setView();
 var tip = $('tip');
 var tipEl = null, tipTimer = null, tipX = 0, tipY = 0, DWELL = 1500;
@@ -2315,8 +2315,7 @@ function abrirLancamentos(cat){
   state.fcat = cat; state.filter = 'out';
   document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   renderTable();
-  state.irTopo = true;
-  location.hash = 'lancamentos';
+  irPara('lancamentos');
 }
 
 /* ---------- inicialização: busca tudo no servidor ---------- */
