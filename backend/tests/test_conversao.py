@@ -23,6 +23,7 @@ def test_conversao_de_banco_antigo(app):
     for chave, nome in [("pf:3", "Feira"), ("empresa:2", "Imóvel"), ("pme:2", "Ponto"), ("pme:6", "Compras"), ("empresa:6", "Mercadinho")]:
         con.execute("INSERT INTO edicoes_padrao VALUES (?, ?, ?, 'variavel', NULL)", (ana, chave, nome))
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     criar_tabelas(caminho)
@@ -54,6 +55,7 @@ def test_categoria_criada_com_nome_de_categoria_padrao_nova(app):
     lanc = con.execute("INSERT INTO lancamentos (extrato_id, data, descricao, valor) VALUES (?, '2026-01-01', 'IFOOD X', -10)", (cur.lastrowid,)).lastrowid
     con.execute("INSERT INTO correcoes VALUES (?, 'delivery')", (lanc,))
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     criar_tabelas(caminho)
@@ -104,6 +106,7 @@ def test_pastas_sem_perfil(app):
     na_loja = _extrato(con, ana, "empresa", loja)
     _extrato(con, bruno, "pf")
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
@@ -124,6 +127,7 @@ def test_pasta_empresa_ja_existente_e_reaproveitada(app):
     pasta = _pagina(con, ana, "empresa", "pf")
     e = _extrato(con, ana, "empresa")
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
@@ -139,6 +143,7 @@ def test_edicoes_unidas(app):
     _edicao(con, ana, "empresa:aluguel", "Ponto", "variavel", ["sala", "aluguel"])
     con.execute("INSERT INTO regras VALUES (?, 'sala x', 'Ponto', 'SALA X', 'x')", (ana,))
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
@@ -154,6 +159,7 @@ def test_edicao_unida_com_palavras_originais(app):
     _edicao(con, ana, "pf:casa", "Contas", "fixo", None)
     _edicao(con, ana, "empresa:contas", "Contas da loja", "fixo", ["luz loja"])
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
@@ -172,6 +178,7 @@ def test_nomes_antigos_nas_regras_e_correcoes(app):
     lanc = con.execute("INSERT INTO lancamentos (extrato_id, data, descricao, valor) VALUES (?, '2026-01-01', 'X', -1)", (e,)).lastrowid
     con.execute("INSERT INTO correcoes VALUES (?, 'Aluguel')", (lanc,))
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
@@ -188,6 +195,7 @@ def test_copia_de_seguranca_uma_vez_so(app):
     con = sqlite3.connect(app.config["BANCO"])
     _extrato(con, _ids(con)["ana@exemplo.com"], "pf")
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     _converter(app).close()
@@ -200,8 +208,29 @@ def test_paginas_de_vendas_nao_mudam_de_nome(app):
     _pagina(con, ana, "Vendas", "pf", tipo="vendas")
     _pagina(con, ana, "vendas", "empresa", tipo="vendas")
     con.commit()
+    con.execute("PRAGMA user_version = 0")  # simula um banco de versão antiga
     con.close()
 
     con = _converter(app)
     assert set(con.execute("SELECT nome, perfil FROM paginas")) == {("Vendas", "unico"), ("vendas", "unico")}
+    con.close()
+
+
+def test_banco_ja_convertido_nao_muda_mais(app):
+    """Depois da conversão, nomes que o cliente escolher (mesmo iguais aos
+    antigos, como "Transporte" ou "Moradia") não podem ser mexidos ao religar."""
+    con = sqlite3.connect(app.config["BANCO"])
+    ana = _ids(con)["ana@exemplo.com"]
+    _edicao(con, ana, "padrao:transporte", "Transporte", "variavel", None)
+    con.execute("INSERT INTO categorias (usuario_id, nome, palavras, criada_em) VALUES (?, 'Moradia', '[]', 'x')", (ana,))
+    con.execute("INSERT INTO categorias (usuario_id, nome, palavras, criada_em) VALUES (?, 'Mercado', '[]', 'x')", (ana,))
+    con.execute("INSERT INTO regras VALUES (?, 'uber', 'Transporte', 'UBER', 'x')", (ana,))
+    con.execute("INSERT INTO regras VALUES (?, 'imob', 'Moradia', 'IMOB', 'x')", (ana,))
+    con.commit()
+    antes = (sorted(con.execute("SELECT * FROM regras")), sorted(con.execute("SELECT nome FROM categorias")))
+    con.close()
+
+    criar_tabelas(app.config["BANCO"])
+    con = sqlite3.connect(app.config["BANCO"])
+    assert (sorted(con.execute("SELECT * FROM regras")), sorted(con.execute("SELECT nome FROM categorias"))) == antes
     con.close()

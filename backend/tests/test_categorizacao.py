@@ -64,6 +64,19 @@ def test_categorias_unidas_reconhecem_as_duas_origens(descricao, esperado):
     ("IFOOD *PEDIDO", "Delivery"),
     ("PIX ENVIADO MERCADO PAGO", "Mercado"),  # colisão conhecida, igual à de antes
     ("PAGAMENTO DAS MEI", "Impostos e encargos"),
+    ("TAXA CONDOMINIO RESIDENCIAL", "Moradia e aluguel"),
+    ("TAXA DE MATRICULA ESCOLA", "Educação"),
+    ("COMPRA CARTAO STONE PADARIA DO ZE", "Mercado"),
+    ("PAGSEGURO *ACADEMIA FIT", "Academia e bem-estar"),
+    ("GETNET *SALAO DA ANA", "Academia e bem-estar"),
+    ("REDE DROGASIL", "Saúde"),
+    ("ASSINATURA FOLHA DE S PAULO", "Assinaturas"),
+    ("APPLE.COM/BILL ICLOUD NUVEM", "Assinaturas"),
+    ("PIX ENVIADO FERIAS CASA PRAIA", "Transferências para pessoas"),
+    # taxas de maquininha continuam reconhecidas
+    ("STONE TAXA ALUGUEL POS", "Taxas de cartão e apps"),
+    ("TAXA CARTAO CIELO", "Taxas de cartão e apps"),
+    ("ANTECIPACAO DE RECEBIVEIS GETNET", "Taxas de cartão e apps"),
 ])
 def test_palavras_de_empresa_nao_roubam_gastos_pessoais(descricao, esperado):
     assert _cat(descricao) == esperado
@@ -112,7 +125,6 @@ EXCECOES = {
     "IFOOD COMISSAO E TAXAS": ("Delivery", "Taxas de cartão e apps", _TAXA),
     "MERCADO PAGO TAXA": ("Mercado", "Taxas de cartão e apps", _TAXA),
     "STONE TAXA ALUGUEL POS": ("Moradia", "Taxas de cartão e apps", _TAXA),
-    "SUMUP *BARRACA DO ZE": ("Outros (revisar)", "Taxas de cartão e apps", _TAXA),
     "ATACADO ASSAI": ("Fornecedores", "Mercado", _MERCADO),
     "ATACADO MAKRO": ("Fornecedores", "Mercado", _MERCADO),
     "COMPRA ASSAI ATACADISTA": ("Fornecedores", "Mercado", _MERCADO),

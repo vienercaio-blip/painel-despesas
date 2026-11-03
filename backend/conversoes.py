@@ -1,8 +1,8 @@
 """Conversão dos dados de bancos criados por versões antigas do site.
 
-Roda sempre que o servidor liga (ver banco.criar_tabelas) e só encontra
-o que converter na primeira vez. Antes de mexer nos dados, guarda uma
-cópia de segurança do banco.
+Roda quando o servidor liga (ver banco.criar_tabelas), uma vez só por
+banco (ver VERSAO). Antes de mexer nos dados, guarda uma cópia de
+segurança do banco.
 """
 import json
 import re
@@ -24,11 +24,20 @@ CODIGO_NOVO = {"aluguel": "moradia", "contas": "casa", "combustivel": "transport
 _REGRA = {codigo: (nome, palavras) for codigo, nome, palavras in REGRAS}
 
 
+# Versão dos dados, guardada no próprio banco (PRAGMA user_version).
+# 1 = sem perfil. Um banco já convertido nunca passa de novo pela conversão:
+# nomes que o cliente escolher depois (mesmo iguais aos antigos) ficam como estão.
+VERSAO = 1
+
+
 def converter(con, caminho_banco):
+    if con.execute("PRAGMA user_version").fetchone()[0] >= VERSAO:
+        return
     _converter_tipos_de_conta(con)
     if _ha_algo_para_converter(con):
         _copia_de_seguranca(con, caminho_banco)
     _converter_sem_perfil(con)
+    con.execute(f"PRAGMA user_version = {VERSAO}")
 
 
 def _ha_algo_para_converter(con):

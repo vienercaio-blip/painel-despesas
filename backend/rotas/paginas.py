@@ -120,18 +120,24 @@ def _pasta_de_extratos(banco, pagina_id):
     return pagina, ids
 
 
+def _lancamentos_da_pasta(banco, ids):
+    """Os lançamentos dos extratos `ids` somados, sem os repetidos entre eles.
+    Devolve (lista, quantos saíram)."""
+    grupos = [
+        [{"id": str(r["id"]), "extrato_id": str(eid), "data": r["data"], "descricao": r["descricao"], "valor": r["valor"]}
+         for r in banco.execute("SELECT id, data, descricao, valor FROM lancamentos WHERE extrato_id = ? ORDER BY data, id", (eid,))]
+        for eid in ids
+    ]
+    return sem_repetidos(grupos)
+
+
 @api.get("/paginas/<int:pagina_id>/lancamentos")
 @login_obrigatorio
 def abrir_pasta(pagina_id):
     """Todos os extratos da pasta somados, sem os repetidos entre extratos."""
     banco = obter_banco()
     pagina, ids = _pasta_de_extratos(banco, pagina_id)
-    grupos = [
-        [{"id": str(r["id"]), "extrato_id": str(eid), "data": r["data"], "descricao": r["descricao"], "valor": r["valor"]}
-         for r in banco.execute("SELECT id, data, descricao, valor FROM lancamentos WHERE extrato_id = ? ORDER BY data, id", (eid,))]
-        for eid in ids
-    ]
-    lancamentos, repetidos = sem_repetidos(grupos)
+    lancamentos, repetidos = _lancamentos_da_pasta(banco, ids)
     lancamentos.sort(key=lambda l: (l["data"], int(l["id"])))
     ficaram = {l["id"] for l in lancamentos}
     correcoes = {}
@@ -155,12 +161,11 @@ def abrir_pasta(pagina_id):
 @api.put("/paginas/<int:pagina_id>/correcoes")
 @login_obrigatorio
 def salvar_correcoes_pasta(pagina_id):
-    """Substitui as correções "só neste extrato" dos lançamentos da pasta."""
+    """Substitui as correções dos lançamentos que a pasta inteira mostra. As
+    cópias escondidas (repetidos de outro extrato) mantêm as correções delas."""
     banco = obter_banco()
     _, ids = _pasta_de_extratos(banco, pagina_id)
-    ids_validos = {
-        r["id"] for eid in ids for r in banco.execute("SELECT id FROM lancamentos WHERE extrato_id = ?", (eid,))
-    }
+    ids_validos = {int(l["id"]) for l in _lancamentos_da_pasta(banco, ids)[0]}
     gravar_correcoes(banco, ids_validos, corpo().get("correcoes"))
     banco.commit()
     return jsonify(ok=True)

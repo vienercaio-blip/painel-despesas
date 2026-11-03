@@ -23,15 +23,19 @@ OUTROS = "Outros (revisar)"
 REGRAS = [
     ("dividas", "Dívidas e juros", ["juros", "parcela", "emprestimo", "financiamento", "fatura", "cartao de credito", "multa", "rotativo", "cheque especial", "consignado"]),
     ("tarifas", "Tarifas bancárias", ["tarifa", "pacote servicos", "pacote de servicos", "cesta de servicos", "cesta servicos", " iof ", "anuidade", "manutencao de conta"]),
-    ("taxas", "Taxas de cartão e apps", [" taxa", " mdr ", "antecipacao", "comissao", " cielo ", " stone ", " getnet ", "pagseguro", " sumup ", " rede ", "maquininha"]),
+    # só taxas de cartão e maquininha: "taxa" sozinha (condomínio, matrícula) e o nome
+    # da maquininha numa compra comum ("STONE PADARIA") são gastos de outras categorias
+    ("taxas", "Taxas de cartão e apps", ["taxa cartao", "taxa de cartao", "taxa maquin", "maquininha", " mdr ", "antecipacao", "comissao",
+                                         "aluguel pos", "aluguel de maquin", "pago taxa", "stone taxa", "taxa stone", "cielo taxa", "taxa cielo",
+                                         "getnet taxa", "taxa getnet", "pagseguro taxa", "taxa pagseguro", "sumup taxa", "taxa sumup", " rede taxa", "taxa rede "]),
     ("impostos", "Impostos e encargos", ["das mei", "pgmei", "simples nacional", " darf", " gps ", " inss", " fgts", " iptu", " icms", " iss ", "imposto"]),
-    ("folha", "Folha de pagamento", ["salario", "folha", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "ferias", "rescisao"]),
+    ("folha", "Folha de pagamento", ["salario", "folha pag", "folha de pag", "folha salario", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "rescisao"]),
     ("moradia", "Moradia e aluguel", ["aluguel", "condominio", "iptu", "imobiliaria"]),
     ("casa", "Água, luz e internet", ["energia", "coelba", "enel", "cemig", "copel", " light ", "agua", "embasa", "sabesp", "compesa", " gas ", "internet", " vivo ", " claro ", " tim ", " oi "]),
-    ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
-    ("seguros", "Seguros", ["seguro", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
+    ("seguros", "Seguros", [" seguro", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
     ("delivery", "Delivery", ["ifood", " ifd ", "rappi", "ze delivery", "99food", " 99 food", "keeta", "aiqfome", "james delivery", "daki", "uber eats", "delivery"]),
     ("assinaturas", "Assinaturas", ["assinatura", "netflix", "spotify", "deezer", "prime video", "amazon prime", "amazonprime", "youtube", "apple", "google one", "icloud", "disney", " max ", "globoplay"]),
+    ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
     ("compras", "Compras online", ["shopee", "mercado livre", "mercadolivre", " amazon ", "magalu", "magazine luiza", "shein", "aliexpress", "temu"]),
     ("mercado", "Mercado", ["mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "feira", "padaria"]),
     ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", " nfe ", "laticinio", "torrefacao", "embalage", "material de limpeza"]),

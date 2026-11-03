@@ -90,3 +90,16 @@ def test_correcoes_da_pasta_nao_apagam_as_de_fora(cliente):
     # um id de fora da pasta no pedido também é ignorado
     cliente.put(f"/api/paginas/{p}/correcoes", json={"correcoes": {alvo: "Saúde"}})
     assert cliente.get(f"/api/extratos/{fora}").json["correcoes"] == {alvo: "Lazer"}
+
+
+def test_correcoes_da_pasta_nao_apagam_as_de_copias_escondidas(cliente):
+    """O mesmo lançamento em dois extratos: a pasta mostra a cópia do mais antigo.
+    Salvar as correções da pasta não pode apagar a correção feita na outra cópia."""
+    p = _pasta(cliente)
+    _salvar(cliente, [A, B], p)
+    novo = _salvar(cliente, [A], p)
+    copia = cliente.get(f"/api/extratos/{novo}").json["lancamentos"][0]["id"]
+    cliente.put(f"/api/extratos/{novo}/correcoes", json={"correcoes": {copia: "Lazer"}})
+    outro = [l for l in cliente.get(f"/api/paginas/{p}/lancamentos").json["lancamentos"] if l["descricao"] == "MERCADO"][0]
+    cliente.put(f"/api/paginas/{p}/correcoes", json={"correcoes": {outro["id"]: "Saúde"}})
+    assert cliente.get(f"/api/extratos/{novo}").json["correcoes"] == {copia: "Lazer"}
