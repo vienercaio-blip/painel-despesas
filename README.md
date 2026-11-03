@@ -68,7 +68,7 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 158 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+São 173 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
 
 As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
 ```
@@ -99,7 +99,9 @@ Feito para quem não tem tempo: responde de cima para baixo.
 
 Não existe tipo de conta: a pessoa só envia o extrato. Ela guarda os extratos em **pastas** que ela mesma cria (um nível só, por exemplo "Empresa", "Casa", "Nubank"); o que não está em pasta fica em "Sem pasta". O botão **"Ver a pasta inteira"** abre no painel todos os extratos da pasta somados, contando uma vez só o lançamento que aparece em dois extratos.
 
-As categorias são **uma lista só, com 25 categorias** para pessoas e empresas (`REGRAS` em `backend/categorizacao.py`); o painel só mostra as que têm gasto. Cada categoria padrão tem um código fixo, e as edições do cliente ficam guardadas como `padrao:<código>`.
+As categorias são **uma lista só, com 26 categorias** para pessoas e empresas (`REGRAS` em `backend/categorizacao.py`); o painel só mostra as que têm gasto.
+
+Duas delas são **movimento interno** (`INTERNAS`): **Investimentos e reservas** (aplicação, cofrinho, reserva e, nas entradas, resgate e "dinheiro retirado") e **Transferências entre suas contas** (só o que o cliente marcar). Elas não contam em Entrou, Saiu e Sobrou; o painel mostra à parte "Você guardou R$ X em investimentos e reservas". Rendimentos (juros) continuam contando como entrada. O saldo acumulado inclui tudo. Cada categoria padrão tem um código fixo, e as edições do cliente ficam guardadas como `padrao:<código>`.
 
 Bancos de versões antigas são convertidos sozinhos ao ligar o servidor (`backend/conversoes.py`), com uma cópia de segurança do banco antes (`painel-antes-sem-perfil-<data>.db`). Os dois tipos de conta antigos viram pastas: extratos de Empresa que estavam soltos vão para a pasta "Empresa", e as categorias que viraram uma só (Moradia e Aluguel, por exemplo) levam junto as edições, regras e correções.
 
