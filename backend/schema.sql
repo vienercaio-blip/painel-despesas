@@ -10,15 +10,14 @@ CREATE TABLE IF NOT EXISTS usuarios (
   criado_em   TEXT NOT NULL
 );
 
--- Páginas: subpastas para organizar os extratos salvos.
--- As pastas principais (Pessoa física, Empresa ou MEI) não ficam aqui:
--- são o próprio perfil do extrato. Cada subpasta pertence a uma delas.
+-- Páginas: as pastas que o cliente cria para organizar os extratos salvos
+-- (um nível só). Extrato sem pasta fica com pagina_id NULL ("Sem pasta").
 CREATE TABLE IF NOT EXISTS paginas (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   nome        TEXT NOT NULL,
   tipo        TEXT NOT NULL DEFAULT 'despesas',   -- 'despesas' ou 'vendas'
-  perfil      TEXT NOT NULL DEFAULT 'pf',         -- pasta principal: 'pf' ou 'empresa'
+  perfil      TEXT NOT NULL DEFAULT 'unico',      -- não é mais usado (antes: 'pf' ou 'empresa')
   criado_em   TEXT NOT NULL
 );
 
@@ -29,7 +28,7 @@ CREATE TABLE IF NOT EXISTS extratos (
   pagina_id   INTEGER REFERENCES paginas(id) ON DELETE SET NULL,
   tipo        TEXT NOT NULL DEFAULT 'despesas',
   nome        TEXT NOT NULL,
-  perfil      TEXT NOT NULL DEFAULT 'pf',         -- 'pf' ou 'empresa'
+  perfil      TEXT NOT NULL DEFAULT 'unico',      -- não é mais usado (antes: 'pf' ou 'empresa')
   linhas_json TEXT,                               -- só para planilhas de vendas (recurso em pausa)
   salvo_em    TEXT NOT NULL
 );
@@ -71,7 +70,7 @@ CREATE TABLE IF NOT EXISTS categorias (
 );
 
 -- Ajustes feitos pelo cliente nas categorias padrão do sistema.
--- chave = "perfil:código", por exemplo "pf:mercado".
+-- chave = "padrao:código", por exemplo "padrao:mercado".
 CREATE TABLE IF NOT EXISTS edicoes_padrao (
   usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   chave       TEXT NOT NULL,
