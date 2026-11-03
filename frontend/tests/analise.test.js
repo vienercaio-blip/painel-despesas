@@ -221,3 +221,26 @@ test('barras: sem seta na visão de semana', () => {
   const c = ctx({escopo:'semana', nM:1, byCat:{A:400}, meses:[{name:'set', cat:{A:100}}, {name:'out', cat:{A:300}}]});
   assert.equal(Analise.barras(c, null).linhas[0].seta, null);
 });
+
+// ---------- os três números (Entrou, Saiu, Sobrou) ----------
+
+test('números: total do período em destaque e média por mês embaixo', () => {
+  const r = Analise.numeros(ctx({nM:2, ins:24609.88, outs:22459.10}));
+  assert.deepEqual(r.map(n => n.rotulo), ['Entrou', 'Saiu', 'Sobrou']);
+  assert.equal(r[0].valor, 'R$ 24609.88');
+  assert.equal(r[0].sub, 'em 2 meses · R$ 12304.94 por mês');
+  assert.equal(r[2].valor, 'R$ 2150.78');
+  assert.equal(r[2].neg, false);
+});
+
+test('números: um mês ou uma semana mostram só o total', () => {
+  assert.equal(Analise.numeros(ctx({nM:1, ins:100, outs:40}))[0].sub, 'neste mês');
+  assert.equal(Analise.numeros(ctx({escopo:'semana', nM:1, ins:100, outs:40}))[1].sub, 'nesta semana');
+});
+
+test('números: gastou mais do que entrou vira Faltou', () => {
+  const r = Analise.numeros(ctx({nM:1, ins:100, outs:150}));
+  assert.equal(r[2].rotulo, 'Faltou');
+  assert.equal(r[2].valor, 'R$ 50.00');
+  assert.equal(r[2].neg, true);
+});

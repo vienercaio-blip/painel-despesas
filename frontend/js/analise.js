@@ -39,6 +39,22 @@ function veredito(c){
   return v;
 }
 
+/* ---------- os três números: Entrou, Saiu e Sobrou (ou Faltou) ----------
+   Em destaque, o total do período (bate com a soma que a pessoa faz de cabeça);
+   com mais de um mês, a média por mês vai na linha de baixo. */
+function numeros(c){
+  var res = c.ins - c.outs;
+  function sub(v){
+    if (c.escopo==='semana') return 'nesta semana';
+    return c.nM>1 ? 'em '+c.nM+' meses · '+c.brl(v/c.nM)+' por mês' : 'neste mês';
+  }
+  return [
+    { rotulo:'Entrou', valor:c.brl(c.ins), sub:sub(c.ins), neg:false },
+    { rotulo:'Saiu', valor:c.brl(c.outs), sub:sub(c.outs), neg:false },
+    { rotulo: res>=0 ? 'Sobrou' : 'Faltou', valor:c.brl(Math.abs(res)), sub:sub(Math.abs(res)), neg: res<0 }
+  ];
+}
+
 /* ---------- Parte 2: o que fazer agora ---------- */
 function acoes(c){
   if (c.escopo==='semana') return { lista:[], vazio:'Escolha um mês ou mais para ver sugestões.' };
@@ -129,7 +145,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, acoes:acoes, barras:barras, atalho:atalho };
+return { veredito:veredito, numeros:numeros, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

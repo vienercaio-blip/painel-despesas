@@ -933,15 +933,14 @@ function renderDashboard(){
   $('dVerPesa').textContent = ver.pesa || '';
   var pp = prevP(), ant = null;
   if (pp && (isWeek || state.p.m!=='all')){  /* compara só mês com mês ou semana com semana */ var pl = state.tx.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
-  var quandoTxt = isWeek ? 'nesta semana' : nM>1 ? 'média por mês, em '+nM+' meses' : 'neste mês';
-  var nums = [
-    {l:'Entrou', v:brl.format(T.ins/nM), s:quandoTxt+(ant ? deltaTxt(T.ins, ant.ins, ant.label) : '')},
-    {l:'Saiu', v:brl.format(T.outs/nM), s:quandoTxt+(ant ? deltaTxt(T.outs, ant.outs, ant.label) : '')},
-    {l: res>=0 ? 'Sobrou' : 'Faltou', v:brl.format(Math.abs(res)/nM), neg: res<0,
-      s:quandoTxt+(ant ? ' · <span class="delta">'+(res-(ant.ins-ant.outs)>=0?'+':'-')+brl.format(Math.abs(res-(ant.ins-ant.outs)))+'</span> vs. '+ant.label : '')}
-  ];
+  var nums = Analise.numeros(ctx);
+  if (ant){  /* comparação com o mês (ou a semana) anterior */
+    nums[0].sub += deltaTxt(T.ins, ant.ins, ant.label);
+    nums[1].sub += deltaTxt(T.outs, ant.outs, ant.label);
+    nums[2].sub += ' · <span class="delta">'+(res-(ant.ins-ant.outs)>=0?'+':'-')+brl.format(Math.abs(res-(ant.ins-ant.outs)))+'</span> vs. '+ant.label;
+  }
   $('dNums').innerHTML = nums.map(function(x){
-    return '<div class="kpi"><span class="label">'+x.l+'</span><span class="value num'+(x.neg?' neg':'')+'">'+esc(x.v)+'</span><span class="sub">'+x.s+'</span></div>';
+    return '<div class="kpi"><span class="label">'+x.rotulo+'</span><span class="value num'+(x.neg?' neg':'')+'">'+esc(x.valor)+'</span><span class="sub">'+x.sub+'</span></div>';
   }).join('');
 
   /* Parte 2: o que fazer agora */
