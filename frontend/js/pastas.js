@@ -23,7 +23,15 @@ function avisoRepetidos(n){
     ' entre os extratos desta pasta e contamos cada um uma vez só.';
 }
 
-return { sugerir:sugerir, avisoRepetidos:avisoRepetidos };
+/* avisos da conferência da leitura (ex.: PDF lido pelo formato geral).
+   avisos = [{nome, aviso}]; todos aparecem, com o nome do extrato quando são vários */
+function textoAvisos(avisos){
+  if (!avisos.length) return null;
+  if (avisos.length===1) return 'Atenção: '+avisos[0].aviso;
+  return avisos.map(function(a, i){ return (i ? 'No extrato' : 'Atenção, no extrato')+' "'+a.nome+'": '+a.aviso; }).join(' ');
+}
+
+return { sugerir:sugerir, avisoRepetidos:avisoRepetidos, textoAvisos:textoAvisos };
 })();
 if (typeof window!=='undefined') window.Pastas = Pastas;
 if (typeof module!=='undefined') module.exports = Pastas;

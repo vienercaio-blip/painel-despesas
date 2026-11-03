@@ -116,7 +116,7 @@ function renderRules(){
   $('cntRegras').textContent = keys.length ? keys.length : '';
   $('rulesList').innerHTML = keys.map(function(k){
     var r = state.rules[k];
-    var n = state.tx.filter(function(t){return ehSaida(t) && t.origin===k;}).length;
+    var n = state.tx.filter(function(t){return t.origin===k;}).length;
     return '<li class="sv"><div class="svi"><strong>'+esc(r.label)+'</strong>'+
       '<span>Sempre <b>'+esc(r.cat)+'</b> · '+(n ? n+(n===1?' lançamento':' lançamentos')+' neste extrato' : 'nenhum lançamento neste extrato')+(r.at?' · criada em '+fmtDate(new Date(r.at)):'')+'</span></div>'+
       '<div class="sva"><button type="button" class="btn" data-rdel="'+esc(k)+'">Excluir</button></div></li>';
@@ -168,7 +168,8 @@ function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
   state.raw = list; state.savedId = null; state.pastaId = null; state.loaded = true;
   if (typeof esquecerCriacao==='function' && CRIAR_PARA) esquecerCriacao();
-  $('dAvisoPasta').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
+  $('dAvisoPasta').hidden = true;
+  $('dAvisoLeitura').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
   state.editLanc = false; state.txPor = 10; state.dashCats = null; state.dashDet = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
@@ -278,17 +279,20 @@ function concluirLeitura(results){
     return;
   }
   var nome = good.map(function(r){return r.nome;}).join(', ');
+  var avisosL = good.filter(function(r){ return r.aviso; }).map(function(r){ return {nome:r.nome, aviso:r.aviso}; });
+  /* um arquivo: só o aviso; vários: o nome de cada arquivo junto (guardado com o extrato) */
+  var textoAv = avisosL.length===1 && good.length===1 ? avisosL[0].aviso
+    : avisosL.map(function(a){ return a.nome+': '+a.aviso; }).join(' ') || null;
   var salvar = $('saveMode').checked;
   /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
      escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
   var pronto = salvar
-    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:$('savePage').value||null, lancamentos:combined })
+    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:$('savePage').value||null, lancamentos:combined, aviso:textoAv })
         .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
               function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
     : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
-  var avisos = good.filter(function(r){ return r.aviso; });
   pronto.then(function(saved){
-    if (avisos.length && saved!==true) toast(avisos[0].aviso);
+    if (saved!==true && textoAv) mostrarAvisoLeitura([{nome:nome, aviso:textoAv}]);
     var lista = combined.map(doServidor).sort(function(x,y){ return x.date-y.date; });
     var a = lista[0].date, b = lista[lista.length-1].date;
     var months = {}; lista.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
@@ -304,7 +308,7 @@ function concluirLeitura(results){
       showPanel('salvos');
       $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
       toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.'+
-        (avisos.length ? ' Atenção: '+avisos[0].aviso : ''));
+        (textoAv ? ' Atenção: '+textoAv : ''));
     }
   });
 }
@@ -314,7 +318,7 @@ function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(er
 function sums(list){
   var ins = 0, outs = 0;
   list.forEach(function(t){ if (entraNaConta(t)) ins += t.value; else if (saiDaConta(t)) outs -= t.value; });
-  return {ins:ins, outs:outs};
+  return Analise.ajustarEstornos({ins:ins, outs:outs});
 }
 function deltaTxt(now, before, label){
   if (!before) return '';
@@ -327,7 +331,7 @@ function deltaTxt(now, before, label){
 var savedCache = {despesas:[], vendas:[]}, pagesCache = {despesas:[], vendas:[]};
 function falhou(e){ toast(e && e.message ? e.message : 'Não foi possível falar com o servidor.'); }
 function metaLocal(m){
-  return { id:m.id, name:m.nome, page:m.pagina_id, savedAt:m.salvo_em, n:m.quantidade, first:m.inicio, last:m.fim };
+  return { id:m.id, name:m.nome, page:m.pagina_id, aviso:m.aviso||null, savedAt:m.salvo_em, n:m.quantidade, first:m.inicio, last:m.fim };
 }
 function getSaved(){ return savedCache[kindNow()] || []; }
 function getPages(){ return pagesCache[kindNow()] || []; }
@@ -371,6 +375,7 @@ function carregarSalvo(id){
     load(x.lancamentos.map(doServidor), 'file', x.nome);
     state.savedId = id;
     aplicarCorrecoes(x.correcoes);
+    if (x.aviso) mostrarAvisoLeitura([{nome:x.nome, aviso:x.aviso}]);
     render(); renderSaved();
   });
 }
@@ -383,8 +388,15 @@ function carregarPasta(id){
     var aviso = Pastas.avisoRepetidos(x.repetidos);
     $('dAvisoPasta').textContent = aviso || '';
     $('dAvisoPasta').hidden = !aviso;
+    mostrarAvisoLeitura(x.avisos || []);
     render(); renderSaved();
   });
+}
+/* aviso da conferência da leitura (ex.: PDF lido pelo formato geral), em cima do painel */
+function mostrarAvisoLeitura(avisos){
+  var t = Pastas.textoAvisos(avisos);
+  $('dAvisoLeitura').textContent = t || '';
+  $('dAvisoLeitura').hidden = !t;
 }
 function openPasta(id){
   carregarPasta(id).then(function(){
@@ -484,7 +496,7 @@ function renderSaved(){
       '</div>' : '';
     var nameBlock = state.editingSaved===x.id
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
-      : '<strong>'+esc(x.name||'Extrato')+'</strong>';
+      : '<strong>'+esc(x.name||'Extrato')+'</strong>'+(x.aviso ? ' <span class="why estorno" data-tip="'+esc(x.aviso)+'">⚠ Confira</span>' : '');
     return '<li class="sv"><div class="svi">'+nameBlock+
       '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
@@ -550,6 +562,7 @@ function render(){
     if (ehEntrada(t)) ins += t.value;
     else { var a=-t.value; outs += a; var c=catOf(t); byCat[c]=(byCat[c]||0)+a; if(!biggest||a>-biggest.value) biggest=t; }
   });
+  var aj = Analise.ajustarEstornos({ins:ins, outs:outs}); ins = aj.ins; outs = aj.outs;
   var res = ins - outs;
   var first = all[0].date, last = all[all.length-1].date;
 
@@ -565,7 +578,7 @@ function render(){
 
   renderPeriod(tx);
 
-  var nIn = tx.filter(function(t){return ehEntrada(t);}).length, nOut = tx.length-nIn;
+  var nIn = tx.filter(entraNaConta).length, nOut = tx.filter(saiDaConta).length;
   $('kIn').textContent = brl.format(ins);  $('kInSub').innerHTML = nIn+' lançamentos'+(prev?deltaTxt(ins, prev.ins, prev.label):'');
   $('kOut').textContent = brl.format(outs); $('kOutSub').innerHTML = nOut+' lançamentos'+(prev?deltaTxt(outs, prev.outs, prev.label):'');
   $('kRes').textContent = brl.format(res);
@@ -743,9 +756,9 @@ function renderCustom(){
     if (state.editingCat===d.id){
       return '<li class="sv editing"><form class="ncform ec-form" data-id="'+esc(d.id)+'" novalidate>'+
         '<div class="nfield"><label for="ecName">Nome da categoria</label><input id="ecName" maxlength="40" autocomplete="off" value="'+esc(d.name)+'"></div>'+
-        '<fieldset class="nfield"><legend>Tipo de custo</legend>'+
+        (d.interna ? '' : '<fieldset class="nfield"><legend>Tipo de custo</legend>'+
           '<label class="radio"><input type="radio" name="ecType" id="ecVar" value="variavel"'+(d.type!=='fixo'?' checked':'')+'> <span><b>Variável</b>, acompanha o movimento</span></label>'+
-          '<label class="radio"><input type="radio" name="ecType" id="ecFix" value="fixo"'+(d.type==='fixo'?' checked':'')+'> <span><b>Fixo</b>, pago todo mês</span></label></fieldset>'+
+          '<label class="radio"><input type="radio" name="ecType" id="ecFix" value="fixo"'+(d.type==='fixo'?' checked':'')+'> <span><b>Fixo</b>, pago todo mês</span></label></fieldset>')+
         '<div class="nfield"><label for="ecKw">Palavras-chave <span class="opt">(opcional)</span></label><input id="ecKw" autocomplete="off" value="'+esc(d.kws.join(', '))+'"><span class="help">Separe por vírgula.</span></div>'+
         '<p class="form-err" id="ecErr" role="alert" hidden></p>'+
         '<div class="sva"><button type="submit" class="btn primary">Salvar alterações</button><button type="button" class="btn" data-ccancel="1">Cancelar</button></div>'+
@@ -890,7 +903,7 @@ function renderDashboard(){
       if (ehEntrada(t)) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
     });
     mk.sort();
-    return mk.map(function(k){ var o = M[k]; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
+    return mk.map(function(k){ var o = M[k], aj = Analise.ajustarEstornos(o); o.ins = aj.ins; o.outs = aj.outs; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
   }
   var months = groupMonths(tx), allMonths = groupMonths(state.tx);
   var nM = isWeek ? 1 : months.length;  /* semana: valores da semana inteira, mesmo cruzando dois meses */
@@ -940,7 +953,7 @@ function renderDashboard(){
   /* contexto para as contas do dashboard (js/analise.js) */
   var ctx = { escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
     ins:T.ins, outs:T.outs, byCat:byCat, fixas:FIXED, outros:OTHER,
-    meses: months.map(function(o){ return {name:MESES[o.m], cat:o.cat}; }),
+    meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }),
     nomes: {delivery:catByCode('delivery'), tarifas:catByCode('tarifas'), assinaturas:catByCode('assinaturas'),
       compras:catByCode('compras'), dividas:catByCode('dividas'), taxas:catByCode('taxas')},
     brl:function(n){ return brl.format(n); }, pct:function(n){ return pct.format(n); } };
@@ -1028,10 +1041,13 @@ function renderDashboard(){
   else if (resRange==='ult12') chartM = months.slice(-12);
   else if (resRange.indexOf('y:')===0) chartM = months.filter(function(o){ return 'y:'+o.y===resRange; });
   if (!chartM.length) chartM = months;
+  state.pdfMeses = null;
   if (sel){
     var selNomes = sel.filter(function(c){ return byCat[c]; });
     $('dResT').textContent = selNomes.length<=2 ? 'Gastos com '+selNomes.join(' e ')+', mês a mês' : 'Gastos com as '+selNomes.length+' categorias escolhidas, mês a mês';
     $('dResH').textContent = 'Soma das categorias escolhidas';
+    state.pdfMeses = { titulo:$('dResT').textContent, linhas: chartM.map(function(o){
+      return {l:o.name, v:brl.format(sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0))}; }) };
     $('dRes').innerHTML = barSVG(chartM.map(function(o){
       var v = sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0);
       return {label:o.label, v:v, fill:'var(--accent)', tip:'<b>'+esc(o.name)+'</b><br>Gastos: '+brl.format(v),
@@ -1438,7 +1454,11 @@ function exportPdf(){
     barras.forEach(function(b){ doc.kv(b.l, b.v); });
     doc.gap(10);
   }
-  if (months.length){
+  if (state.pdfMeses){
+    doc.line(state.pdfMeses.titulo, 13, true, 4);
+    state.pdfMeses.linhas.forEach(function(m){ doc.kv(m.l, m.v); });
+    doc.gap(10);
+  } else if (months.length){
     doc.line('Resultado por mês', 13, true, 4);
     months.forEach(function(m){ doc.kv(m.l, m.v); });
     doc.gap(10);
@@ -1912,6 +1932,7 @@ $('ncForm').addEventListener('submit', function(e){
   var name = $('ncName').value.replace(/\s+/g,' ').trim();
   var err = $('ncErr');
   if (!name){ err.textContent = 'Dê um nome para a categoria.'; err.hidden = false; $('ncName').focus(); return; }
+  if (norm(name)===norm(ENTRADA)){ err.textContent = '"Entrada" é um nome usado pelo sistema. Escolha outro nome.'; err.hidden = false; $('ncName').focus(); return; }
   var exists = allCats().some(function(c){ return norm(c)===norm(name); });
   if (exists){ err.textContent = 'Já existe uma categoria chamada "'+name+'". Escolha outro nome.'; err.hidden = false; $('ncName').focus(); return; }
   err.hidden = true;
@@ -1943,7 +1964,7 @@ $('customList').addEventListener('submit', function(e){
   if (!name){ err.textContent = 'Dê um nome para a categoria.'; err.hidden = false; $('ecName').focus(); return; }
   var clash = allCats().some(function(c){ return c!==orig && norm(c)===norm(name); });
   if (clash){ err.textContent = 'Já existe uma categoria chamada "'+name+'". Escolha outro nome.'; err.hidden = false; $('ecName').focus(); return; }
-  var type = $('ecFix').checked ? 'fixo' : 'variavel';
+  var type = $('ecFix') ? ($('ecFix').checked ? 'fixo' : 'variavel') : d.type;
   var kwTxt = $('ecKw').value;
   var changes = [];
   if (name!==orig) changes.push('nome: "'+orig+'" para "'+name+'"');

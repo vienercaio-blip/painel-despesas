@@ -25,7 +25,9 @@ function veredito(c){
   var q = quando(c);
   var res = c.ins - c.outs, mRes = Math.abs(res)/c.nM, sobra = c.ins ? res/c.ins : 0;
   var v;
-  if (!c.ins && c.outs>0){
+  if (!c.ins && !c.outs){
+    v = { cor:'neutro', titulo:'Sem movimento:', texto:'nenhuma entrada nem saída neste período.' };
+  } else if (!c.ins && c.outs>0){
     v = { cor:'vermelho', titulo:'Alerta:', texto:'saíram '+c.brl(c.outs)+' e não entrou nada neste período.' };
   } else if (res<0){
     v = { cor:'vermelho', titulo:'Alerta:', texto:'você gasta '+c.brl(mRes)+' a mais do que ganha '+q+'.' };
@@ -37,6 +39,12 @@ function veredito(c){
   var top = maiorCategoria(c);
   v.pesa = top && c.outs>0 ? 'O que mais pesa: '+top+', com '+c.pct(c.byCat[top]/c.outs)+' dos gastos.' : null;
   return v;
+}
+
+/* estornos maiores que os gastos deixariam "Saiu" negativo: o Saiu fica em
+   zero e a sobra conta como entrada (é dinheiro que voltou para a conta) */
+function ajustarEstornos(t){
+  return t.outs<0 ? { ins:t.ins-t.outs, outs:0 } : { ins:t.ins, outs:t.outs };
 }
 
 /* ---------- os três números: Entrou, Saiu e Sobrou (ou Faltou) ----------
@@ -173,7 +181,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
+return { veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

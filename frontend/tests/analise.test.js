@@ -299,3 +299,17 @@ test('próximos: não pode apagar a regra do outro sentido', () => {
   assert.equal(regra({entrada:false, para:'Lazer', regraAtual:'Mercado'}), true);   // mesmo sentido: troca normal
   assert.equal(regra({entrada:true, para:INT[0], regraAtual:INT[1]}), true);
 });
+
+// ---------- pendências do painel ----------
+
+test('veredito sem nenhuma entrada nem saída: sem movimento, em cinza', () => {
+  const v = Analise.veredito(ctx({ins:0, outs:0}));
+  assert.equal(v.cor, 'neutro');
+  assert.equal(v.titulo, 'Sem movimento:');
+  assert.equal(v.texto, 'nenhuma entrada nem saída neste período.');
+});
+
+test('estornos maiores que os gastos: Saiu fica em zero e a sobra vira entrada', () => {
+  assert.deepEqual(Analise.ajustarEstornos({ins:100, outs:-30}), {ins:130, outs:0});
+  assert.deepEqual(Analise.ajustarEstornos({ins:100, outs:40}), {ins:100, outs:40});
+});

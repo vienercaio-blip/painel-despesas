@@ -131,16 +131,6 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .rule-msg{margin:0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:14px}
 .svi b{font-weight:600;color:var(--ink)}
 .vl{fill:var(--ink-2)!important;font-weight:500}
-.fixvar{display:flex;flex-direction:column;gap:16px}
-.stack{display:flex;gap:2px;height:18px;border-radius:4px;overflow:hidden}
-.stack span{display:block;height:100%}
-.fv-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-.fv-h{margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:600}
-.fv-h b{font-weight:500}
-.fv-d{margin:2px 0 8px;font-size:13px;color:var(--ink-3)}
-.fv-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
-.fv-list li{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px dashed var(--line)}
-.fv-list li span:first-child{min-width:0;overflow-wrap:anywhere;color:var(--ink-2)}
 .tip{transition:max-width .15s}
 .tip.expanded{max-width:340px;padding:10px 12px}
 .tip-wait{display:block;height:2px;margin-top:6px;border-radius:2px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
@@ -423,6 +413,8 @@ td .in{color:var(--good);font-weight:500}
 .why.estorno{background:var(--accent-soft);color:var(--ink)}
 /* dashboard: veredito e ações */
 .verdict{border-left:4px solid var(--line)}
+.verdict.neutro{border-left-color:var(--line)} .verdict.neutro #dVerT{color:var(--ink-2)}
+.aviso-leitura{color:var(--warn)}
 .verdict.verde{border-left-color:var(--good)} .verdict.amarelo{border-left-color:var(--warn)} .verdict.vermelho{border-left-color:var(--bad)}
 .verdict-frase{margin:0;font-size:20px;line-height:1.35}
 .verdict.verde #dVerT{color:var(--good)} .verdict.amarelo #dVerT{color:var(--warn)} .verdict.vermelho #dVerT{color:var(--bad)}
