@@ -32,7 +32,7 @@ dados_site/
 | Login e separação dos dados de cada cliente | Desenhar telas, gráficos e tabelas |
 | Ler os arquivos do banco (OFX, CSV, Excel, PDF) | Filtros de período, busca, tooltips |
 | Categorizar automaticamente cada despesa | Confirmações antes de cada mudança |
-| Guardar extratos, subpastas, categorias, regras, correções e preferências | Exportar PDF e CSV |
+| Guardar extratos, pastas, categorias, regras, correções e preferências | Exportar PDF e CSV |
 
 Antes, tudo isso ficava no `localStorage` do navegador: se o cliente trocasse de computador ou limpasse o navegador, perdia tudo. Agora fica no banco de dados, na conta de cada cliente.
 
@@ -68,7 +68,7 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 98 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir/mesclar extratos, subpastas, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+São 146 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir/mesclar extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
 
 As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
 ```
@@ -95,11 +95,13 @@ Feito para quem não tem tempo: responde de cima para baixo.
 4. **Mês a mês:** o resultado de cada mês (ou o gasto das categorias escolhidas).
 5. **Ver mais detalhes:** saldo acumulado, dias do mês, categorias que mais mudaram, projeção e outras informações.
 
-## Tipos de conta
+## Pastas e categorias
 
-São dois: **Pessoa física** (`pf`, 17 categorias padrão) e **Empresa ou MEI** (`empresa`, 13 categorias). O tipo é escolhido nas configurações e decide as categorias, a pasta dos extratos salvos e os textos do dashboard. Cada categoria padrão tem um código fixo (`pf:mercado`, `empresa:fornecedores`), usado para guardar as edições do cliente.
+Não existe tipo de conta: a pessoa só envia o extrato. Ela guarda os extratos em **pastas** que ela mesma cria (um nível só, por exemplo "Empresa", "Casa", "Nubank"); o que não está em pasta fica em "Sem pasta". O botão **"Ver a pasta inteira"** abre no painel todos os extratos da pasta somados, contando uma vez só o lançamento que aparece em dois extratos.
 
-Bancos de versões antigas são convertidos sozinhos ao ligar o servidor: o antigo tipo "MEI / PME" vira Empresa ou MEI (subpasta com nome repetido ganha " (MEI)"), e as edições das categorias passam da posição para o código.
+As categorias são **uma lista só, com 25 categorias** para pessoas e empresas (`REGRAS` em `backend/categorizacao.py`); o painel só mostra as que têm gasto. Cada categoria padrão tem um código fixo, e as edições do cliente ficam guardadas como `padrao:<código>`.
+
+Bancos de versões antigas são convertidos sozinhos ao ligar o servidor (`backend/conversoes.py`), com uma cópia de segurança do banco antes (`painel-antes-sem-perfil-<data>.db`). Os dois tipos de conta antigos viram pastas: extratos de Empresa que estavam soltos vão para a pasta "Empresa", e as categorias que viraram uma só (Moradia e Aluguel, por exemplo) levam junto as edições, regras e correções.
 
 ## Endereços da API
 
@@ -112,14 +114,15 @@ Todos exigem login e respondem em JSON.
 | `GET /api/extratos?tipo=despesas` | Lista os extratos salvos |
 | `POST /api/extratos` | Salva um extrato |
 | `GET /api/extratos/<id>` | Abre um extrato (lançamentos + correções) |
-| `PATCH /api/extratos/<id>` | Renomeia ou muda de subpasta |
+| `PATCH /api/extratos/<id>` | Renomeia ou muda de pasta |
 | `DELETE /api/extratos/<id>` | Exclui |
 | `POST /api/extratos/<id>/lancamentos` | Acrescenta lançamentos (ignora repetidos) |
 | `PUT /api/extratos/<id>/correcoes` | Guarda as correções "só neste extrato" |
-| `POST /api/extratos/mesclar` | Junta vários extratos do mesmo perfil |
-| `GET/POST /api/paginas`, `PATCH/DELETE /api/paginas/<id>` | Subpastas (dentro das pastas Pessoa física e Empresa ou MEI) |
+| `POST /api/extratos/mesclar` | Junta vários extratos num novo |
+| `GET/POST /api/paginas`, `PATCH/DELETE /api/paginas/<id>` | Pastas de extratos |
+| `GET /api/paginas/<id>/lancamentos`, `PUT /api/paginas/<id>/correcoes` | A pasta inteira (extratos somados, sem repetidos) e as correções feitas nela |
 | `POST /api/categorias`, `PATCH/DELETE /api/categorias/<id>` | Categorias criadas pelo cliente |
-| `PUT/DELETE /api/categorias-padrao/<perfil>/<codigo>` | Editar ou restaurar uma categoria padrão (ex.: `pf/mercado`) |
+| `PUT/DELETE /api/categorias-padrao/<codigo>` | Editar ou restaurar uma categoria padrão (ex.: `mercado`) |
 | `POST /api/regras`, `DELETE /api/regras?origem=...` | Regras do cliente |
 | `POST /api/categorizar` | Recalcula a categoria automática de uma lista de descrições |
 | `PUT /api/preferencias/<confirmacoes ou config>` | Preferências |
