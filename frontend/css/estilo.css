@@ -47,8 +47,6 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;margin:0;text-wrap:bala
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px}
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
 .tab{min-height:40px;padding:0 14px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:500}
 a.tab{text-decoration:none}
@@ -177,7 +175,6 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .stbl td,.stbl th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
 .stbl .r{text-align:right;font-variant-numeric:tabular-nums}
 .stbl-wrap{overflow-x:auto}
-.top-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
 .modo-top{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-3)}
 .modo-top b{color:var(--ink-2);font-weight:600}
 .cnt{font-size:12px;font-weight:600;padding:0 7px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font-family:var(--font-mono)}
@@ -301,8 +298,6 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .chart-tools .field{flex:0 1 auto;max-width:none;min-width:180px}
 .chart-tools .field select{min-height:34px;height:34px;font-size:13px}
 [hidden]{display:none!important}
-.btn.cfg-btn{width:40px;min-width:40px;min-height:40px;padding:0;justify-content:center}
-.cfg-btn svg{width:22px;height:22px;flex:none}
 .cfg-modal{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto}
 .cfg-sec{padding:14px 0;border-top:1px solid var(--line)}
 .cfg-sec h3{margin:0 0 6px;font-size:15px}
@@ -410,8 +405,6 @@ td .in{color:var(--good);font-weight:500}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 
 /* usuário logado e botão Sair */
-.user-area{font-size:13px;color:var(--ink-3);margin-right:24px}
-.user-area b{color:var(--ink-2);font-weight:600}
 .sair-form{margin:0}
 .btn:disabled{opacity:.45;cursor:default;pointer-events:none}
 .why.estorno{background:var(--accent-soft);color:var(--ink)}
@@ -477,3 +470,34 @@ td .in{color:var(--good);font-weight:500}
 .pdf-senha{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin-top:4px}
 .pdf-senha input{min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);flex:1 1 160px;min-width:0}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---------- menu na coluna da esquerda (identidade "sobrou.") ---------- */
+.app{min-height:100vh}
+.menu{background:var(--menu-bg);color:var(--menu-ink);display:flex;flex-direction:column;gap:6px;padding:18px 12px}
+.menu .logo{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.3px;color:var(--menu-ink);text-decoration:none;padding:0 8px 14px;line-height:1}
+.menu .ponto{color:#E2B04A}
+.menu .tabs{display:flex;flex-direction:column;gap:2px}
+.menu .tab{color:#B4C0D3;width:100%;min-height:42px;gap:10px;font-weight:600}
+.menu a.tab:hover{background:rgba(255,255,255,.05);color:var(--menu-ink)}
+.menu .tab[aria-current="page"],.menu a.tab[aria-current="page"]:hover{background:rgba(255,255,255,.07);color:var(--menu-ink);font-weight:700;box-shadow:inset 3px 0 0 #E2B04A}
+.menu .ico{flex:none;opacity:.85}
+.menu-pe{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:12px 8px 0;border-top:1px solid rgba(255,255,255,.08);font-size:13px}
+.user-area{color:#8E9BB0}
+.user-area b{color:var(--menu-ink);font-weight:600}
+.modo-top{color:#8E9BB0}
+.cfg-btn{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;margin:0 -8px;border:0;border-radius:8px;background:transparent;color:#B4C0D3;font:inherit;font-weight:600;cursor:pointer}
+.cfg-btn:hover{background:rgba(255,255,255,.05);color:var(--menu-ink)}
+.cfg-btn svg{width:20px;height:20px;flex:none}
+@media (min-width:900px){
+  .app{display:grid;grid-template-columns:220px minmax(0,1fr)}
+  .menu{position:sticky;top:0;height:100vh;overflow-y:auto}
+}
+@media (max-width:899.98px){
+  .menu{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px}
+  .menu .logo{padding:0;font-size:24px;margin-right:auto}
+  .menu-pe{order:2;margin:0;padding:0;border:0;flex-direction:row;align-items:center}
+  .menu-pe .user-area,.menu-pe .cfg-txt{display:none}
+  .menu .tabs{order:3;flex-basis:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:4px}
+  .menu .tab{width:auto;flex:none}
+  .menu .ico{display:none}
+}

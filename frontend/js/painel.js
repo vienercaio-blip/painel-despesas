@@ -1562,7 +1562,7 @@ function refreshTabs(){
     a.hidden = MODE==='vendas' ? !(v==='dashboard' && sales.length>0) : !(MODE==='despesas' && state.loaded);
   });
   var d = document.querySelector('a.tab[data-view="dashboard"]');
-  if (d) d.textContent = MODE==='vendas' ? 'Análise de vendas' : 'Dashboard';
+  if (d) d.querySelector('.tab-txt').textContent = MODE==='vendas' ? 'Análise de vendas' : 'Dashboard';  /* o ícone fica */
 }
 document.querySelectorAll('.modo-card').forEach(function(b){ b.addEventListener('click', function(){ setMode(b.dataset.modo); }); });
 $('modoTrocar').addEventListener('click', function(){ setMode(null); });
