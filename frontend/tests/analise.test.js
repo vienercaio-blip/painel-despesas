@@ -5,7 +5,7 @@ const Analise = require('../js/analise.js');
 
 function ctx(over){
   return Object.assign({
-    perfil:'pf', escopo:'meses', nM:1, ins:0, outs:0, byCat:{}, meses:[], fixas:[],
+    escopo:'meses', nM:1, ins:0, outs:0, byCat:{}, meses:[], fixas:[],
     nomes:{delivery:null, tarifas:null, assinaturas:null, compras:null, dividas:null, taxas:null},
     outros:'Outros (revisar)',
     brl: n => 'R$ ' + n.toFixed(2),
@@ -28,20 +28,18 @@ test('limite de 10% é verde', () => {
   assert.equal(Analise.veredito(ctx({ins:1000, outs:900})).cor, 'verde');
 });
 
-test('textos de pf e empresa', () => {
+test('veredito usa sempre textos de pessoa física', () => {
   assert.equal(Analise.veredito(ctx({ins:1000, outs:850})).titulo, 'Tudo certo:');
   assert.equal(Analise.veredito(ctx({ins:1000, outs:950})).titulo, 'Atenção:');
   assert.equal(Analise.veredito(ctx({ins:1000, outs:1200})).titulo, 'Alerta:');
-  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:1000, outs:850})).titulo, 'Lucro saudável:');
-  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:1000, outs:950})).titulo, 'Margem apertada:');
-  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:1000, outs:1200})).titulo, 'Prejuízo:');
-  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:0, outs:10})).titulo, 'Sem faturamento:');
+  assert.equal(Analise.veredito(ctx({ins:0, outs:10})).titulo, 'Alerta:');
+  // um "perfil" antigo vindo de fora não muda nada
+  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:1000, outs:1200})).titulo, 'Alerta:');
 });
 
 test('frases da especificação', () => {
   assert.equal(Analise.veredito(ctx({ins:1000, outs:850, nM:1})).texto, 'sobram R$ 150.00 neste mês, 15% do que entra.');
   assert.equal(Analise.veredito(ctx({ins:1000, outs:1200})).texto, 'você gasta R$ 200.00 a mais do que ganha neste mês.');
-  assert.equal(Analise.veredito(ctx({perfil:'empresa', ins:1000, outs:950})).texto, 'lucro de R$ 50.00 neste mês, só 5% do faturamento.');
 });
 
 test('por mês / neste mês / nesta semana', () => {
@@ -148,27 +146,28 @@ test('dívidas acima de 15%, sem estimativa', () => {
   assert.deepEqual(ids(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Dívidas e juros':150}, nomes:N}))), []);
 });
 
-test('empresa: maquininha usa % das entradas, economia 1/4', () => {
-  const r = Analise.acoes(ctx({perfil:'empresa', ins:1000, outs:500, byCat:{'Taxas de cartão e apps':31}, nomes:N}));
+test('taxas acima de 3% das entradas sugere negociar a maquininha', () => {
+  const r = Analise.acoes(ctx({ins:1000, outs:500, byCat:{'Taxas de cartão e apps':31}, nomes:N}));
   assert.deepEqual(ids(r), ['taxas']);
   assert.equal(r.lista[0].titulo, 'Negociar a taxa da maquininha');
   assert.equal(r.lista[0].economia, 7.75);
   assert.equal(r.lista[0].motivo, 'Taxas de cartão e apps levaram R$ 31.00 neste mês, 3% do que entrou.');
-  assert.deepEqual(ids(Analise.acoes(ctx({perfil:'empresa', ins:1000, outs:500, byCat:{'Taxas de cartão e apps':30}, nomes:N}))), []);
+  assert.deepEqual(ids(Analise.acoes(ctx({ins:1000, outs:500, byCat:{'Taxas de cartão e apps':30}, nomes:N}))), []);
 });
 
-test('empresa: tarifas e contratos fixos', () => {
-  const r = Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{'Tarifas bancárias':20, Aluguel:600}, fixas:['Tarifas bancárias', 'Aluguel'], nomes:N}));
-  assert.deepEqual(ids(r), ['tarifasEmpresa', 'fixos']);   // fixos 62%, sem estimativa: por último
-  assert.equal(r.lista[0].titulo, 'Negociar o pacote do banco');
-  assert.equal(r.lista[1].titulo, 'Revisar contratos fixos');
-  const pouco = Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{Aluguel:600}, fixas:['Aluguel'], nomes:N}));
+test('fixos acima de 60% sugere revisar contratos', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Moradia e aluguel':610}, fixas:['Moradia e aluguel'], nomes:N}));
+  assert.deepEqual(ids(r), ['fixos']);
+  assert.equal(r.lista[0].titulo, 'Revisar contratos fixos');
+  assert.equal(r.lista[0].motivo, 'As contas fixas somam R$ 610.00 neste mês, 61% de tudo que saiu.');
+  const pouco = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Moradia e aluguel':600}, fixas:['Moradia e aluguel'], nomes:N}));
   assert.deepEqual(ids(pouco), []);   // exatamente 60%: não aparece
 });
 
-test('ações de pf não aparecem em empresa e vice-versa', () => {
-  assert.deepEqual(ids(Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, byCat:{Delivery:500}, nomes:N}))), []);
-  assert.deepEqual(ids(Analise.acoes(ctx({ins:1000, outs:500, byCat:{'Taxas de cartão e apps':100}, nomes:N}))), []);
+test('tarifas gera uma ação só', () => {
+  const r = Analise.acoes(ctx({ins:2000, outs:1000, byCat:{'Tarifas bancárias':20, 'Taxas de cartão e apps':100}, nomes:N}));
+  assert.deepEqual(ids(r).filter(i => i.indexOf('tarifas')===0), ['tarifas']);
+  assert.deepEqual(ids(r).sort(), ['tarifas', 'taxas']);
 });
 
 test('volta ao normal: 3+ meses, +20% e +R$ 50, só a maior', () => {
@@ -215,7 +214,6 @@ test('semana não sugere nada; sem ações, mensagem verde', () => {
   assert.equal(Analise.acoes(ctx({escopo:'semana', ins:100, outs:1000, byCat:{Delivery:500}, nomes:N})).vazio,
     'Escolha um mês ou mais para ver sugestões.');
   assert.equal(Analise.acoes(ctx({ins:2000, outs:1000, nomes:N})).vazio, 'Nada urgente: seus gastos estão sob controle.');
-  assert.equal(Analise.acoes(ctx({perfil:'empresa', ins:2000, outs:1000, nomes:N})).vazio, 'Nada urgente: seus custos estão sob controle.');
   assert.equal(Analise.acoes(ctx({ins:2000, outs:1000, byCat:{Delivery:500}, nomes:N})).vazio, null);
 });
 

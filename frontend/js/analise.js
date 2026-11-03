@@ -2,7 +2,7 @@
    categorias e atalhos do filtro. Não mexe na tela: recebe tudo pronto
    num "contexto" montado pelo painel.js e devolve dados para desenhar.
 
-   Contexto: { perfil:'pf'|'empresa', escopo:'meses'|'mes'|'semana', nM,
+   Contexto: { escopo:'meses'|'mes'|'semana', nM,
      ins, outs, byCat:{nome:total}, meses:[{name, cat:{nome:total}}],
      fixas:[nome], nomes:{delivery, tarifas, assinaturas, compras, dividas, taxas},
      outros, brl(n), pct(n) }
@@ -22,21 +22,17 @@ function maiorCategoria(c){
 
 /* ---------- Parte 1: veredito ---------- */
 function veredito(c){
-  var pf = c.perfil!=='empresa', q = quando(c);
+  var q = quando(c);
   var res = c.ins - c.outs, mRes = Math.abs(res)/c.nM, sobra = c.ins ? res/c.ins : 0;
   var v;
   if (!c.ins && c.outs>0){
-    v = { cor:'vermelho', titulo: pf ? 'Alerta:' : 'Sem faturamento:',
-      texto:'saíram '+c.brl(c.outs)+' e não entrou nada neste período.' };
+    v = { cor:'vermelho', titulo:'Alerta:', texto:'saíram '+c.brl(c.outs)+' e não entrou nada neste período.' };
   } else if (res<0){
-    v = { cor:'vermelho', titulo: pf ? 'Alerta:' : 'Prejuízo:',
-      texto: pf ? 'você gasta '+c.brl(mRes)+' a mais do que ganha '+q+'.' : 'saem '+c.brl(mRes)+' a mais do que entram '+q+'.' };
+    v = { cor:'vermelho', titulo:'Alerta:', texto:'você gasta '+c.brl(mRes)+' a mais do que ganha '+q+'.' };
   } else if (sobra<0.10 && c.outs>0){
-    v = { cor:'amarelo', titulo: pf ? 'Atenção:' : 'Margem apertada:',
-      texto: pf ? 'sobra pouco, '+c.brl(mRes)+' '+q+'. Um imprevisto já aperta.' : 'lucro de '+c.brl(mRes)+' '+q+', só '+c.pct(sobra)+' do faturamento.' };
+    v = { cor:'amarelo', titulo:'Atenção:', texto:'sobra pouco, '+c.brl(mRes)+' '+q+'. Um imprevisto já aperta.' };
   } else {
-    v = { cor:'verde', titulo: pf ? 'Tudo certo:' : 'Lucro saudável:',
-      texto: pf ? 'sobram '+c.brl(mRes)+' '+q+', '+c.pct(sobra)+' do que entra.' : c.brl(mRes)+' '+q+', '+c.pct(sobra)+' do faturamento.' };
+    v = { cor:'verde', titulo:'Tudo certo:', texto:'sobram '+c.brl(mRes)+' '+q+', '+c.pct(sobra)+' do que entra.' };
   }
   var top = maiorCategoria(c);
   v.pesa = top && c.outs>0 ? 'O que mais pesa: '+top+', com '+c.pct(c.byCat[top]/c.outs)+' dos gastos.' : null;
@@ -45,42 +41,34 @@ function veredito(c){
 
 /* ---------- Parte 2: o que fazer agora ---------- */
 function acoes(c){
-  var pf = c.perfil!=='empresa';
   if (c.escopo==='semana') return { lista:[], vazio:'Escolha um mês ou mais para ver sugestões.' };
   var q = quando(c), L = [];
   function val(cod){ var n = c.nomes && c.nomes[cod]; return n ? (c.byCat[n]||0) : 0; }
   function nome(cod){ return c.nomes[cod]; }
   function deSaidas(v){ return c.outs>0 ? v/c.outs : 0; }
   function gastou(v, n){
-    return pf ? 'Você gastou '+c.brl(v/c.nM)+' '+q+' com '+n+', '+c.pct(deSaidas(v))+' de tudo que saiu.'
-              : 'Saíram '+c.brl(v/c.nM)+' '+q+' com '+n+', '+c.pct(deSaidas(v))+' das saídas.';
+    return 'Você gastou '+c.brl(v/c.nM)+' '+q+' com '+n+', '+c.pct(deSaidas(v))+' de tudo que saiu.';
   }
   function add(id, titulo, motivo, economia, cat, link){
     L.push({ id:id, titulo:titulo, motivo:motivo, economia:economia, cat:cat||null, link:link||null });
   }
-  var v;
-  if (pf){
-    v = val('delivery');
-    if (deSaidas(v)>0.08) add('delivery', 'Pedir delivery metade das vezes', gastou(v, nome('delivery')), v/c.nM*0.5, nome('delivery'));
-    v = val('tarifas');
-    if (v>0) add('tarifas', 'Trocar para uma conta sem tarifa', gastou(v, nome('tarifas')), v/c.nM, nome('tarifas'));
-    v = val('assinaturas');
-    if (v/c.nM>100) add('assinaturas', 'Cancelar assinaturas que não usa', gastou(v, nome('assinaturas')), v/c.nM/3, nome('assinaturas'));
-    v = val('compras');
-    if (deSaidas(v)>0.10) add('compras', 'Esperar 24 h antes de comprar online', gastou(v, nome('compras')), v/c.nM*0.3, nome('compras'));
-    v = val('dividas');
-    if (deSaidas(v)>0.15) add('dividas', 'Quitar primeiro as dívidas com juros',
-      'Você pagou '+c.brl(v/c.nM)+' '+q+' em '+nome('dividas')+', '+c.pct(deSaidas(v))+' de tudo que saiu.', null, nome('dividas'));
-  } else {
-    v = val('taxas');
-    if (c.ins>0 && v/c.ins>0.03) add('taxas', 'Negociar a taxa da maquininha',
-      nome('taxas')+' levaram '+c.brl(v/c.nM)+' '+q+', '+c.pct(v/c.ins)+' do que entrou.', v/c.nM*0.25, nome('taxas'));
-    v = val('tarifas');
-    if (v>0) add('tarifasEmpresa', 'Negociar o pacote do banco', gastou(v, nome('tarifas')), v/c.nM, nome('tarifas'));
-    var fixos = c.fixas.reduce(function(s,n){ return s+(c.byCat[n]||0); },0);
-    if (deSaidas(fixos)>0.60) add('fixos', 'Revisar contratos fixos',
-      'Os custos fixos somam '+c.brl(fixos/c.nM)+' '+q+', '+c.pct(deSaidas(fixos))+' das saídas.', null, null);
-  }
+  var v = val('delivery');
+  if (deSaidas(v)>0.08) add('delivery', 'Pedir delivery metade das vezes', gastou(v, nome('delivery')), v/c.nM*0.5, nome('delivery'));
+  v = val('tarifas');
+  if (v>0) add('tarifas', 'Trocar para uma conta sem tarifa', gastou(v, nome('tarifas')), v/c.nM, nome('tarifas'));
+  v = val('assinaturas');
+  if (v/c.nM>100) add('assinaturas', 'Cancelar assinaturas que não usa', gastou(v, nome('assinaturas')), v/c.nM/3, nome('assinaturas'));
+  v = val('compras');
+  if (deSaidas(v)>0.10) add('compras', 'Esperar 24 h antes de comprar online', gastou(v, nome('compras')), v/c.nM*0.3, nome('compras'));
+  v = val('dividas');
+  if (deSaidas(v)>0.15) add('dividas', 'Quitar primeiro as dívidas com juros',
+    'Você pagou '+c.brl(v/c.nM)+' '+q+' em '+nome('dividas')+', '+c.pct(deSaidas(v))+' de tudo que saiu.', null, nome('dividas'));
+  v = val('taxas');
+  if (c.ins>0 && v/c.ins>0.03) add('taxas', 'Negociar a taxa da maquininha',
+    nome('taxas')+' levaram '+c.brl(v/c.nM)+' '+q+', '+c.pct(v/c.ins)+' do que entrou.', v/c.nM*0.25, nome('taxas'));
+  var fixos = c.fixas.reduce(function(s,n){ return s+(c.byCat[n]||0); },0);
+  if (deSaidas(fixos)>0.60) add('fixos', 'Revisar contratos fixos',
+    'As contas fixas somam '+c.brl(fixos/c.nM)+' '+q+', '+c.pct(deSaidas(fixos))+' de tudo que saiu.', null, null);
   /* categoria que subiu no último mês em relação à média dos anteriores */
   if (c.meses.length>=3){
     var ult = c.meses[c.meses.length-1], ant = c.meses.slice(0,-1), melhor = null;
@@ -90,7 +78,7 @@ function acoes(c){
       if (media>0 && agora>media*1.2 && agora-media>=50 && (!melhor || agora-media>melhor.d)) melhor = {n:n, d:agora-media, agora:agora};
     });
     if (melhor) add('normal', 'Trazer '+melhor.n+' de volta ao normal',
-      (pf ? 'Em '+ult.name+' você gastou ' : 'Em '+ult.name+' saíram ')+c.brl(melhor.agora)+' com '+melhor.n+', '+c.brl(melhor.d)+' acima da média.',
+      'Em '+ult.name+' você gastou '+c.brl(melhor.agora)+' com '+melhor.n+', '+c.brl(melhor.d)+' acima da média.',
       melhor.d, melhor.n);
   }
   v = c.byCat[c.outros]||0;
@@ -103,7 +91,7 @@ function acoes(c){
     if (ex===null) return 1; if (ey===null) return -1;
     return ey-ex || x.i-y.i;
   }).map(function(x){ return x.a; }).slice(0,3);
-  return { lista:L, vazio: L.length ? null : 'Nada urgente: seus '+(pf ? 'gastos' : 'custos')+' estão sob controle.' };
+  return { lista:L, vazio: L.length ? null : 'Nada urgente: seus gastos estão sob controle.' };
 }
 
 /* ---------- Parte 3: barras de "para onde vai o dinheiro" ---------- */
