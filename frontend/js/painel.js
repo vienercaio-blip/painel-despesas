@@ -1085,7 +1085,7 @@ function renderDashboard(){
   var bestD = 0, worstD = 0;
   dowAvg.forEach(function(v,i){ if (v>dowAvg[bestD]) bestD = i; if (v<dowAvg[worstD]) worstD = i; });
   $('dWeek').innerHTML = barSVG(dowAvg.map(function(v,i){
-    return {label:DOW[i].slice(0,3), v:v, fill:'var(--s1)', op: i===bestD ? null : 0.5, mark: i===bestD,
+    return {label:DOW[i].slice(0,3), v:v, fill:'var(--s1)', op: i===bestD ? null : 0.75, mark: i===bestD,
       tip:'<b>'+DOW[i]+'</b><br>Média de entradas: '+brl.format(v),
       more: moreHTML('O que entra às '+DOW[i].toLowerCase()+'s (média por dia)', topOrigins(dowTx[i], 3, dowCount[i]).map(function(o){return [o.l, brl.format(o.v)];}),
         'Considera '+dowCount[i]+' '+DOW[i].toLowerCase()+'s do extrato e representa '+pct.format(T.ins?dowIns[i]/T.ins:0)+' de tudo o que entrou.')};
@@ -1096,7 +1096,7 @@ function renderDashboard(){
   var top3 = order.slice(0,3), top3sum = top3.reduce(function(s,i){return s+domAvg[i];},0);
   $('dDom').innerHTML = barSVG(domAvg.map(function(v,i){
     var hot = top3.indexOf(i)!==-1;
-    return {label:String(i+1), v:v, fill:'var(--s2)', op: hot ? null : 0.45, mark: hot,
+    return {label:String(i+1), v:v, fill:'var(--s2)', op: hot ? null : 0.75, mark: hot,
       tip:'<b>Dia '+(i+1)+'</b><br>Saída média: '+brl.format(v),
       more: moreHTML(domTx[i].length ? 'O que costuma sair no dia '+(i+1)+' (média por mês)' : 'Nada costuma sair neste dia', topOrigins(domTx[i], 4, nM).map(function(o){return [o.l, brl.format(o.v)];}),
         domTx[i].length ? pct.format(T.outs?domOut[i]/T.outs:0)+' de todas as saídas do extrato.' : '')};

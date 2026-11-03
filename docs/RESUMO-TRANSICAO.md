@@ -1,6 +1,6 @@
-# Resumo de transição — Painel de Despesas
+# Resumo de transição — sobrou. (antes Painel de Despesas)
 
-Atualizado em 03/11/2026. Leia isto primeiro ao abrir um novo chat. A memória do Claude Code deste projeto (`C:\Users\CAIO\.claude\projects\c--Users-CAIO-Desktop-dados-site\memory\`) também tem estas informações.
+Atualizado em 03/11/2026. **Redesenho em 3 etapas:** 1 identidade visual "sobrou." (ramo `identidade-visual`, especificação `docs/superpowers/specs/2026-11-03-identidade-visual-design.md`), 2 arrumação das telas, 3 celular e PWA. Leia isto primeiro ao abrir um novo chat. A memória do Claude Code deste projeto (`C:\Users\CAIO\.claude\projects\c--Users-CAIO-Desktop-dados-site\memory\`) também tem estas informações.
 
 ---
 

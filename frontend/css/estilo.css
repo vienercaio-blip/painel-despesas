@@ -9,7 +9,7 @@ img{max-width:100%}
   --bg:#F7F3EA; --surface:#FFFDF8; --surface-2:#F1EBDD; --line:#E8DFCB;
   --ink:#1A2233; --ink-2:#4A5466; --ink-3:#606979;
   --accent:#8A6516; --accent-ink:#F3EBD9; --accent-soft:#FBEBC5;
-  --s1:#C8952F; --s2:#B9B1A0; --grid:#E8DFCB;
+  --s1:#9C7019; --s2:#7E7766; --grid:#E8DFCB;
   --good:#17804B; --bad:#B42318; --warn:#8F6400;
   --note-bg:#FBEBC5; --note-ink:#6B4A00; --note-line:#E8D29A;
   --menu-bg:#0E1420; --menu-ink:#E8ECF3;
@@ -23,7 +23,7 @@ img{max-width:100%}
     --bg:#0E1420; --surface:#151E2E; --surface-2:#1B2638; --line:#23314A;
     --ink:#E8ECF3; --ink-2:#B4C0D3; --ink-3:#8E9BB0;
     --accent:#E2B04A; --accent-ink:#0E1420; --accent-soft:#3A2E12;
-    --s1:#E2B04A; --s2:#5B6B85; --grid:#1F2A3B;
+    --s1:#E2B04A; --s2:#7A8AA6; --grid:#1F2A3B;
     --good:#4CC38A; --bad:#FF8A80; --warn:#E3B341;
     --note-bg:#3A2E12; --note-ink:#F3D27F; --note-line:#584520;
     --menu-bg:#0A0F18; --menu-ink:#E8ECF3; --btn-bg:#E2B04A; --btn-ink:#0E1420;
@@ -34,7 +34,7 @@ img{max-width:100%}
   --bg:#0E1420; --surface:#151E2E; --surface-2:#1B2638; --line:#23314A;
   --ink:#E8ECF3; --ink-2:#B4C0D3; --ink-3:#8E9BB0;
   --accent:#E2B04A; --accent-ink:#0E1420; --accent-soft:#3A2E12;
-  --s1:#E2B04A; --s2:#5B6B85; --grid:#1F2A3B;
+  --s1:#E2B04A; --s2:#7A8AA6; --grid:#1F2A3B;
   --good:#4CC38A; --bad:#FF8A80; --warn:#E3B341;
   --note-bg:#3A2E12; --note-ink:#F3D27F; --note-line:#584520;
   --menu-bg:#0A0F18; --menu-ink:#E8ECF3; --btn-bg:#E2B04A; --btn-ink:#0E1420;
@@ -306,6 +306,8 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .cfg-row{display:flex;align-items:center;gap:10px;font-size:14px;margin:6px 0;cursor:pointer}
 .cfg-row input{width:18px;height:18px;margin:0}
 html.texto-grande{zoom:1.15}
+/* com o zoom, 100vh fica 15% maior: a coluna do menu (e o botão de Configurações) precisa caber na tela */
+html.texto-grande .lateral{height:calc(100vh / 1.15)}
 html.sem-esteira .months{animation:none!important;width:auto}
 html.sem-esteira .months-wrap{overflow-x:auto;-webkit-mask-image:none;mask-image:none}
 html.sem-esteira .months [aria-hidden="true"]{display:none}

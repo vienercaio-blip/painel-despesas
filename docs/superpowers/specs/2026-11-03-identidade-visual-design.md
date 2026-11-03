@@ -60,8 +60,8 @@ Os nomes das variáveis de `:root` em `estilo.css` **continuam os mesmos**, para
 | `--warn` | `#E3B341` | `#8F6400` |
 | `--bad` | `#FF8A80` | `#B42318` |
 | `--note-bg`, `--note-ink` e `--note-line` | `#3A2E12`, `#F3D27F` e `#584520` | `#FBEBC5`, `#6B4A00` e `#E8D29A` |
-| `--s1` (série principal dos gráficos) | `#E2B04A` | `#C8952F` |
-| `--s2` (série secundária) | `#5B6B85` | `#B9B1A0` |
+| `--s1` (série principal dos gráficos) | `#E2B04A` | `#9C7019` |
+| `--s2` (série secundária) | `#7A8AA6` | `#7E7766` |
 | `--grid` | `#1F2A3B` | `#E8DFCB` |
 
 **Regras:**
