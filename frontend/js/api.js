@@ -44,7 +44,6 @@ var API = (function(){
     alterarExtrato: function(id, mudancas){ return pedir('PATCH', '/extratos/' + id, mudancas); },
     excluirExtrato: function(id){ return pedir('DELETE', '/extratos/' + id); },
     salvarCorrecoes: function(id, correcoes){ return pedir('PUT', '/extratos/' + id + '/correcoes', {correcoes: correcoes}); },
-    mesclar: function(ids, nome, excluirOriginais){ return pedir('POST', '/extratos/mesclar', {ids: ids, nome: nome, excluir_originais: excluirOriginais}); },
 
     /* páginas */
     listarPaginas: function(tipo){ return pedir('GET', '/paginas' + q({tipo: tipo})); },

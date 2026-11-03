@@ -68,7 +68,7 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 146 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir/mesclar extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+São 158 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
 
 As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
 ```
@@ -118,7 +118,6 @@ Todos exigem login e respondem em JSON.
 | `DELETE /api/extratos/<id>` | Exclui |
 | `POST /api/extratos/<id>/lancamentos` | Acrescenta lançamentos (ignora repetidos) |
 | `PUT /api/extratos/<id>/correcoes` | Guarda as correções "só neste extrato" |
-| `POST /api/extratos/mesclar` | Junta vários extratos num novo |
 | `GET/POST /api/paginas`, `PATCH/DELETE /api/paginas/<id>` | Pastas de extratos |
 | `GET /api/paginas/<id>/lancamentos`, `PUT /api/paginas/<id>/correcoes` | A pasta inteira (extratos somados, sem repetidos) e as correções feitas nela |
 | `POST /api/categorias`, `PATCH/DELETE /api/categorias/<id>` | Categorias criadas pelo cliente |

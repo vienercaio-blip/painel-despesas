@@ -1,5 +1,5 @@
 """Extratos salvos: listar, salvar, abrir, renomear, mover, excluir,
-acrescentar lançamentos, guardar correções e mesclar."""
+acrescentar lançamentos e guardar correções."""
 import json
 import math
 from collections import Counter
@@ -258,43 +258,3 @@ def salvar_correcoes(extrato_id):
     gravar_correcoes(banco, ids_validos, correcoes)
     banco.commit()
     return jsonify(ok=True)
-
-
-@api.post("/extratos/mesclar")
-@login_obrigatorio
-def mesclar_extratos():
-    """Junta dois ou mais extratos num extrato novo."""
-    d = corpo()
-    ids = [id_ou_none(i) for i in (d.get("ids") or [])]
-    ids = list(dict.fromkeys(i for i in ids if i is not None))
-    if len(ids) < 2:
-        erro("Escolha pelo menos dois extratos.")
-    banco = obter_banco()
-    origens = [_buscar(banco, i) for i in ids]
-    if any(o["tipo"] != "despesas" for o in origens):
-        erro("Só é possível mesclar extratos bancários.")
-
-    base = origens[0]
-    nome = texto(d.get("nome"), 120) or "Mesclado: " + " + ".join(o["nome"] for o in origens)
-    cur = banco.execute(
-        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, salvo_em) VALUES (?, ?, 'despesas', ?, 'unico', ?)",
-        (uid(), base["pagina_id"], nome[:120], agora()),
-    )
-    novo_id = cur.lastrowid
-    # cada extrato de origem entra como um arquivo separado, para que
-    # lançamentos iguais dentro de um mesmo extrato não se percam
-    adicionados = repetidos = 0
-    for o in origens:
-        lista = [
-            {"data": r["data"], "descricao": r["descricao"], "valor": r["valor"]}
-            for r in banco.execute("SELECT data, descricao, valor FROM lancamentos WHERE extrato_id = ? ORDER BY data, id", (o["id"],))
-        ]
-        a, r = _inserir_lancamentos(banco, novo_id, lista)
-        adicionados += a
-        repetidos += r
-    if d.get("excluir_originais"):
-        banco.executemany("DELETE FROM extratos WHERE id = ?", [(i,) for i in ids])
-    banco.commit()
-    resposta = _meta(banco, _buscar(banco, novo_id))
-    resposta.update(adicionados=adicionados, repetidos=repetidos)
-    return jsonify(resposta), 201

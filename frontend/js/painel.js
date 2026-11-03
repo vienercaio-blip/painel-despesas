@@ -467,11 +467,10 @@ function renderSaved(){
         '<button type="button" role="menuitem" data-xmove="'+esc(x.id)+'"'+(pages.length?'':' disabled')+'>'+ICON_FOLDER+'Mover para outra '+PG+(pages.length?'':'<small>Crie uma '+PG+' primeiro</small>')+'</button>'+
         '<button type="button" role="menuitem" class="danger-item" data-del="'+esc(x.id)+'">'+ICON_TRASH+'Excluir</button>'+
       '</div>' : '';
-    var pick = MERGE_ON ? '<label class="sv-pick"><input type="checkbox" class="mg-check" data-mg="'+esc(x.id)+'"'+(MERGE_SEL.indexOf(x.id)!==-1?' checked':'')+' aria-label="Mesclar '+esc(x.name||'extrato')+'"></label>' : '';
     var nameBlock = state.editingSaved===x.id
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
       : '<strong>'+esc(x.name||'Extrato')+'</strong>';
-    return '<li class="sv">'+pick+'<div class="svi">'+nameBlock+
+    return '<li class="sv"><div class="svi">'+nameBlock+
       '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
       '<div class="sva sva-x"><button type="button" class="btn primary" data-open="'+esc(x.id)+'">Abrir</button>'+
@@ -1979,57 +1978,6 @@ $('cfgClear').addEventListener('click', function(){
   closeCfg();
   askX({ kind:'apagar-dados', danger:true, title:'Apagar todos os seus dados?', text:'Extratos salvos, páginas, categorias, regras e configurações serão apagados da sua conta. O seu login continua existindo. Isso não pode ser desfeito.', yes:'Apagar tudo', cancel:'Cancelar', back:$('cfgBtn'),
     onYes:function(){ API.apagarTudo().then(function(){ location.reload(); }).catch(falhou); } });
-});
-/* ---------- mesclar extratos salvos ---------- */
-var MERGE_ON = false, MERGE_SEL = [];
-function updateMergeBar(){
-  var n = MERGE_SEL.length;
-  $('mergeCount').textContent = n ? n+(n===1?' extrato marcado':' extratos marcados')+(n<2?' (marque mais um)':'') : 'Marque os extratos que quer mesclar (mínimo 2).';
-  $('mergeGo').disabled = n<2;
-}
-function setMerge(on){
-  MERGE_ON = on; if (!on) MERGE_SEL = [];
-  $('mergeBar').hidden = !on; $('mergeBtn').hidden = on;
-  renderSaved(); updateMergeBar();
-}
-$('mergeBtn').addEventListener('click', function(){ setMerge(true); });
-$('mergeCancel').addEventListener('click', function(){ setMerge(false); });
-$('mergeGo').addEventListener('click', openMerge);
-$('savedList').addEventListener('change', function(e){
-  var c = e.target.closest && e.target.closest('.mg-check'); if (!c) return;
-  var id = c.dataset.mg;
-  MERGE_SEL = c.checked ? MERGE_SEL.concat([id]) : MERGE_SEL.filter(function(x){ return x!==id; });
-  updateMergeBar();
-});
-function openMerge(){
-  var sel = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  $('mgList').innerHTML = sel.map(function(x){ return '<li>'+esc(x.name||'Extrato')+'</li>'; }).join('');
-  $('mgErr').hidden = true;
-  document.querySelector('input[name="mgDel"][value="nao"]').checked = true;
-  $('mgName').value = 'Mesclado: '+sel.map(function(x){ return x.name||'Extrato'; }).join(' + ');
-  $('mgName').classList.add('is-suggest');
-  $('mergeBg').style.display = 'flex';
-  mgRefresh();
-}
-function mgRefresh(){
-  var sel = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  $('mgGo').disabled = sel.length<2;
-}
-$('mgName').addEventListener('input', function(){ this.classList.remove('is-suggest'); });
-$('mgClose').addEventListener('click', function(){ $('mergeBg').style.display = 'none'; });
-$('mergeBg').addEventListener('click', function(e){ if (e.target===$('mergeBg')) $('mergeBg').style.display = 'none'; });
-$('mgGo').addEventListener('click', function(){
-  if ($('mgGo').disabled) return;
-  var sel = getSaved().filter(function(x){ return MERGE_SEL.indexOf(x.id)!==-1; });
-  var nomes = $('mgName').value.trim() || ('Mesclado: '+sel.map(function(x){ return x.name||'Extrato'; }).join(' + '));
-  var excluir = document.querySelector('input[name="mgDel"]:checked').value==='sim';
-  $('mgGo').disabled = true;
-  API.mesclar(sel.map(function(x){ return x.id; }), nomes.slice(0,120), excluir).then(function(meta){
-    $('mergeBg').style.display = 'none';
-    setMerge(false);
-    toast('Extratos mesclados: '+meta.quantidade+' lançamentos'+(meta.repetidos ? ' ('+meta.repetidos+' repetidos foram ignorados)' : '')+'.');
-    return recarregarSalvos().then(function(){ openSaved(meta.id); });
-  }).catch(function(e){ $('mgErr').textContent = e.message; $('mgErr').hidden = false; $('mgGo').disabled = false; });
 });
 $('pMonths').addEventListener('click', function(e){
   var b = e.target.closest('.mchip'); if (!b) return;

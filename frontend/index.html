@@ -184,11 +184,6 @@
         </nav>
         <div class="pg-main">
           <div class="page-head" id="pageHead" hidden></div>
-          <div class="merge-start"><button type="button" class="btn btn-sm" id="mergeBtn">Mesclar extratos</button></div>
-          <div class="merge-bar" id="mergeBar" hidden>
-            <span id="mergeCount">Marque os extratos que quer mesclar (mínimo 2).</span>
-            <span class="sva"><button type="button" class="btn primary btn-sm" id="mergeGo" disabled>Continuar</button><button type="button" class="btn ghost btn-sm" id="mergeCancel">Cancelar</button></span>
-          </div>
           <ul class="saved scrolly" id="savedList"></ul>
           <p class="empty" id="savedEmpty">Nenhum extrato salvo ainda. Envie um extrato com a opção "Salvar para acessar depois" marcada e ele aparece aqui.</p>
         </div>
@@ -500,25 +495,6 @@
         </section>
       </div>
     </div>
-  </div>
-</div>
-<div class="modal-bg" id="mergeBg" style="display:none">
-  <div class="modal cfg-modal" role="dialog" aria-modal="true" aria-labelledby="mgT">
-    <div class="card-head"><h2 id="mgT">Mesclar extratos</h2></div>
-    <div class="cfg-sec">
-      <h3>Extratos que serão mesclados</h3>
-      <p class="mg-info">Só entram extratos já salvos em Extratos salvos.</p>
-      <ul class="mg-list" id="mgList"></ul>
-      <div class="field"><label for="mgName">Nome do novo extrato</label><input type="text" id="mgName" maxlength="120"></div>
-    </div>
-    <div class="cfg-sec">
-      <fieldset class="perfil-choice" id="mgDelBox"><legend>Deseja excluir os extratos que foram mesclados?</legend>
-        <label><input type="radio" name="mgDel" value="nao" checked> Não, manter os originais</label>
-        <label><input type="radio" name="mgDel" value="sim"> Sim, excluir os originais</label>
-      </fieldset>
-    </div>
-    <p class="form-err" id="mgErr" role="alert" hidden></p>
-    <div class="modal-actions"><button type="button" class="btn primary" id="mgGo" disabled>Mesclar</button><button type="button" class="btn ghost" id="mgClose">Cancelar</button></div>
   </div>
 </div>
 <div class="modal-bg" id="cfgBg" style="display:none">

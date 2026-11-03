@@ -108,13 +108,6 @@ def test_acrescentar_conta_repetidos_pela_quantidade(cliente):
     assert r.json["adicionados"] == 1 and r.json["repetidos"] == 2 and r.json["quantidade"] == 4
 
 
-def test_mesclar_mantem_lancamentos_iguais(cliente):
-    a = salvar(cliente, [CAFE_5, CAFE_5, PAO_7], nome="A")
-    b = salvar(cliente, [CAFE_5, CAFE_5], nome="B")
-    r = cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]]})
-    assert r.json["quantidade"] == 3 and r.json["adicionados"] == 3 and r.json["repetidos"] == 2
-
-
 def test_correcoes_so_neste_extrato(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
     meta = salvar(cliente, lanc)
@@ -124,27 +117,13 @@ def test_correcoes_so_neste_extrato(cliente, arquivo):
     assert cliente.get(f"/api/extratos/{meta['id']}").json["correcoes"] == {alvo: "Mercado"}
 
 
-def test_mesclar(cliente, arquivo):
-    lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
-    a = salvar(cliente, lanc[:120], nome="A")
-    b = salvar(cliente, lanc[100:], nome="B")
-    r = cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]], "nome": "A+B", "excluir_originais": True})
-    assert r.status_code == 201 and r.json["quantidade"] == 188 and r.json["repetidos"] == 20
-    assert [x["nome"] for x in cliente.get("/api/extratos").json] == ["A+B"]
-
-
-def test_mesclar_extratos_de_origens_diferentes(app, cliente, arquivo):
-    """Extratos que antes eram de perfis diferentes podem ser mesclados."""
-    lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
-    a = salvar(cliente, lanc[:10])
-    b = salvar(cliente, lanc[10:20])
-    con = sqlite3.connect(app.config["BANCO"])
-    con.execute("UPDATE extratos SET perfil = 'pf' WHERE id = ?", (int(a["id"]),))
-    con.execute("UPDATE extratos SET perfil = 'empresa' WHERE id = ?", (int(b["id"]),))
-    con.commit()
-    con.close()
+def test_mesclar_nao_existe_mais(cliente):
+    """Juntar extratos agora é com pastas ("Ver a pasta inteira"): o mesclar saiu."""
+    a = salvar(cliente, [CAFE_5], nome="A")
+    b = salvar(cliente, [PAO_7], nome="B")
     r = cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]]})
-    assert r.status_code == 201 and r.json["quantidade"] == 20 and "perfil" not in r.json
+    assert r.status_code in (404, 405)
+    assert sorted(x["nome"] for x in cliente.get("/api/extratos").json) == ["A", "B"]
 
 
 def test_lancamento_invalido_e_recusado(cliente):
