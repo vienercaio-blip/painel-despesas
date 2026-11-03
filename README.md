@@ -72,7 +72,7 @@ Dentro da pasta `backend`, com o ambiente ativado:
 ```
 python -m pytest
 ```
-São 173 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
+São 201 testes no servidor: leitura dos formatos (incluindo PDFs inventados que imitam cada banco), salvar/abrir extratos, pastas e a pasta inteira, categorias (incluindo a classificação de descrições reais típicas), regras, preferências, a conversão de bancos antigos, os estornos e a garantia de que um cliente não enxerga os dados de outro.
 
 As contas do dashboard (`frontend/js/analise.js`) têm testes próprios, que rodam com o Node 18 ou mais novo, na pasta do projeto:
 ```
