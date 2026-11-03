@@ -13,10 +13,6 @@ from leitura import ler_data
 from rotas import api
 from rotas.util import corpo, erro, id_ou_none, texto, uid
 
-def perfil_valido(perfil):  # temporário: sai na Tarefa 4 (sem perfil)
-    return "empresa" if perfil in ("empresa", "pme", "cafe") else "pf"
-
-
 TIPOS = {"despesas", "vendas"}
 MAX_LANCAMENTOS = 100_000
 
@@ -40,7 +36,6 @@ def _meta(banco, linha):
         "id": str(linha["id"]),
         "nome": linha["nome"],
         "tipo": linha["tipo"],
-        "perfil": linha["perfil"],
         "pagina_id": str(linha["pagina_id"]) if linha["pagina_id"] is not None else None,
         "salvo_em": linha["salvo_em"],
         "quantidade": qtd,
@@ -58,16 +53,15 @@ def _buscar(banco, extrato_id):
     return linha
 
 
-def _validar_pagina(banco, pagina_id, tipo, perfil):
-    """Confere se a subpasta existe e, nos extratos, se é da mesma pasta
-    principal (perfil) do extrato. None = pasta principal."""
+def _validar_pagina(banco, pagina_id, tipo):
+    """Confere se a pasta existe e é do mesmo tipo do extrato. None = "Sem pasta"."""
     if pagina_id is None:
         return None
     pagina = banco.execute(
-        "SELECT perfil FROM paginas WHERE id = ? AND usuario_id = ? AND tipo = ?", (pagina_id, uid(), tipo)
+        "SELECT 1 FROM paginas WHERE id = ? AND usuario_id = ? AND tipo = ?", (pagina_id, uid(), tipo)
     ).fetchone()
-    if not pagina or (tipo == "despesas" and pagina["perfil"] != perfil):
-        erro("Subpasta não encontrada nesta pasta.", 404)
+    if not pagina:
+        erro("Pasta não encontrada.", 404)
     return pagina_id
 
 
@@ -137,8 +131,7 @@ def salvar_extrato():
         erro("Tipo inválido.")
     banco = obter_banco()
     nome = texto(d.get("nome"), 120) or "Extrato"
-    perfil = perfil_valido(d.get("perfil"))
-    pagina_id = _validar_pagina(banco, id_ou_none(d.get("pagina_id")), tipo, perfil)
+    pagina_id = _validar_pagina(banco, id_ou_none(d.get("pagina_id")), tipo)
 
     linhas_json = None
     if tipo == "vendas":
@@ -152,8 +145,8 @@ def salvar_extrato():
             erro("O extrato não tem lançamentos.")
 
     cur = banco.execute(
-        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, linhas_json, salvo_em) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (uid(), pagina_id, tipo, nome, perfil, linhas_json, agora()),
+        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, linhas_json, salvo_em) VALUES (?, ?, ?, ?, 'unico', ?, ?)",
+        (uid(), pagina_id, tipo, nome, linhas_json, agora()),
     )
     if tipo == "despesas":
         _inserir_lancamentos(banco, cur.lastrowid, lancamentos)
@@ -203,7 +196,7 @@ def alterar_extrato(extrato_id):
         nome = texto(d["nome"], 120, "Dê um nome para o extrato.")
         banco.execute("UPDATE extratos SET nome = ? WHERE id = ?", (nome, extrato_id))
     if "pagina_id" in d:
-        pagina_id = _validar_pagina(banco, id_ou_none(d["pagina_id"]), linha["tipo"], perfil_valido(linha["perfil"]))
+        pagina_id = _validar_pagina(banco, id_ou_none(d["pagina_id"]), linha["tipo"])
         banco.execute("UPDATE extratos SET pagina_id = ? WHERE id = ?", (pagina_id, extrato_id))
     banco.commit()
     return jsonify(_meta(banco, _buscar(banco, extrato_id)))
@@ -267,7 +260,7 @@ def salvar_correcoes(extrato_id):
 @api.post("/extratos/mesclar")
 @login_obrigatorio
 def mesclar_extratos():
-    """Junta dois ou mais extratos do mesmo perfil num extrato novo."""
+    """Junta dois ou mais extratos num extrato novo."""
     d = corpo()
     ids = [id_ou_none(i) for i in (d.get("ids") or [])]
     ids = list(dict.fromkeys(i for i in ids if i is not None))
@@ -277,15 +270,12 @@ def mesclar_extratos():
     origens = [_buscar(banco, i) for i in ids]
     if any(o["tipo"] != "despesas" for o in origens):
         erro("Só é possível mesclar extratos bancários.")
-    perfis = {perfil_valido(o["perfil"]) for o in origens}
-    if len(perfis) > 1:
-        erro("Só é possível mesclar extratos do mesmo perfil.")
 
     base = origens[0]
     nome = texto(d.get("nome"), 120) or "Mesclado: " + " + ".join(o["nome"] for o in origens)
     cur = banco.execute(
-        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, salvo_em) VALUES (?, ?, 'despesas', ?, ?, ?)",
-        (uid(), base["pagina_id"], nome[:120], perfis.pop(), agora()),
+        "INSERT INTO extratos (usuario_id, pagina_id, tipo, nome, perfil, salvo_em) VALUES (?, ?, 'despesas', ?, 'unico', ?)",
+        (uid(), base["pagina_id"], nome[:120], agora()),
     )
     novo_id = cur.lastrowid
     # cada extrato de origem entra como um arquivo separado, para que

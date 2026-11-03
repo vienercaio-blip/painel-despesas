@@ -1,5 +1,6 @@
 """Testes da API. Para rodar (dentro da pasta backend):  python -m pytest"""
 import io
+import sqlite3
 
 import pytest
 
@@ -132,12 +133,18 @@ def test_mesclar(cliente, arquivo):
     assert [x["nome"] for x in cliente.get("/api/extratos").json] == ["A+B"]
 
 
-@pytest.mark.skip("Tarefa 4")
-def test_mesclar_perfis_diferentes_falha(cliente, arquivo):
+def test_mesclar_extratos_de_origens_diferentes(app, cliente, arquivo):
+    """Extratos que antes eram de perfis diferentes podem ser mesclados."""
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
-    a = salvar(cliente, lanc[:10], perfil="pf")
-    b = salvar(cliente, lanc[10:20], perfil="empresa")
-    assert cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]]}).status_code == 400
+    a = salvar(cliente, lanc[:10])
+    b = salvar(cliente, lanc[10:20])
+    con = sqlite3.connect(app.config["BANCO"])
+    con.execute("UPDATE extratos SET perfil = 'pf' WHERE id = ?", (int(a["id"]),))
+    con.execute("UPDATE extratos SET perfil = 'empresa' WHERE id = ?", (int(b["id"]),))
+    con.commit()
+    con.close()
+    r = cliente.post("/api/extratos/mesclar", json={"ids": [a["id"], b["id"]]})
+    assert r.status_code == 201 and r.json["quantidade"] == 20 and "perfil" not in r.json
 
 
 def test_lancamento_invalido_e_recusado(cliente):
@@ -147,42 +154,52 @@ def test_lancamento_invalido_e_recusado(cliente):
 
 # ---------- páginas ----------
 
-@pytest.mark.skip("Tarefa 4")
 def test_paginas(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
-    p = cliente.post("/api/paginas", json={"nome": "Cafeteria", "perfil": "empresa"}).json
-    assert p["perfil"] == "empresa"
-    assert cliente.post("/api/paginas", json={"nome": "cafetéria", "perfil": "empresa"}).status_code == 409
+    p = cliente.post("/api/paginas", json={"nome": "Cafeteria"}).json
+    assert "perfil" not in p
+    r = cliente.post("/api/paginas", json={"nome": "cafetéria"})
+    assert r.status_code == 409 and r.json["erro"] == 'Já existe uma pasta chamada "cafetéria".'
     meta = salvar(cliente, lanc[:5], pagina_id=p["id"])
-    assert meta["pagina_id"] == p["id"]
-    # excluir a subpasta devolve o extrato para a pasta principal do tipo
+    assert meta["pagina_id"] == p["id"] and "perfil" not in meta
+    # excluir a pasta devolve o extrato para "Sem pasta"
     cliente.delete(f"/api/paginas/{p['id']}")
     assert cliente.get("/api/extratos").json[0]["pagina_id"] is None
 
 
-@pytest.mark.skip("Tarefa 4")
-def test_subpastas_separadas_por_tipo(cliente):
-    pf = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"})
-    pme = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "empresa"})
-    assert pf.status_code == 201 and pme.status_code == 201
-    assert cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"}).status_code == 409
-    assert {(p["nome"], p["perfil"]) for p in cliente.get("/api/paginas").json} == {("2026", "pf"), ("2026", "empresa")}
-    # renomear também só conflita dentro do mesmo tipo
-    cliente.post("/api/paginas", json={"nome": "Cartão", "perfil": "pf"})
-    assert cliente.patch(f"/api/paginas/{pme.json['id']}", json={"nome": "Cartão"}).status_code == 200
+def test_renomear_pasta_com_nome_repetido(cliente):
+    a = cliente.post("/api/paginas", json={"nome": "Casa"}).json
+    cliente.post("/api/paginas", json={"nome": "Empresa"})
+    assert cliente.patch(f"/api/paginas/{a['id']}", json={"nome": "empresa"}).status_code == 409
+    assert cliente.patch(f"/api/paginas/{a['id']}", json={"nome": "Pessoal"}).json["nome"] == "Pessoal"
 
 
-@pytest.mark.skip("Tarefa 4")
-def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
-    pf = cliente.post("/api/paginas", json={"nome": "Casa", "perfil": "pf"}).json
-    pme = cliente.post("/api/paginas", json={"nome": "Loja", "perfil": "empresa"}).json
-    r = cliente.post("/api/extratos", json={"nome": "x", "perfil": "pf", "pagina_id": pme["id"], "lancamentos": [CAFE_5]})
-    assert r.status_code == 404
-    meta = salvar(cliente, [CAFE_5], perfil="pf")
-    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": pme["id"]}).status_code == 404
-    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": pf["id"]}).json["pagina_id"] == pf["id"]
-    # voltar para a pasta principal
+def test_mover_extrato_para_qualquer_pasta(app, cliente):
+    """Dados antigos: extrato de Empresa e pasta criada como Pessoa física."""
+    meta = salvar(cliente, [CAFE_5])
+    pasta = cliente.post("/api/paginas", json={"nome": "Casa"}).json
+    con = sqlite3.connect(app.config["BANCO"])
+    con.execute("UPDATE extratos SET perfil = 'empresa' WHERE id = ?", (int(meta["id"]),))
+    con.execute("UPDATE paginas SET perfil = 'pf' WHERE id = ?", (int(pasta["id"]),))
+    con.commit()
+    con.close()
+    assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": pasta["id"]}).json["pagina_id"] == pasta["id"]
     assert cliente.patch(f"/api/extratos/{meta['id']}", json={"pagina_id": None}).json["pagina_id"] is None
+
+
+def test_pasta_de_vendas_nao_recebe_extrato(cliente):
+    vendas = cliente.post("/api/paginas", json={"nome": "Vendas", "tipo": "vendas"}).json
+    r = cliente.post("/api/extratos", json={"nome": "x", "pagina_id": vendas["id"], "lancamentos": [CAFE_5]})
+    assert r.status_code == 404
+
+
+def test_extratos_e_pastas_novos_gravam_perfil_unico(app, cliente):
+    """Nada novo pode parecer "dado antigo" para a conversão."""
+    salvar(cliente, [CAFE_5])
+    cliente.post("/api/paginas", json={"nome": "Casa"})
+    con = sqlite3.connect(app.config["BANCO"])
+    assert {r[0] for r in con.execute("SELECT perfil FROM extratos UNION SELECT perfil FROM paginas")} == {"unico"}
+    con.close()
 
 
 # ---------- categorias e regras ----------
@@ -216,13 +233,6 @@ def test_editar_e_restaurar_categoria_unida(cliente):
     e = cliente.get("/api/estado").json
     assert e["edicoes"] == {} and e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Moradia e aluguel"
     assert cliente.put("/api/categorias-padrao/inexistente", json={"nome": "X"}).status_code == 404
-
-
-@pytest.mark.skip("Tarefa 4")
-def test_pme_vindo_de_fora_vira_empresa(cliente, arquivo):
-    assert salvar(cliente, [CAFE_5], perfil="pme")["perfil"] == "empresa"
-    assert cliente.post("/api/paginas", json={"nome": "X", "perfil": "pme"}).json["perfil"] == "empresa"
-    assert enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx")), perfil="pme").json["perfil"] == "empresa"
 
 
 def test_excluir_regra(cliente):
