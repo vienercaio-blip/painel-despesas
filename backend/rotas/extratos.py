@@ -108,6 +108,20 @@ def _inserir_lancamentos(banco, extrato_id, lista):
     return len(novos), len(lista) - len(novos)
 
 
+def gravar_correcoes(banco, ids_validos, correcoes):
+    """Substitui as correções "só neste extrato" dos lançamentos `ids_validos`
+    pelas de `correcoes` ({id_lançamento: categoria}). Outros ids são ignorados."""
+    if not isinstance(correcoes, dict):
+        erro("Correções inválidas.")
+    banco.executemany("DELETE FROM correcoes WHERE lancamento_id = ?", [(i,) for i in ids_validos])
+    for lanc_id, categoria in correcoes.items():
+        lanc_id = id_ou_none(lanc_id)
+        if lanc_id in ids_validos and isinstance(categoria, str) and categoria.strip():
+            banco.execute(
+                "INSERT INTO correcoes (lancamento_id, categoria) VALUES (?, ?)", (lanc_id, categoria.strip()[:80])
+            )
+
+
 # ---------- rotas ----------
 
 @api.get("/extratos")
@@ -236,23 +250,12 @@ def acrescentar_lancamentos(extrato_id):
 def salvar_correcoes(extrato_id):
     """Substitui as correções "só neste extrato" ({id_lançamento: categoria})."""
     correcoes = corpo().get("correcoes")
-    if not isinstance(correcoes, dict):
-        erro("Correções inválidas.")
     banco = obter_banco()
     _buscar(banco, extrato_id)
     ids_validos = {
         r["id"] for r in banco.execute("SELECT id FROM lancamentos WHERE extrato_id = ?", (extrato_id,))
     }
-    banco.execute(
-        "DELETE FROM correcoes WHERE lancamento_id IN (SELECT id FROM lancamentos WHERE extrato_id = ?)",
-        (extrato_id,),
-    )
-    for lanc_id, categoria in correcoes.items():
-        lanc_id = id_ou_none(lanc_id)
-        if lanc_id in ids_validos and isinstance(categoria, str) and categoria.strip():
-            banco.execute(
-                "INSERT INTO correcoes (lancamento_id, categoria) VALUES (?, ?)", (lanc_id, categoria.strip()[:80])
-            )
+    gravar_correcoes(banco, ids_validos, correcoes)
     banco.commit()
     return jsonify(ok=True)
 
