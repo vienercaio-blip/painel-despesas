@@ -370,7 +370,8 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
 .chart-box{overflow-x:auto}
-.chart-box svg{display:block;width:100%;min-width:420px;height:auto}
+.chart-box svg{display:block;width:100%;height:auto}
+.chart-box svg.big{min-width:420px}
 .chart-box text{fill:var(--ink-3);font-family:var(--font-mono);font-size:11px}
 .chart-box .gl{stroke:var(--grid);stroke-width:1}
 .chart-box .base{stroke:var(--line);stroke-width:1}
@@ -510,3 +511,19 @@ td .in{color:var(--good);font-weight:500}
 .cfg-row select{min-height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
 input,select,textarea{border-radius:10px}
 .why.estorno{background:var(--note-bg);color:var(--note-ink)}
+
+/* ---------- Dashboard em grade ---------- */
+.dash-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.dash-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dash-grid2>.card{margin:0}
+@media (max-width:899.98px){.dash-grid2,.dash-grid3{grid-template-columns:1fr}}
+#dAcoes .acao{padding:12px 14px;gap:4px}
+#dAcoes .acao h3{font-size:15px}
+#dAcoes .acao p{display:none}
+#dAcoes .acao p.eco{display:block;font-size:13px}
+.acoes-vazio{grid-column:1/-1}
+.kpi .spark{display:block;width:100%;height:28px;margin-top:6px;overflow:visible}
+.kpi .spark .hit{fill:transparent}
+.barras-mais{list-style:none;padding-top:4px}
+.barras-mais button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
+.barras-mais button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}

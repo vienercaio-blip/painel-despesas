@@ -226,11 +226,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <p class="aviso-pasta aviso-leitura" id="dAvisoLeitura" role="status" hidden></p>
     </section>
 
-    <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
-      <div class="card-head"><h2 id="dAcoesT">O que fazer agora</h2></div>
-      <div class="acoes" id="dAcoes"></div>
-    </section>
-
+    <div class="dash-grid2">
     <section class="card" id="dOnde" aria-labelledby="dOndeT">
       <div class="card-head"><h2 id="dOndeT">Para onde vai o dinheiro</h2>
         <div class="filtro-wrap">
@@ -251,32 +247,34 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <ul class="barras" id="dBarras"></ul>
     </section>
 
-    <section class="grid2">
-      <div class="card">
+    <section class="card" id="dMesSec">
         <div class="card-head"><h2 id="dResT">Resultado por mês</h2><span class="hint" id="dResH">Entradas menos saídas</span></div>
         <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
         <div class="chart-box" id="dRes"></div>
-      </div>
     </section>
+    </div>
+
+    <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
+      <div class="card-head"><h2 id="dAcoesT">O que fazer agora</h2></div>
+      <div class="acoes dash-grid3" id="dAcoes"></div>
+    </section>
+
 
     <details class="det" id="dDet">
       <summary>Ver mais detalhes</summary>
       <div class="det-corpo">
+
+    <div class="dash-grid2">
     <section class="card">
       <div class="card-head"><h2 id="dCumT">Caixa acumulado</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
       <div class="chart-box" id="dCum"></div>
     </section>
-
-    <section class="grid2">
-      <div class="card" id="dWeekCard">
-        <div class="card-head"><h2>Entradas por dia da semana</h2><span class="hint">Média do que entra na conta em cada dia</span></div>
-        <div class="chart-box" id="dWeek"></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>Saídas por dia do mês</h2><span class="hint">Média do que sai em cada dia</span></div>
-        <div class="chart-box" id="dDom"></div>
-      </div>
+    <section class="card" aria-labelledby="dProjT">
+      <div class="card-head"><h2 id="dProjT">Projeção para o próximo mês</h2><span class="hint" id="dProjHint"></span></div>
+      <div class="kpis" id="dProj"></div>
+      <p class="foot">É uma estimativa simples, pela média dos últimos meses. Não considera datas especiais, reajustes ou gastos fora do comum.</p>
     </section>
+    </div>
 
     <section class="card" aria-labelledby="dChgT">
       <div class="card-head"><h2 id="dChgT">Categorias que mais mudaram</h2><span class="hint" id="dChgHint"></span></div>
@@ -289,11 +287,6 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <p class="empty" id="dChgEmpty" hidden>Envie um extrato com pelo menos dois meses para comparar as categorias.</p>
     </section>
 
-    <section class="card" aria-labelledby="dProjT">
-      <div class="card-head"><h2 id="dProjT">Projeção para o próximo mês</h2><span class="hint" id="dProjHint"></span></div>
-      <div class="kpis" id="dProj"></div>
-      <p class="foot">É uma estimativa simples, pela média dos últimos meses. Não considera datas especiais, reajustes ou gastos fora do comum.</p>
-    </section>
 
     <section class="card" aria-labelledby="dInsT">
       <div class="card-head"><h2 id="dInsT">Outras informações</h2><span class="hint" id="dSpan"></span></div>
