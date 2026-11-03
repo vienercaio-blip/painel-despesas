@@ -21,24 +21,24 @@ OUTROS = "Outros (revisar)"
 # Atenção: alguns termos têm espaço no início/fim de propósito
 # (ex.: " taxa", " iof "), para não pegar pedaços de outras palavras.
 REGRAS = [
-    ("dividas", "Dívidas e juros", ["juros", "parcela", "emprestimo", "financiamento", "fatura", "cartao de credito", "multa", "rotativo", "cheque especial", "consignado"]),
+    ("dividas", "Dívidas e juros", ["juros", "emprestimo", "financiamento", "fatura", "cartao de credito", "multa", "rotativo", "cheque especial", "consignado"]),
     ("tarifas", "Tarifas bancárias", ["tarifa", "pacote servicos", "pacote de servicos", "cesta de servicos", "cesta servicos", " iof ", "anuidade", "manutencao de conta"]),
     # só taxas de cartão e maquininha: "taxa" sozinha (condomínio, matrícula) e o nome
     # da maquininha numa compra comum ("STONE PADARIA") são gastos de outras categorias
     ("taxas", "Taxas de cartão e apps", ["taxa cartao", "taxa de cartao", "taxa maquin", "maquininha", " mdr ", "antecipacao", "comissao",
-                                         "aluguel pos", "aluguel de maquin", "pago taxa", "stone taxa", "taxa stone", "cielo taxa", "taxa cielo",
+                                         "aluguel pos", "aluguel de maquin", "mpago taxa", "stone taxa", "taxa stone", "cielo taxa", "taxa cielo",
                                          "getnet taxa", "taxa getnet", "pagseguro taxa", "taxa pagseguro", "sumup taxa", "taxa sumup", " rede taxa", "taxa rede "]),
-    ("impostos", "Impostos e encargos", ["das mei", "pgmei", "simples nacional", " darf", " gps ", " inss", " fgts", " iptu", " icms", " iss ", "imposto"]),
+    ("impostos", "Impostos e encargos", ["das mei", "pgmei", "simples nacional", " darf", " gps ", " inss", " fgts", " icms", " iss ", "imposto"]),
     ("folha", "Folha de pagamento", ["salario", "folha pag", "folha de pag", "folha salario", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "rescisao"]),
     ("moradia", "Moradia e aluguel", ["aluguel", "condominio", "iptu", "imobiliaria"]),
     ("casa", "Água, luz e internet", ["energia", "coelba", "enel", "cemig", "copel", " light ", "agua", "embasa", "sabesp", "compesa", " gas ", "internet", " vivo ", " claro ", " tim ", " oi "]),
-    ("seguros", "Seguros", [" seguro", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
+    ("seguros", "Seguros", [" seguro auto", " seguro de vida", " seguro vida", " seguro resid", " seguro empresarial", " seguro celular", " seguro viagem", "seguradora", "apolice", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
     ("delivery", "Delivery", ["ifood", " ifd ", "rappi", "ze delivery", "99food", " 99 food", "keeta", "aiqfome", "james delivery", "daki", "uber eats", "delivery"]),
     ("assinaturas", "Assinaturas", ["assinatura", "netflix", "spotify", "deezer", "prime video", "amazon prime", "amazonprime", "youtube", "apple", "google one", "icloud", "disney", " max ", "globoplay"]),
     ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
     ("compras", "Compras online", ["shopee", "mercado livre", "mercadolivre", " amazon ", "magalu", "magazine luiza", "shein", "aliexpress", "temu"]),
     ("mercado", "Mercado", ["mercado", "supermerc", "atacad", "assai", "makro", "carrefour", "hortifruti", "acougue", "feira", "padaria"]),
-    ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", " nfe ", "laticinio", "torrefacao", "embalage", "material de limpeza"]),
+    ("fornecedores", "Fornecedores", ["fornecedor", "distribuidora", "atacadista", "insumo", "nota fiscal", " nfe ", "laticinio", "torrefacao", "embalage", "material de limpeza", "material limpeza"]),
     ("transporte", "Transporte e combustível", ["uber", "99app", " 99 pop", "combustivel", " posto ", "gasolina", "diesel", "etanol", "estacionamento", "pedagio", "onibus", "metro", "passagem", "ipva", "licenciamento", "detran", "bilhete unico", "motoboy", "frete", "correios", "loggi", "lalamove"]),
     ("manutencao", "Manutenção", ["manutencao", "conserto", "reparo", "assistencia tecnica"]),
     ("marketing", "Marketing", ["anuncio", "google ads", "meta ads", "facebook", "instagram", "impulsionamento", "marketing", "panfleto", "grafica"]),
@@ -140,7 +140,8 @@ class Categorizador:
         return next(c["nome"] for c in self.padrao if c["codigo"] == codigo)
 
     def categorizar(self, descricao):
-        t = normalizar(descricao)
+        # "Mercado Pago" é a carteira, não um mercado: vira "mpago" (sem "mercado" dentro)
+        t = normalizar(descricao).replace(" mercado pago ", " mpago ")
         for cat in self.personalizadas:
             for p in cat["palavras"]:
                 if " " + p in t:
@@ -195,11 +196,14 @@ def eh_estorno(descricao, valor):
 # aplicação, retirada do cofrinho): vai para "Investimentos e reservas".
 # Rendimento (juros) não está aqui: é dinheiro novo e conta como entrada.
 PALAVRAS_RESGATE = ["resgate", "resg ", "dinheiro retirado"]
+# ...mas resgate de pontos, milhas, seguro ou cashback é dinheiro novo
+NAO_E_RESGATE = ["pontos", "milhas", "seguro", "cashback"]
 
 
 def eh_resgate(descricao, valor):
     t = normalizar(descricao)
-    return valor > 0 and any(" " + p in t for p in PALAVRAS_RESGATE)
+    return (valor > 0 and any(" " + p in t for p in PALAVRAS_RESGATE)
+            and not any(" " + p in t for p in NAO_E_RESGATE))
 
 
 def preparar_lancamentos(lancamentos, categorizador):

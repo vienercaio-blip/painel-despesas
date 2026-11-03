@@ -63,7 +63,7 @@ def test_categorias_unidas_reconhecem_as_duas_origens(descricao, esperado):
 @pytest.mark.parametrize("descricao, esperado", [
     ("PIX ENVIADO MARIA DAS DORES", "Transferências para pessoas"),
     ("IFOOD *PEDIDO", "Delivery"),
-    ("PIX ENVIADO MERCADO PAGO", "Mercado"),  # colisão conhecida, igual à de antes
+    ("PIX ENVIADO MERCADO PAGO", "Transferências para pessoas"),  # Mercado Pago é a carteira, não um mercado
     ("PAGAMENTO DAS MEI", "Impostos e encargos"),
     ("TAXA CONDOMINIO RESIDENCIAL", "Moradia e aluguel"),
     ("TAXA DE MATRICULA ESCOLA", "Educação"),
@@ -136,6 +136,9 @@ EXCECOES = {
     "MERCADO ATACADO ASSAI": ("Fornecedores", "Mercado", _MERCADO),
     "PADARIA PAO DOURADO FORNECEDOR": ("Fornecedores", "Mercado", _MERCADO),
     "MERCADO LIVRE COMPRAS": ("Fornecedores", "Compras online", "compra no Mercado Livre é Compras online"),
+    "13 SALARIO 2 PARCELA": ("Dívidas e juros", "Folha de pagamento", "\"parcela\" sozinha não é dívida; 13º salário é folha"),
+    "IPTU PARCELA PREFEITURA": ("Dívidas e juros", "Moradia e aluguel", "IPTU é custo da casa, não dívida nem imposto da empresa"),
+    "MATERIAL LIMPEZA PRO": ("Outros (revisar)", "Fornecedores", "material de limpeza é insumo"),
 }
 
 
@@ -224,3 +227,26 @@ def test_preparar_resgate_e_rendimento():
     assert rendimento["categoria_auto"] is None
     editada = {"padrao:investimentos": {"nome": "Reserva", "tipo": "variavel", "palavras": None}}
     assert preparar_lancamentos(lanc[:1], Categorizador([], editada))[0]["categoria_auto"] == "Reserva"
+
+
+# ---------- colisões de palavras-chave (pendências) ----------
+
+@pytest.mark.parametrize("descricao, esperado", [
+    ("IPTU PARCELA 3/10", "Moradia e aluguel"),
+    ("COMPRA PARCELADA LOJA X 2/6", "Outros (revisar)"),
+    ("PARCELA EMPRESTIMO PESSOAL", "Dívidas e juros"),
+    ("PIX ENVIADO JOAO SEGURO", "Transferências para pessoas"),
+    ("SEGURO AUTO PORTO", "Seguros"),
+    ("PAGTO SEGURADORA LIDER", "Seguros"),
+    ("PIX ENVIADO MERCADO PAGO", "Transferências para pessoas"),
+    ("MERCADO PAGO TAXA", "Taxas de cartão e apps"),
+    ("SUPERMERCADO BOM PRECO", "Mercado"),
+    ("MATERIAL LIMPEZA", "Fornecedores"),
+])
+def test_colisoes_resolvidas(descricao, esperado):
+    assert _cat(descricao) == esperado
+
+
+@pytest.mark.parametrize("descricao", ["RESGATE PONTOS LIVELO", "RESGATE MILHAS SMILES", "RESGATE SEGURO VIDA"])
+def test_resgate_de_pontos_e_seguro_e_dinheiro_novo(descricao):
+    assert eh_resgate(descricao, 100.0) is False
