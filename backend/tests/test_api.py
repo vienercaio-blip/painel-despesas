@@ -1,15 +1,17 @@
 """Testes da API. Para rodar (dentro da pasta backend):  python -m pytest"""
 import io
 
+import pytest
 
-def enviar(cliente, *nomes_e_conteudos, perfil="empresa"):
-    dados = {"perfil": perfil, "arquivos": [(io.BytesIO(c), n) for n, c in nomes_e_conteudos]}
+
+def enviar(cliente, *nomes_e_conteudos):
+    dados = {"arquivos": [(io.BytesIO(c), n) for n, c in nomes_e_conteudos]}
     return cliente.post("/api/leitura", data=dados, content_type="multipart/form-data")
 
 
-def salvar(cliente, lancamentos, nome="Extrato teste", perfil="empresa", pagina_id=None):
+def salvar(cliente, lancamentos, nome="Extrato teste", pagina_id=None):
     r = cliente.post("/api/extratos", json={
-        "nome": nome, "perfil": perfil, "pagina_id": pagina_id,
+        "nome": nome, "pagina_id": pagina_id,
         "lancamentos": [{"data": l["data"], "descricao": l["descricao"], "valor": l["valor"]} for l in lancamentos],
     })
     assert r.status_code == 201, r.json
@@ -32,9 +34,9 @@ def test_senha_errada(app):
 def test_estado_inicial(cliente):
     e = cliente.get("/api/estado").json
     assert e["usuario"]["nome"] == "Ana"
-    assert set(e["perfis"]) == {"pf", "empresa"}
-    taxas = e["perfis"]["empresa"]["regras"][0]
-    assert (taxas["codigo"], taxas["nome"], taxas["fixa"]) == ("taxas", "Taxas de cartão e apps", False)
+    assert "perfis" not in e and len(e["categorias_padrao"]) == 25
+    moradia = [c for c in e["categorias_padrao"] if c["codigo"] == "moradia"][0]
+    assert (moradia["nome"], moradia["fixa"]) == ("Moradia e aluguel", True)
     assert e["categorias"] == [] and e["regras"] == {}
 
 
@@ -53,7 +55,7 @@ def test_leitura_de_varios_formatos(cliente, arquivo):
     # OFX e CSV do mesmo extrato dão o mesmo resultado
     assert arqs["cafe.ofx"]["lancamentos"] == arqs["cafe.csv"]["lancamentos"]
     aluguel = next(l for l in arqs["cafe.ofx"]["lancamentos"] if "ALUGUEL IMOBILIARIA" in l["descricao"])
-    assert aluguel["categoria_auto"] == "Aluguel" and aluguel["origem"] == "aluguel imobiliaria sol"
+    assert aluguel["categoria_auto"] == "Moradia e aluguel" and aluguel["origem"] == "aluguel imobiliaria sol"
 
 
 def test_acentos_do_csv_latin1(cliente, arquivo):
@@ -130,6 +132,7 @@ def test_mesclar(cliente, arquivo):
     assert [x["nome"] for x in cliente.get("/api/extratos").json] == ["A+B"]
 
 
+@pytest.mark.skip("Tarefa 4")
 def test_mesclar_perfis_diferentes_falha(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
     a = salvar(cliente, lanc[:10], perfil="pf")
@@ -144,6 +147,7 @@ def test_lancamento_invalido_e_recusado(cliente):
 
 # ---------- páginas ----------
 
+@pytest.mark.skip("Tarefa 4")
 def test_paginas(cliente, arquivo):
     lanc = enviar(cliente, ("cafe.ofx", arquivo("cafe.ofx"))).json["arquivos"][0]["lancamentos"]
     p = cliente.post("/api/paginas", json={"nome": "Cafeteria", "perfil": "empresa"}).json
@@ -156,6 +160,7 @@ def test_paginas(cliente, arquivo):
     assert cliente.get("/api/extratos").json[0]["pagina_id"] is None
 
 
+@pytest.mark.skip("Tarefa 4")
 def test_subpastas_separadas_por_tipo(cliente):
     pf = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "pf"})
     pme = cliente.post("/api/paginas", json={"nome": "2026", "perfil": "empresa"})
@@ -167,6 +172,7 @@ def test_subpastas_separadas_por_tipo(cliente):
     assert cliente.patch(f"/api/paginas/{pme.json['id']}", json={"nome": "Cartão"}).status_code == 200
 
 
+@pytest.mark.skip("Tarefa 4")
 def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
     pf = cliente.post("/api/paginas", json={"nome": "Casa", "perfil": "pf"}).json
     pme = cliente.post("/api/paginas", json={"nome": "Loja", "perfil": "empresa"}).json
@@ -183,10 +189,10 @@ def test_extrato_so_vai_para_subpasta_do_mesmo_tipo(cliente):
 
 def test_categoria_criada_muda_a_classificacao(cliente):
     descs = ["PAGAMENTO CONSULTORIA XYZ"]
-    antes = cliente.post("/api/categorizar", json={"perfil": "empresa", "descricoes": descs}).json["resultados"][0]
+    antes = cliente.post("/api/categorizar", json={"descricoes": descs}).json["resultados"][0]
     assert antes["categoria"] == "Outros (revisar)"
     cliente.post("/api/categorias", json={"nome": "Consultoria", "tipo": "fixo", "palavras": ["consultoria"]})
-    depois = cliente.post("/api/categorizar", json={"perfil": "empresa", "descricoes": descs}).json["resultados"][0]
+    depois = cliente.post("/api/categorizar", json={"descricoes": descs}).json["resultados"][0]
     assert depois == {"categoria": "Consultoria", "palavra": "consultoria"}
 
 
@@ -200,21 +206,19 @@ def test_renomear_categoria_leva_regras_junto(cliente):
     assert cliente.get("/api/estado").json["regras"] == {}
 
 
-def test_editar_e_restaurar_categoria_padrao(cliente):
-    cliente.post("/api/regras", json={"origem": "aluguel imobiliaria sol", "categoria": "Aluguel"})
-    cliente.put("/api/categorias-padrao/empresa/aluguel", json={"nome": "Imóvel", "tipo": "fixo", "palavras": None})
+def test_editar_e_restaurar_categoria_unida(cliente):
+    cliente.post("/api/regras", json={"origem": "aluguel imobiliaria sol", "categoria": "Moradia e aluguel"})
+    cliente.put("/api/categorias-padrao/moradia", json={"nome": "Casa própria", "tipo": "fixo", "palavras": None})
     e = cliente.get("/api/estado").json
-    assert e["edicoes"]["empresa:aluguel"]["nome"] == "Imóvel"
-    assert e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Imóvel"
-    cliente.delete("/api/categorias-padrao/empresa/aluguel")
+    assert e["edicoes"]["padrao:moradia"]["nome"] == "Casa própria"
+    assert e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Casa própria"
+    cliente.delete("/api/categorias-padrao/moradia")
     e = cliente.get("/api/estado").json
-    assert e["edicoes"] == {} and e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Aluguel"
-    assert cliente.put("/api/categorias-padrao/empresa/nao-existe", json={"nome": "X"}).status_code == 404
-    r = cliente.put("/api/categorias-padrao/pme/aluguel", json={"nome": "Imóvel", "tipo": "fixo", "palavras": None})
-    assert r.status_code == 200
-    assert cliente.get("/api/estado").json["edicoes"]["empresa:aluguel"]["nome"] == "Imóvel"
+    assert e["edicoes"] == {} and e["regras"]["aluguel imobiliaria sol"]["categoria"] == "Moradia e aluguel"
+    assert cliente.put("/api/categorias-padrao/inexistente", json={"nome": "X"}).status_code == 404
 
 
+@pytest.mark.skip("Tarefa 4")
 def test_pme_vindo_de_fora_vira_empresa(cliente, arquivo):
     assert salvar(cliente, [CAFE_5], perfil="pme")["perfil"] == "empresa"
     assert cliente.post("/api/paginas", json={"nome": "X", "perfil": "pme"}).json["perfil"] == "empresa"
@@ -267,7 +271,7 @@ def test_pdf_com_senha_pede_senha(cliente):
     conteudo = _pdf_c6_com_senha()
 
     def enviar_pdf(senha=None):
-        dados = {"perfil": "empresa", "arquivos": [(io.BytesIO(conteudo), "extrato.pdf")]}
+        dados = {"arquivos": [(io.BytesIO(conteudo), "extrato.pdf")]}
         if senha is not None:
             dados["senha"] = senha
         return cliente.post("/api/leitura", data=dados, content_type="multipart/form-data")

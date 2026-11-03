@@ -8,10 +8,14 @@ from flask import jsonify, request
 
 from auth import login_obrigatorio
 from banco import agora, obter_banco
-from categorizacao import carregar_categorizador, perfil_valido, preparar_lancamentos
+from categorizacao import carregar_categorizador, preparar_lancamentos
 from leitura import ler_data
 from rotas import api
 from rotas.util import corpo, erro, id_ou_none, texto, uid
+
+def perfil_valido(perfil):  # temporário: sai na Tarefa 4 (sem perfil)
+    return "empresa" if perfil in ("empresa", "pme", "cafe") else "pf"
+
 
 TIPOS = {"despesas", "vendas"}
 MAX_LANCAMENTOS = 100_000
@@ -175,7 +179,7 @@ def abrir_extrato(extrato_id):
             (extrato_id,),
         )
     ]
-    categorizador = carregar_categorizador(banco, uid(), linha["perfil"])
+    categorizador = carregar_categorizador(banco, uid())
     resposta["lancamentos"] = preparar_lancamentos(lancamentos, categorizador)
     resposta["correcoes"] = {
         str(r["lancamento_id"]): r["categoria"]

@@ -6,9 +6,13 @@ from flask import jsonify, request
 
 from auth import login_obrigatorio
 from banco import agora, obter_banco
-from categorizacao import normalizar, perfil_valido
+from categorizacao import normalizar
 from rotas import api
 from rotas.util import corpo, erro, texto, uid
+
+def perfil_valido(perfil):  # temporário: sai na Tarefa 4 (sem perfil)
+    return "empresa" if perfil in ("empresa", "pme", "cafe") else "pf"
+
 
 TIPOS = {"despesas", "vendas"}
 

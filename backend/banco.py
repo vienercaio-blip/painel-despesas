@@ -11,7 +11,7 @@ from pathlib import Path
 
 from flask import current_app, g
 
-from categorizacao import CODIGOS_ANTIGOS, PERFIS, normalizar
+from categorizacao import CODIGOS_ANTIGOS, REGRAS, normalizar
 
 
 def obter_banco():
@@ -93,7 +93,7 @@ def _converter_tipos_de_conta(con):
     # categoria criada pelo cliente com o nome de uma categoria padrão (ex.: ele
     # criou "Delivery" antes de ela existir): a dele ganha " (sua)", e as regras
     # e correções que apontavam para ela vão junto
-    padrao = {normalizar(nome) for p in PERFIS.values() for _, nome, _ in p["regras"]}
+    padrao = {normalizar(nome) for _, nome, _ in REGRAS}
     for cid, usuario_id, nome in con.execute("SELECT id, usuario_id, nome FROM categorias").fetchall():
         if normalizar(nome) in padrao:
             novo = nome + " (sua)"

@@ -6,7 +6,7 @@ from flask import jsonify, request
 from auth import login_obrigatorio
 from banco import agora, obter_banco
 from categorizacao import (
-    OUTROS, PERFIS, carregar_categorizador, carregar_edicoes, normalizar, perfil_valido, separar_palavras,
+    OUTROS, REGRAS, carregar_categorizador, carregar_edicoes, normalizar, separar_palavras,
 )
 from rotas import api
 from rotas.util import corpo, erro, texto, uid
@@ -70,17 +70,17 @@ def _buscar_categoria(banco, cat_id):
     return r
 
 
-def _regra_padrao(perfil, codigo):
-    """A categoria padrão (código, nome, palavras) do perfil; 404 se não existir."""
-    for regra in PERFIS[perfil]["regras"]:
+def _regra_padrao(codigo):
+    """A categoria padrão (código, nome, palavras); 404 se não existir."""
+    for regra in REGRAS:
         if regra[0] == codigo:
             return regra
     erro("Categoria padrão não encontrada.", 404)
 
 
-def _nome_padrao_atual(banco, perfil, codigo):
-    ed = carregar_edicoes(banco, uid()).get(f"{perfil}:{codigo}")
-    return (ed and ed["nome"]) or _regra_padrao(perfil, codigo)[1]
+def _nome_padrao_atual(banco, codigo):
+    ed = carregar_edicoes(banco, uid()).get(f"padrao:{codigo}")
+    return (ed and ed["nome"]) or _regra_padrao(codigo)[1]
 
 
 # ---------- categorias criadas pelo cliente ----------
@@ -137,13 +137,12 @@ def excluir_categoria(cat_id):
 
 # ---------- ajustes nas categorias padrão ----------
 
-@api.put("/categorias-padrao/<perfil>/<codigo>")
+@api.put("/categorias-padrao/<codigo>")
 @login_obrigatorio
-def editar_padrao(perfil, codigo):
+def editar_padrao(codigo):
     """Muda nome, tipo e/ou palavras de uma categoria padrão.
     "palavras": null mantém as palavras originais do sistema."""
-    perfil = perfil_valido(perfil)
-    _regra_padrao(perfil, codigo)
+    _regra_padrao(codigo)
     d = corpo()
     banco = obter_banco()
     nome = texto(d.get("nome"), 40, "Dê um nome para a categoria.")
@@ -153,26 +152,25 @@ def editar_padrao(perfil, codigo):
         separar_palavras(",".join(str(p) for p in palavras) if isinstance(palavras, list) else palavras),
         ensure_ascii=False,
     )
-    antigo = _nome_padrao_atual(banco, perfil, codigo)
+    antigo = _nome_padrao_atual(banco, codigo)
     banco.execute(
         "INSERT INTO edicoes_padrao (usuario_id, chave, nome, tipo, palavras) VALUES (?, ?, ?, ?, ?) "
         "ON CONFLICT(usuario_id, chave) DO UPDATE SET nome = excluded.nome, tipo = excluded.tipo, palavras = excluded.palavras",
-        (uid(), f"{perfil}:{codigo}", nome, tipo, palavras_json),
+        (uid(), f"padrao:{codigo}", nome, tipo, palavras_json),
     )
     _renomear_em_tudo(banco, antigo, nome)
     banco.commit()
     return jsonify(ok=True)
 
 
-@api.delete("/categorias-padrao/<perfil>/<codigo>")
+@api.delete("/categorias-padrao/<codigo>")
 @login_obrigatorio
-def restaurar_padrao(perfil, codigo):
+def restaurar_padrao(codigo):
     """Volta a categoria padrão ao original do sistema."""
-    perfil = perfil_valido(perfil)
-    original = _regra_padrao(perfil, codigo)[1]
+    original = _regra_padrao(codigo)[1]
     banco = obter_banco()
-    antigo = _nome_padrao_atual(banco, perfil, codigo)
-    banco.execute("DELETE FROM edicoes_padrao WHERE usuario_id = ? AND chave = ?", (uid(), f"{perfil}:{codigo}"))
+    antigo = _nome_padrao_atual(banco, codigo)
+    banco.execute("DELETE FROM edicoes_padrao WHERE usuario_id = ? AND chave = ?", (uid(), f"padrao:{codigo}"))
     _renomear_em_tudo(banco, antigo, original)
     banco.commit()
     return jsonify(ok=True)
@@ -220,7 +218,7 @@ def categorizar():
     descricoes = d.get("descricoes")
     if not isinstance(descricoes, list) or len(descricoes) > 100_000:
         erro("Lista de descrições inválida.")
-    cat = carregar_categorizador(obter_banco(), uid(), perfil_valido(d.get("perfil")))
+    cat = carregar_categorizador(obter_banco(), uid())
     resultados = []
     for desc in descricoes:
         nome, palavra = cat.categorizar(str(desc))

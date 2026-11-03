@@ -4,7 +4,7 @@ from flask import jsonify, request
 
 from auth import login_obrigatorio
 from banco import obter_banco
-from categorizacao import carregar_categorizador, perfil_valido, preparar_lancamentos
+from categorizacao import carregar_categorizador, preparar_lancamentos
 from leitura import ErroLeitura, ler_arquivo_com_aviso
 from leitura_pdf.comum import SenhaIncorreta, SenhaNecessaria
 from rotas import api
@@ -21,9 +21,8 @@ def ler_arquivos():
         erro("Nenhum arquivo recebido.")
     if len(arquivos) > MAX_ARQUIVOS:
         erro(f"Envie no máximo {MAX_ARQUIVOS} arquivos de uma vez.")
-    perfil = perfil_valido(request.form.get("perfil"))
     senha = request.form.get("senha") or None  # só para abrir PDFs protegidos; nunca é guardada
-    categorizador = carregar_categorizador(obter_banco(), uid(), perfil)
+    categorizador = carregar_categorizador(obter_banco(), uid())
 
     resultado = []
     for arq in arquivos:
@@ -42,4 +41,4 @@ def ler_arquivos():
             resultado.append({"nome": nome, "erro": str(e)})
         except Exception:
             resultado.append({"nome": nome, "erro": "Não consegui ler este arquivo. Tente exportar de novo pelo site do banco."})
-    return jsonify(perfil=perfil, arquivos=resultado)
+    return jsonify(arquivos=resultado)
