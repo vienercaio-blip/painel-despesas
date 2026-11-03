@@ -167,6 +167,7 @@ function doServidor(l){
 function load(list, source, name){
   list.sort(function(a,b){return a.date-b.date;});
   state.raw = list; state.savedId = null; state.pastaId = null; state.loaded = true;
+  if (typeof esquecerCriacao==='function' && CRIAR_PARA) esquecerCriacao();
   $('dAvisoPasta').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
   state.editLanc = false; state.txPor = 10; state.dashCats = null; state.dashDet = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
@@ -1698,7 +1699,7 @@ function renderTable(){
     var catCell = ehEntrada(t) ? (ed
       ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+[ENTRADA].concat(INTERNOS).map(function(x){ return '<option'+(x===ci?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>'
       : ci===ENTRADA ? '<span class="in">Entrada</span>' : '<span class="why">'+esc(ci)+'</span>') :
-      ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>' :
+      ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'<option value="'+NOVA_CAT+'">+ Criar nova categoria…</option></select></span>' :
       '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
     if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
@@ -1802,7 +1803,13 @@ var RECLASS_HELP = 'As próximas mudanças de categoria vão usar esta mesma res
 /* troca a categoria de um lançamento (abas Organizar e Lançamentos) */
 function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
-  var t = state.tx[+s.dataset.id], to = s.value;
+  var t = state.tx[+s.dataset.id];
+  if (s.value===NOVA_CAT){ irCriarCategoria(t); return; }
+  perguntarMudanca(t, s.value, s);
+}
+/* pergunta se a categoria nova vale só para este lançamento, para a origem neste
+   extrato ou também nos próximos; back = onde o foco volta ao fechar */
+function perguntarMudanca(t, to, back){
   /* mesma origem = mesma descrição, ignorando números (datas, códigos) */
   var mesma = state.tx.filter(function(x){ return ehEntrada(x)===ehEntrada(t) && x.origin===t.origin; });
   var n = mesma.length;
@@ -1817,7 +1824,7 @@ function mudarCategoria(e){
       text:'Você mudou "'+t.desc+'" para '+to+'. Essa origem também tem '+(ehEntrada(t) ? 'saídas' : 'entradas')+', então a mudança vale só neste extrato, para não mudar as '+(ehEntrada(t) ? 'saídas' : 'entradas')+' sem você ver.',
       yes: n>1 ? 'Todos dessa origem, só neste extrato ('+n+')' : 'Só este lançamento',
       no: n>1 ? 'Só este lançamento' : null,
-      cancel:'Cancelar mudança', back:s,
+      cancel:'Cancelar mudança', back:back,
       onYes: n>1 ? todos : soEste, onNo: n>1 ? soEste : null, onCancel:render });
     return;
   }
@@ -1825,7 +1832,7 @@ function mudarCategoria(e){
     text:'Você mudou "'+t.desc+'" para '+to+'.'+(n>1 ? ' Neste extrato há '+n+' lançamentos dessa mesma origem.' : '')+' Se escolher os próximos extratos, sempre que essa origem aparecer ela já vem como '+to+'.',
     yes:'Todos dessa origem, também nos próximos extratos',
     alt: n>1 ? 'Todos dessa origem, só neste extrato ('+n+')' : null,
-    no:'Só este lançamento', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
+    no:'Só este lançamento', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:back,
     onYes:function(){ setRule(t.origin, t.desc, to).then(render, function(e){ falhou(e); render(); }); },
     onAlt: n>1 ? function(){
       mesma.forEach(function(x){ state.overrides[x.id] = to; });
@@ -1836,6 +1843,34 @@ function mudarCategoria(e){
 }
 $('cdRows').addEventListener('change', mudarCategoria);
 $('rows').addEventListener('change', mudarCategoria);
+/* "+ Criar nova categoria…" em Lançamentos: vai para Organizar › Nova categoria e,
+   depois de criar, volta para o mesmo lugar e aplica a categoria ao lançamento */
+var NOVA_CAT = '__nova', CRIAR_PARA = null;
+function irCriarCategoria(t){
+  CRIAR_PARA = { id:t.id, pag:state.txPag, y:window.scrollY };
+  renderTable();  /* o seletor volta para a categoria atual */
+  $('ncPara').innerHTML = 'Criando uma categoria para "<b>'+esc(t.desc)+'</b>". Depois de criar, você volta para Lançamentos. '+
+    '<button type="button" class="btn btn-sm ghost" data-ncvoltar="1">Cancelar e voltar</button>';
+  $('ncPara').hidden = false;
+  showNc('new');
+  state.depois = function(){ $('ncPara').scrollIntoView({block:'center'}); $('ncName').focus({preventScroll:true}); };
+  state.irTopo = true;
+  location.hash = 'categorias';
+}
+function esquecerCriacao(){ CRIAR_PARA = null; $('ncPara').hidden = true; $('ncPara').innerHTML = ''; }
+function voltarParaLancamentos(categoria){
+  var p = CRIAR_PARA; esquecerCriacao();
+  if (!p) return;
+  state.txPag = p.pag;
+  state.depois = function(){
+    window.scrollTo(0, p.y);
+    var t = state.tx[p.id], linha = document.querySelector('#rows select[data-id="'+p.id+'"]');
+    if (categoria && t) perguntarMudanca(t, categoria, linha);
+  };
+  state.irTopo = true;
+  location.hash = 'lancamentos';
+}
+$('ncPara').addEventListener('click', function(e){ if (e.target.closest('[data-ncvoltar]')) voltarParaLancamentos(null); });
 $('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
 $('txPor').addEventListener('change', function(){ state.txPor = +this.value; state.txPag = 0; renderTable(); });
 $('txPrev').addEventListener('click', function(){ state.txPag--; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
@@ -1896,6 +1931,7 @@ function doCreate(name, type, kws){
     ruleMsg('Categoria "'+name+'" criada.'+(kws.length ? ' '+n+(n===1?' lançamento foi classificado':' lançamentos foram classificados')+' nela pelas palavras-chave.' : ' Use "Mover para" ou a tabela de lançamentos para colocar despesas nela.'));
     render();
     showNc('list');
+    if (CRIAR_PARA) voltarParaLancamentos(name);
   }).catch(falhou);
 }
 $('customList').addEventListener('submit', function(e){
@@ -2176,7 +2212,11 @@ document.addEventListener('keydown', function(e){
 });
 window.addEventListener('hashchange', function(){
   /* trocar de aba mantém a rolagem; vindo de um clique numa barra do dashboard, abre no topo */
-  if (state.irTopo){ state.irTopo = false; setView(); window.scrollTo(0, 0); return; }
+  if (state.irTopo){
+    state.irTopo = false; setView(); window.scrollTo(0, 0);
+    if (state.depois){ var f = state.depois; state.depois = null; f(); }
+    return;
+  }
   keepScroll(setView);
 });
 setView();
