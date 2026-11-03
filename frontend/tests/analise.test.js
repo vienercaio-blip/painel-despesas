@@ -244,3 +244,32 @@ test('números: gastou mais do que entrou vira Faltou', () => {
   assert.equal(r[2].valor, 'R$ 50.00');
   assert.equal(r[2].neg, true);
 });
+
+// ---------- movimento interno: dinheiro guardado e transferências entre suas contas ----------
+
+const brl = n => 'R$ ' + n.toFixed(2);
+
+test('linha interna: guardou', () => {
+  assert.equal(Analise.linhaInterno({aplicado:1000, resgatado:200, transferido:0, brl}),
+    'Você guardou R$ 800.00 em investimentos e reservas.');
+});
+
+test('linha interna: tirou mais do que guardou', () => {
+  assert.equal(Analise.linhaInterno({aplicado:100, resgatado:300, transferido:0, brl}),
+    'Você tirou R$ 200.00 dos investimentos e reservas.');
+});
+
+test('linha interna: só transferências', () => {
+  assert.equal(Analise.linhaInterno({aplicado:0, resgatado:0, transferido:500, brl}),
+    'R$ 500.00 em transferências entre suas contas não contam como entrada nem saída.');
+});
+
+test('linha interna: guardado e transferências juntos', () => {
+  assert.equal(Analise.linhaInterno({aplicado:300, resgatado:0, transferido:50, brl}),
+    'Você guardou R$ 300.00 em investimentos e reservas. R$ 50.00 em transferências entre suas contas não contam como entrada nem saída.');
+});
+
+test('linha interna: nada a mostrar', () => {
+  assert.equal(Analise.linhaInterno({aplicado:0, resgatado:0, transferido:0, brl}), null);
+  assert.equal(Analise.linhaInterno({aplicado:100, resgatado:100, transferido:0, brl}), null);
+});

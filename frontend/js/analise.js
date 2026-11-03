@@ -55,6 +55,18 @@ function numeros(c){
   ];
 }
 
+/* ---------- movimento interno: a linha embaixo dos três números ----------
+   Dinheiro guardado (aplicado menos resgatado) e transferências entre as
+   contas do cliente ficam fora de Entrou e Saiu; esta linha mostra para onde
+   foram. Os nomes são fixos, mesmo que o cliente renomeie as categorias. */
+function linhaInterno(c){
+  var partes = [], guardado = c.aplicado - c.resgatado;
+  if (guardado>0.005) partes.push('Você guardou '+c.brl(guardado)+' em investimentos e reservas.');
+  else if (guardado<-0.005) partes.push('Você tirou '+c.brl(-guardado)+' dos investimentos e reservas.');
+  if (c.transferido>0.005) partes.push(c.brl(c.transferido)+' em transferências entre suas contas não contam como entrada nem saída.');
+  return partes.length ? partes.join(' ') : null;
+}
+
 /* ---------- Parte 2: o que fazer agora ---------- */
 function acoes(c){
   if (c.escopo==='semana') return { lista:[], vazio:'Escolha um mês ou mais para ver sugestões.' };
@@ -145,7 +157,7 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { veredito:veredito, numeros:numeros, acoes:acoes, barras:barras, atalho:atalho };
+return { veredito:veredito, numeros:numeros, linhaInterno:linhaInterno, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;
