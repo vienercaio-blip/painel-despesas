@@ -336,11 +336,15 @@ test('visiveis: todas, ou menos de 5', () => {
   assert.deepEqual([Analise.visiveis(linhasN(3), false, 5).linhas.length, Analise.visiveis(linhasN(3), false, 5).escondidas], [3, 0]);
 });
 
-test('visiveis: Outros (por último) fica de fora quando não está entre as 5', () => {
-  const l = linhasN(5).concat([{nome:'Outros (revisar)', mes:900, outros:true}]);
-  const r = Analise.visiveis(l, false, 5);
-  assert.equal(r.linhas.some(x => x.outros), false);
-  assert.equal(r.escondidas, 1);
+test('visiveis: Outros entra quando o valor dele está entre os 5 maiores (sempre por último)', () => {
+  const grande = linhasN(6).concat([{nome:'Outros (revisar)', mes:900, outros:true}]);
+  const r = Analise.visiveis(grande, false, 5);
+  assert.deepEqual(r.linhas.map(x => x.nome), ['C0','C1','C2','C3','Outros (revisar)']);
+  assert.equal(r.escondidas, 2);
+  const pequeno = linhasN(6).concat([{nome:'Outros (revisar)', mes:1, outros:true}]);
+  const r2 = Analise.visiveis(pequeno, false, 5);
+  assert.equal(r2.linhas.some(x => x.outros), false);
+  assert.equal(r2.escondidas, 2);
 });
 
 test('serieMeses: valores em ordem, mês sem valor vale 0, um mês só não tem série', () => {

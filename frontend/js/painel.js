@@ -674,6 +674,11 @@ function ajustarEsteira(){
   faixa.style.setProperty('--dur', Math.max(213, half/1.5).toFixed(1)+'s');
 }
 window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira(); });
+var redesenhoTimer = null;
+window.addEventListener('resize', function(){
+  clearTimeout(redesenhoTimer);
+  redesenhoTimer = setTimeout(function(){ if (state.loaded && !$('viewDash').hidden) renderDashboard(); }, 150);
+});
 
 function renderCategorias(){
   var base = state.tx, outs = 0, byC = {};
@@ -843,6 +848,9 @@ function barSVG(data, o){
   });
   return s + '</svg>';
 }
+/* largura real (em px) do lugar do gráfico: o desenho usa a mesma escala da tela,
+   então o texto fica sempre do tamanho certo. Escondido (ex.: detalhes fechados): 520 */
+function larguraDe(id){ var w = $(id).clientWidth; return w>0 ? Math.max(320, Math.round(w)) : 520; }
 /* minigráfico dos três números: só a linha, sem eixos; dica (mês e valor) em cada ponto */
 function sparkSVG(valores, cor, dicas){
   if (!valores.length) return '';
@@ -1067,7 +1075,7 @@ function renderDashboard(){
       var v = sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0);
       return {label:o.label, v:v, fill:'var(--accent)', tip:'<b>'+esc(o.name)+'</b><br>Gastos: '+brl.format(v),
         more: moreHTML('Neste mês', sel.filter(function(c){ return o.cat[c]; }).sort(function(a,b){ return o.cat[b]-o.cat[a]; }).map(function(c){ return [c, brl.format(o.cat[c])]; }), '')};
-    }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:520, aria:$('dResT').textContent});
+    }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:larguraDe('dRes'), aria:$('dResT').textContent});
   } else {
   $('dResT').textContent = 'Resultado por mês'; $('dResH').textContent = 'Entradas menos saídas';
   $('dRes').innerHTML = barSVG(chartM.map(function(o){
@@ -1075,7 +1083,7 @@ function renderDashboard(){
       tip:'<b>'+esc(o.name)+'</b><br>Entradas: '+brl.format(o.ins)+'<br>Saídas: '+brl.format(o.outs)+'<br>Resultado: '+brl.format(o.res)+'<br>Margem: '+pct.format(o.ins?o.res/o.ins:0),
       more: moreHTML('Maiores saídas do mês', Object.keys(o.cat).sort(function(a,b){return o.cat[b]-o.cat[a];}).slice(0,4).map(function(c){return [c, brl.format(o.cat[c])];}),
         nM>1 ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
-  }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:520, aria:'Resultado por mês'});
+  }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:larguraDe('dRes'), aria:'Resultado por mês'});
   }
 
   /* caixa acumulado */
@@ -1093,7 +1101,7 @@ function renderDashboard(){
   var marks = [{i:pts.length-1, text:'Hoje no extrato: '+fmtK(acc)}];
   if (minI>0 && minI<pts.length-1) marks.push({i:minI, text:'Menor ponto: '+fmtK(pts[minI].y)+' em '+shortDate(pts[minI].date), below:true});
   $('dCumT').textContent = X.caixaTitulo;
-  $('dCum').innerHTML = lineSVG(pts, {aria:X.caixaTitulo+' ao longo do extrato', marks:marks, altura:180, largura:520});
+  $('dCum').innerHTML = lineSVG(pts, {aria:X.caixaTitulo+' ao longo do extrato', marks:marks, altura:180, largura:larguraDe('dCum')});
 
   /* dia do mês */
   var order = domAvg.map(function(v,i){return i;}).sort(function(a,b){return domAvg[b]-domAvg[a];});
@@ -2236,7 +2244,10 @@ document.addEventListener('keydown', function(e){
 /* mudar de página sempre abre no topo. state.depois roda logo depois (ex.: a volta
    da criação de categoria rola de novo até o lançamento de onde a pessoa saiu) */
 function chegou(){
-  setView(); window.scrollTo(0, 0);
+  setView();
+  /* o Dashboard é desenhado com a largura real dos cartões: redesenha já visível */
+  if (state.loaded && MODE==='despesas' && !$('viewDash').hidden) renderDashboard();
+  window.scrollTo(0, 0);
   if (state.depois){ var f = state.depois; state.depois = null; f(); }
 }
 function irPara(v){
@@ -2284,7 +2295,7 @@ $('dFiltroBtn').addEventListener('click', function(e){ e.stopPropagation(); abri
 document.addEventListener('click', function(e){ if (!$('dFiltro').hidden && !e.target.closest('.filtro-wrap')) abrirFiltro(false); });
 document.addEventListener('keydown', function(e){ if (e.key==='Escape' && !$('dFiltro').hidden){ abrirFiltro(false); $('dFiltroBtn').focus(); } });
 $('dOnde').addEventListener('click', function(e){
-  if (e.target.closest('[data-todas]')){ state.dashTodas = !state.dashTodas; renderDashboard(); return; }
+  if (e.target.closest('[data-todas]')){ state.dashTodas = !state.dashTodas; renderDashboard(); var bt = document.querySelector('#dBarras [data-todas]'); if (bt) bt.focus(); return; }
   var at = e.target.closest('[data-atalho]');
   if (at){
     var tx = cur(), byCat = {};
@@ -2311,7 +2322,7 @@ $('dFiltroLista').addEventListener('change', function(e){
   renderDashboard();
   $('dFiltroLista').querySelectorAll('input[type=checkbox]').forEach(function(c){ if (c.value===foco) c.focus(); });
 });
-$('dDet').addEventListener('toggle', function(){ state.dashDet = $('dDet').open; });
+$('dDet').addEventListener('toggle', function(){ state.dashDet = $('dDet').open; if (state.dashDet) renderDashboard(); });
 /* no celular não existe "passar o mouse": tocar (ou Enter) num cartão de ação mostra as origens na hora */
 function mostrarOrigens(el, x, y){
   clearTimeout(tipTimer); tipEl = el; tipX = x; tipY = y;

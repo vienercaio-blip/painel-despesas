@@ -180,7 +180,14 @@ function barras(c, selecionadas){
    com "Outros" por último); "todas" mostra a lista inteira */
 function visiveis(linhas, todas, n){
   if (todas || linhas.length<=n) return { linhas:linhas, escondidas:0 };
-  return { linhas:linhas.slice(0, n), escondidas:linhas.length-n };
+  /* "Outros" (sempre por último) entra quando o VALOR dele está entre os n maiores:
+     é justamente o que a pessoa precisa classificar */
+  var outros = linhas.filter(function(l){ return l.outros; })[0];
+  var resto = linhas.filter(function(l){ return !l.outros; });
+  var maiores = resto.concat(outros ? [outros] : []).slice().sort(function(a,b){ return b.mes-a.mes; }).slice(0, n);
+  var comOutros = !!outros && maiores.indexOf(outros)!==-1;
+  var lista = resto.slice(0, comOutros ? n-1 : n).concat(comOutros ? [outros] : []);
+  return { linhas:lista, escondidas:linhas.length-lista.length };
 }
 /* valores de um campo (ins, outs, res) mês a mês, para os minigráficos;
    com menos de 2 meses não há evolução para mostrar */

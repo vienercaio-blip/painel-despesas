@@ -527,3 +527,6 @@ input,select,textarea{border-radius:10px}
 .barras-mais{list-style:none;padding-top:4px}
 .barras-mais button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
 .barras-mais button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+/* "Para onde vai o dinheiro" se arruma pela largura do próprio cartão (na grade ele é estreito) */
+#dOnde{container-type:inline-size}
+@container (max-width:480px){.barra{grid-template-columns:1fr auto}.barra .bt{grid-column:1 / -1;grid-row:2}}
