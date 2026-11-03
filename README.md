@@ -1,4 +1,8 @@
-# Painel de Despesas — frontend e backend separados
+# sobrou.
+
+*Veja para onde vai o seu dinheiro e quanto sobra no mês.* (Antes chamado "Painel de Despesas".)
+
+Aparência: escura com detalhes dourados ou clara "marfim"; segue o aparelho, com troca em Configurações. Fontes Fraunces (títulos) e Manrope (texto); cores em `frontend/css/estilo.css` (`:root`).
 
 O painel agora tem duas partes:
 
