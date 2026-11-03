@@ -473,14 +473,14 @@ td .in{color:var(--good);font-weight:500}
 
 /* ---------- menu na coluna da esquerda (identidade "sobrou.") ---------- */
 .app{min-height:100vh}
-.menu{background:var(--menu-bg);color:var(--menu-ink);display:flex;flex-direction:column;gap:6px;padding:18px 12px}
-.menu .logo{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.3px;color:var(--menu-ink);text-decoration:none;padding:0 8px 14px;line-height:1}
-.menu .ponto{color:#E2B04A}
-.menu .tabs{display:flex;flex-direction:column;gap:2px}
-.menu .tab{color:#B4C0D3;width:100%;min-height:42px;gap:10px;font-weight:600}
-.menu a.tab:hover{background:rgba(255,255,255,.05);color:var(--menu-ink)}
-.menu .tab[aria-current="page"],.menu a.tab[aria-current="page"]:hover{background:rgba(255,255,255,.07);color:var(--menu-ink);font-weight:700;box-shadow:inset 3px 0 0 #E2B04A}
-.menu .ico{flex:none;opacity:.85}
+.lateral{background:var(--menu-bg);color:var(--menu-ink);display:flex;flex-direction:column;gap:6px;padding:18px 12px}
+.lateral .logo{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.3px;color:var(--menu-ink);text-decoration:none;padding:0 8px 14px;line-height:1}
+.lateral .ponto{color:#E2B04A}
+.lateral .tabs{display:flex;flex-direction:column;gap:2px}
+.lateral .tab{color:#B4C0D3;width:100%;min-height:42px;gap:10px;font-weight:600}
+.lateral a.tab:hover{background:rgba(255,255,255,.05);color:var(--menu-ink)}
+.lateral .tab[aria-current="page"],.lateral a.tab[aria-current="page"]:hover{background:rgba(255,255,255,.07);color:var(--menu-ink);font-weight:700;box-shadow:inset 3px 0 0 #E2B04A}
+.lateral .ico{flex:none;opacity:.85}
 .menu-pe{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:12px 8px 0;border-top:1px solid rgba(255,255,255,.08);font-size:13px}
 .user-area{color:#8E9BB0}
 .user-area b{color:var(--menu-ink);font-weight:600}
@@ -490,14 +490,14 @@ td .in{color:var(--good);font-weight:500}
 .cfg-btn svg{width:20px;height:20px;flex:none}
 @media (min-width:900px){
   .app{display:grid;grid-template-columns:220px minmax(0,1fr)}
-  .menu{position:sticky;top:0;height:100vh;overflow-y:auto}
+  .lateral{position:sticky;top:0;height:100vh;overflow-y:auto}
 }
 @media (max-width:899.98px){
-  .menu{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px}
-  .menu .logo{padding:0;font-size:24px;margin-right:auto}
+  .lateral{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px}
+  .lateral .logo{padding:0;font-size:24px;margin-right:auto}
   .menu-pe{order:2;margin:0;padding:0;border:0;flex-direction:row;align-items:center}
   .menu-pe .user-area,.menu-pe .cfg-txt{display:none}
-  .menu .tabs{order:3;flex-basis:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:4px}
-  .menu .tab{width:auto;flex:none}
-  .menu .ico{display:none}
+  .lateral .tabs{order:3;flex-basis:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:4px}
+  .lateral .tab{width:auto;flex:none}
+  .lateral .ico{display:none}
 }
