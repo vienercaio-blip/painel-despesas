@@ -32,7 +32,7 @@ REGRAS = [
     ("folha", "Folha de pagamento", ["salario", "folha pag", "folha de pag", "folha salario", " pro labore", "prolabore", "vale transporte", "vale refeicao", "adiantamento", "rescisao"]),
     ("moradia", "Moradia e aluguel", ["aluguel", "condominio", "iptu", "imobiliaria"]),
     ("casa", "Água, luz e internet", ["energia", "coelba", "enel", "cemig", "copel", " light ", "agua", "embasa", "sabesp", "compesa", " gas ", "internet", " vivo ", " claro ", " tim ", " oi "]),
-    ("seguros", "Seguros", [" seguro auto", " seguro de vida", " seguro vida", " seguro resid", " seguro empresarial", " seguro celular", " seguro viagem", "seguradora", "apolice", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
+    ("seguros", "Seguros", [" seguros", "deb aut seguro", " seguro cartao", " seguro prestamista", " seguro protec", " seguro auto", " seguro de vida", " seguro vida", " seguro resid", " seguro empresarial", " seguro celular", " seguro viagem", "seguradora", "apolice", "porto seguro", "mapfre", "allianz", "tokio marine", "sulamerica"]),
     ("delivery", "Delivery", ["ifood", " ifd ", "rappi", "ze delivery", "99food", " 99 food", "keeta", "aiqfome", "james delivery", "daki", "uber eats", "delivery"]),
     ("assinaturas", "Assinaturas", ["assinatura", "netflix", "spotify", "deezer", "prime video", "amazon prime", "amazonprime", "youtube", "apple", "google one", "icloud", "disney", " max ", "globoplay"]),
     ("contabilidade", "Contabilidade e sistemas", ["contabil", "contador", "sistema", "software", "nuvem", "certificado digital"]),
@@ -140,11 +140,13 @@ class Categorizador:
         return next(c["nome"] for c in self.padrao if c["codigo"] == codigo)
 
     def categorizar(self, descricao):
-        # "Mercado Pago" é a carteira, não um mercado: vira "mpago" (sem "mercado" dentro)
-        t = normalizar(descricao).replace(" mercado pago ", " mpago ")
+        bruto = normalizar(descricao)
+        # nas palavras do sistema, "Mercado Pago" (a carteira, não um mercado) vira
+        # "mpago"; as palavras escritas pelo cliente continuam vendo o texto original
+        t = bruto.replace(" mercado pago ", " mpago ")
         for cat in self.personalizadas:
             for p in cat["palavras"]:
-                if " " + p in t:
+                if " " + p in bruto:
                     return cat["nome"], p
         for cat in self.padrao:
             if cat["originais"] is not None:
@@ -153,7 +155,7 @@ class Categorizador:
                         return cat["nome"], p.strip()
             else:
                 for p in cat["palavras"]:
-                    if " " + p in t:
+                    if " " + p in bruto:
                         return cat["nome"], p
         return OUTROS, None
 

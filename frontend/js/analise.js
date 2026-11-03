@@ -44,7 +44,11 @@ function veredito(c){
 /* estornos maiores que os gastos deixariam "Saiu" negativo: o Saiu fica em
    zero e a sobra conta como entrada (é dinheiro que voltou para a conta) */
 function ajustarEstornos(t){
-  return t.outs<0 ? { ins:t.ins-t.outs, outs:0 } : { ins:t.ins, outs:t.outs };
+  /* arredonda para centavos: somas de reais deixam restos como 0,0000000000004,
+     que viraria "Alerta: saíram R$ 0,00" */
+  function cents(x){ return Math.round(x*100)/100 || 0; }
+  var ins = cents(t.ins), outs = cents(t.outs);
+  return outs<0 ? { ins:cents(ins-outs), outs:0 } : { ins:ins, outs:outs };
 }
 
 /* ---------- os três números: Entrou, Saiu e Sobrou (ou Faltou) ----------

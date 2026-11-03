@@ -250,3 +250,17 @@ def test_colisoes_resolvidas(descricao, esperado):
 @pytest.mark.parametrize("descricao", ["RESGATE PONTOS LIVELO", "RESGATE MILHAS SMILES", "RESGATE SEGURO VIDA"])
 def test_resgate_de_pontos_e_seguro_e_dinheiro_novo(descricao):
     assert eh_resgate(descricao, 100.0) is False
+
+
+def test_palavra_do_cliente_mercado_pago_continua_valendo():
+    """A troca interna "mercado pago" → "mpago" vale só para as palavras do sistema."""
+    cat = Categorizador([{"nome": "Carteira", "palavras": ["mercado pago"]}], {})
+    assert cat.categorizar("MERCADO PAGO RECARGA")[0] == "Carteira"
+    editada = {"padrao:taxas": {"nome": "Taxas", "tipo": "variavel", "palavras": ["pago taxa"]}}
+    assert Categorizador([], editada).categorizar("MERCADO PAGO TAXA")[0] == "Taxas"
+
+
+@pytest.mark.parametrize("descricao", ["BRADESCO SEGUROS", "PAGTO SEGUROS", "DEB AUT SEGURO", "SEGURO CARTAO",
+                                       "SEGURO PRESTAMISTA", "SEGURO PROTECAO CELULAR"])
+def test_seguros_com_texto_de_banco(descricao):
+    assert _cat(descricao) == "Seguros"

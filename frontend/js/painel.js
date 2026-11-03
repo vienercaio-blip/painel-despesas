@@ -1041,7 +1041,8 @@ function renderDashboard(){
   else if (resRange==='ult12') chartM = months.slice(-12);
   else if (resRange.indexOf('y:')===0) chartM = months.filter(function(o){ return 'y:'+o.y===resRange; });
   if (!chartM.length) chartM = months;
-  state.pdfMeses = null;
+  /* o PDF imprime o mesmo mês a mês do gráfico (sem o dinheiro guardado e no mesmo intervalo) */
+  state.pdfMeses = { titulo:'Resultado por mês', linhas: chartM.map(function(o){ return {l:o.name, v:brl.format(o.res)}; }) };
   if (sel){
     var selNomes = sel.filter(function(c){ return byCat[c]; });
     $('dResT').textContent = selNomes.length<=2 ? 'Gastos com '+selNomes.join(' e ')+', mês a mês' : 'Gastos com as '+selNomes.length+' categorias escolhidas, mês a mês';

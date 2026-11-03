@@ -313,3 +313,10 @@ test('estornos maiores que os gastos: Saiu fica em zero e a sobra vira entrada',
   assert.deepEqual(Analise.ajustarEstornos({ins:100, outs:-30}), {ins:130, outs:0});
   assert.deepEqual(Analise.ajustarEstornos({ins:100, outs:40}), {ins:100, outs:40});
 });
+
+test('restos de arredondamento não viram alerta: estornos que zeram os gastos', () => {
+  const t = Analise.ajustarEstornos({ins:0, outs:10.10 + 20.20 - 30.30});
+  assert.deepEqual(t, {ins:0, outs:0});
+  assert.equal(Analise.veredito(ctx(t)).cor, 'neutro');
+  assert.deepEqual(Analise.ajustarEstornos({ins:0.1 + 0.2, outs:-0.0000001}), {ins:0.3, outs:0});
+});
