@@ -588,6 +588,12 @@ function renderSaved(){
       '<button type="button" class="btn btn-sm ghost" data-sugno="1">Agora não</button></div>' : '';
     shown = Pastas.filtrar(todos, pages, cur);
     desenharLembrete(grande ? [] : shown);
+    /* busca: só a partir de 10 extratos; vale dentro da etiqueta escolhida */
+    var comBusca = todos.length>=10;
+    $('svBusca').hidden = !comBusca;
+    if (!comBusca) state.busca = '';
+    if (comBusca && $('svBusca').value!==(state.busca||'')) $('svBusca').value = state.busca||'';
+    shown = Pastas.buscar(shown, state.busca);
   } else {
     if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
     cur = state.page || null;
@@ -610,7 +616,7 @@ function renderSaved(){
 
   $('savedEmpty').hidden = shown.length>0;
   $('savedEmpty').textContent = desp
-    ? (cur && cur!=='none' ? 'Esta pasta ainda não tem extratos.' : 'Nenhum extrato aqui.')
+    ? (state.busca && String(state.busca).trim() ? 'Nenhum extrato com "'+String(state.busca).trim()+'".' : cur && cur!=='none' ? 'Esta pasta ainda não tem extratos.' : 'Nenhum extrato aqui.')
     : (a.length ? 'Nenhuma planilha nesta página. Use "Mover para" no menu de uma planilha para colocá-la aqui.'
                 : 'Nenhuma planilha salva ainda. Envie uma planilha com a opção "Salvar para acessar depois" marcada e ela aparece aqui.');
   var raizLabel = desp ? 'Sem pasta' : 'Sem página';
@@ -630,7 +636,9 @@ function renderSaved(){
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
       : '<strong>'+esc(x.name||'Extrato')+'</strong>'+(x.aviso ? ' <span class="why estorno" data-tip="'+esc(x.aviso)+'">⚠ Confira</span>' : '');
     var naPasta = pn && !cur ? (desp ? ' · <span class="pasta-nome">Pasta '+esc(pn)+'</span>' : ' · página '+esc(pn)) : '';
-    return '<li class="sv'+(desp && x.id===state.novoId ? ' sv-novo' : '')+'" data-sv="'+esc(x.id)+'"><div class="svi">'+nameBlock+
+    var arrasta = desp && state.editingSaved!==x.id && state.movingSaved!==x.id;
+    return '<li class="sv'+(desp && x.id===state.novoId ? ' sv-novo' : '')+'" data-sv="'+esc(x.id)+'"'+(arrasta ? ' draggable="true"' : '')+'><div class="svi">'+
+      (arrasta ? '<span class="sv-alca" title="Arraste para uma pasta" aria-hidden="true">⠿</span>' : '')+nameBlock+
       '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(desp?'lançamentos':'vendas')+' · '+(desp?'enviado em ':'salvo em ')+fmtDate(new Date(x.savedAt))+naPasta+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
       '<div class="sva sva-x"><button type="button" class="btn primary" data-open="'+esc(x.id)+'">Abrir</button>'+
@@ -1864,10 +1872,12 @@ function renderTable(){
 /* ---------- events ---------- */
 $('file').addEventListener('change', function(e){ readFiles(e.target.files); e.target.value=''; });
 var drop = $('drop');
-['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+/* só arquivos acendem a área: arrastar um extrato da lista não conta */
+function temArquivos(e){ var t = e.dataTransfer && e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t, 'Files')!==-1; }
+['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ if (!temArquivos(e)) return; e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
 drop.addEventListener('drop', function(e){
-  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  if (!temArquivos(e) || !e.dataTransfer.files.length) return;
   var files = Array.prototype.slice.call(e.dataTransfer.files);
   if (semMovimento()){ readFiles(files); return; }
   drop.classList.add('soltou');   /* o ícone desce e some, como se a área engolisse o arquivo */
@@ -2260,6 +2270,49 @@ $('pastaSug').addEventListener('click', function(e){
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
+/* ---------- busca e arrastar o extrato para uma pasta ---------- */
+$('svBusca').addEventListener('input', function(){ state.busca = this.value; renderSaved(); });
+$('savedList').addEventListener('dragstart', function(e){
+  var li = e.target.closest && e.target.closest('.sv[draggable="true"]'); if (!li) return;
+  state.arrastando = li.dataset.sv;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/x-extrato', li.dataset.sv); } catch (er) { e.dataTransfer.setData('text', li.dataset.sv); }
+  li.classList.add('arrastando');
+});
+function limparArrasto(){
+  state.arrastando = null;
+  document.querySelectorAll('.sv.arrastando').forEach(function(x){ x.classList.remove('arrastando'); });
+  document.querySelectorAll('#pagesBar .alvo').forEach(function(x){ x.classList.remove('alvo'); });
+}
+$('savedList').addEventListener('dragend', limparArrasto);
+function etiquetaAlvo(e){
+  if (!state.arrastando) return null;
+  var b = e.target.closest && e.target.closest('#pagesBar [data-page]');
+  return b && b.dataset.page!=='all' ? b : null;
+}
+$('pagesBar').addEventListener('dragover', function(e){
+  var b = etiquetaAlvo(e); if (!b) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#pagesBar .alvo').forEach(function(x){ if (x!==b) x.classList.remove('alvo'); });
+  b.classList.add('alvo');
+});
+$('pagesBar').addEventListener('dragleave', function(e){
+  var b = etiquetaAlvo(e); if (b && !b.contains(e.relatedTarget)) b.classList.remove('alvo');
+});
+$('pagesBar').addEventListener('drop', function(e){
+  var b = etiquetaAlvo(e); if (!b) return;
+  e.preventDefault();
+  var id = state.arrastando, para = b.dataset.page==='none' ? null : b.dataset.page;
+  limparArrasto();
+  var x = getSaved().filter(function(v){ return v.id===id; })[0]; if (!x) return;
+  var naPasta = x.page && getPages().some(function(p){ return p.id===x.page; }) ? x.page : null;
+  if (naPasta===para) return;
+  var nomeDest = para ? 'a pasta "'+pageName(para)+'"' : '"Sem pasta"';
+  API.alterarExtrato(id, {pagina_id: para})
+    .then(function(){ return recarregarSalvos(); })
+    .then(function(){ toast('Extrato movido para '+nomeDest+'.'); })
+    .catch(falhou);
+});
 /* ---------- lembrete do mês que falta ----------
    window.__hoje existe só para os testes simularem outra data */
 function HOJE(){ return window.__hoje ? new Date(window.__hoje) : new Date(); }
