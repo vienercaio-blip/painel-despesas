@@ -412,7 +412,7 @@ function concluirLeitura(results, envio){
         state.novoId = meta.id;
         if (!atual()) return recarregarSalvos();   /* outro envio começou: este só entra na lista */
         return recarregarSalvos().then(function(){
-          return abrirDepoisDoEnvio(function(){ return carregarSalvo(meta.id); }, envio, total, selo);
+          return abrirDepoisDoEnvio(function(){ lembrarAberto('extrato', meta.id); return carregarSalvo(meta.id); }, envio, total, selo);
         }).then(function(){ if (atual()) toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'); });
       }, function(e){
         if (!atual()) return;
@@ -458,6 +458,7 @@ function recarregarSalvos(){
     state.salvosProntos = true;
     renderSaved();
     if (primeira && !$('viewEnviar').hidden) animarEntrada();
+    if (primeira) reabrirUltimo();
   });
 }
 function isoD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -515,13 +516,16 @@ function mostrarAvisoLeitura(avisos){
   $('dAvisoLeitura').textContent = t || '';
   $('dAvisoLeitura').hidden = !t;
 }
+function lembrarAberto(tipo, id){ cfg.ultimoAberto = {tipo:tipo, id:id}; saveCfg(); }
 function openPasta(id){
+  lembrarAberto('pasta', id);
   carregarPasta(id).then(function(){
     irPara('dashboard');
   }).catch(falhou);
 }
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
+  lembrarAberto('extrato', id);
   carregarSalvo(id).then(function(){
     irPara('dashboard');
   }).catch(falhou);
@@ -635,6 +639,7 @@ function renderSaved(){
 
   posicionarMenu();
   posicionarPilula(false);
+  desenharResumo();
   if (desp) return;
   var ssp = $('sSavePage'), keep2 = ssp.value;
   ssp.innerHTML = popts(null);
@@ -743,6 +748,7 @@ function render(){
   renderRules();
   renderCustom();
   renderDashboard();
+  desenharResumo();
 }
 
 function renderPeriod(tx){
@@ -1094,6 +1100,8 @@ function renderDashboard(){
 
   /* Parte 1: veredito e os três números */
   var ver = Analise.veredito(ctx);
+  /* o resumo do Início usa exatamente estes números */
+  state.resumo = { ver:ver, ins:T.ins, outs:T.outs, nM:nM, periodo:periodName(state.p) };
   $('dVer').className = 'card verdict '+ver.cor;
   $('dVerT').textContent = ver.titulo;
   $('dVerTx').textContent = ver.texto;
@@ -1679,7 +1687,7 @@ function readSalesFile(f){
 }
 /* nenhum extrato escolhido: esconde as abas do painel e volta ao Início */
 function fecharExtrato(){
-  state.loaded = false; state.savedId = null; state.raw = []; state.tx = []; state.overrides = {};
+  state.loaded = false; state.savedId = null; state.raw = []; state.tx = []; state.overrides = {}; state.resumo = null;
   refreshTabs(); setView(); renderSaved();
 }
 function refreshTabs(){
@@ -2251,6 +2259,34 @@ $('pastaSug').addEventListener('click', function(e){
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
+/* ---------- resumo do último extrato aberto (topo do Início) ----------
+   Na entrada, o site reabre em segundo plano o último extrato (ou pasta) que a
+   pessoa abriu. O cartão mostra o mesmo veredito e os mesmos números do Dashboard. */
+function reabrirUltimo(){
+  var u = cfg.ultimoAberto;
+  if (MODE!=='despesas' || state.loaded || !u || !u.id) return;
+  var existe = u.tipo==='pasta' ? getPages().some(function(p){ return p.id===u.id; })
+                                : getSaved().some(function(x){ return x.id===u.id; });
+  if (!existe) return;
+  (u.tipo==='pasta' ? carregarPasta(u.id) : carregarSalvo(u.id)).catch(function(){ /* sem cartão; a lista continua */ });
+}
+function desenharResumo(){
+  var card = $('iniResumo'), r = state.resumo;
+  var mostrar = MODE==='despesas' && state.loaded && state.source!=='sample' && !!r && getSaved().length>0;
+  card.hidden = !mostrar;
+  if (!mostrar) return;
+  var porMes = function(v){ return brl.format(v/(r.nM||1)); };
+  card.className = 'card verdict ini-resumo ini-bloco '+r.ver.cor;
+  $('iniResumoDe').textContent = (state.pastaId ? 'Última pasta aberta · ' : 'Último extrato aberto · ')+state.fileName+' · '+r.periodo;
+  $('iniResumoTit').textContent = r.ver.titulo;
+  $('iniResumoTx').textContent = r.ver.texto;
+  $('iniResumoN').innerHTML = [['Entrou', r.ins], ['Saiu', r.outs], ['Sobrou', r.ins-r.outs]].map(function(c){
+    return '<span>'+c[0]+(r.nM>1 ? ' por mês' : '')+'<b class="num">'+porMes(c[1])+'</b></span>';
+  }).join('');
+  $('iniResumoPesa').textContent = r.ver.pesa || '';
+  $('iniResumoPesa').hidden = !r.ver.pesa;
+}
+$('iniResumoVer').addEventListener('click', function(){ irPara('dashboard'); });
 /* extrato de exemplo: abre o painel com dados inventados, sem salvar nada */
 function abrirExemplo(){
   API.exemplo().then(function(r){

@@ -621,3 +621,15 @@ input,select,textarea{border-radius:10px}
 }
 @media (prefers-reduced-motion: reduce){.up-bar.indet i{width:100%;opacity:.5}}
 .wrap{overflow-x:clip}   /* a passagem animada não cria rolagem lateral */
+
+/* ---------- Início: resumo do último extrato aberto ---------- */
+.ini-resumo{display:flex;flex-direction:column;gap:8px}
+.ini-resumo p{margin:0}
+.ini-resumo-de{font-size:13px;color:var(--ink-3)}
+.ini-resumo-v{font-size:17px}
+.ini-resumo-t{font-family:var(--font-display);font-weight:700}
+.verdict.verde .ini-resumo-t{color:var(--good)} .verdict.amarelo .ini-resumo-t{color:var(--warn)} .verdict.vermelho .ini-resumo-t{color:var(--bad)} .verdict.neutro .ini-resumo-t{color:var(--ink-2)}
+.ini-resumo-n{display:flex;flex-wrap:wrap;gap:8px 28px}
+.ini-resumo-n span{display:flex;flex-direction:column;font-size:13px;color:var(--ink-2)}
+.ini-resumo-n b{font-size:18px;color:var(--ink);font-weight:600}
+.ini-resumo-pesa{font-size:14px;color:var(--ink-2)}
