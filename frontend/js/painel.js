@@ -210,6 +210,7 @@ function readFiles(files){
   $('msg').hidden = true;
   state.leitura = null;   /* um envio novo anula caixinhas de senha pendentes do anterior */
   var envio = state.envioId = (state.envioId || 0) + 1;
+  state.envioEscolha = state.escolhaManual || 0;   /* se a pessoa abrir outro extrato no meio, ela manda */
   estadoEnvio('lendo', {n: files.length});
   API.lerArquivos(files).then(function(resp){
     if (envio !== state.envioId) return;   /* outro envio começou depois deste */
@@ -307,13 +308,33 @@ function posicionarPilula(animar){
 window.addEventListener('resize', function(){ posicionarPilula(false); });
 function trocarPasta(novo){
   var lista = $('savedList');
-  var aplicar = function(){ keepScroll(function(){ state.page = novo; state.editingPage = null; renderSaved(); }); lista.classList.remove('trocando'); };
+  var comFoco = $('pagesBar').contains(document.activeElement);
+  clearTimeout(trocaTimer);
+  var aplicar = function(){
+    keepScroll(function(){ state.page = novo; state.editingPage = null; renderSaved(); });
+    lista.classList.remove('trocando');
+    /* as etiquetas são redesenhadas: o foco volta para a escolhida */
+    if (comFoco){ var b = $('pagesBar').querySelector('[data-page="'+(novo===null ? 'all' : novo)+'"]'); if (b) b.focus({preventScroll:true}); }
+  };
   if (semMovimento()){ aplicar(); return; }
   $('pagesBar').querySelectorAll('[role=tab]').forEach(function(b){ b.setAttribute('aria-selected', b.dataset.page===(novo===null ? 'all' : novo) ? 'true' : 'false'); });
   posicionarPilula(true);
   lista.classList.add('trocando');
-  setTimeout(aplicar, 120);
+  trocaTimer = setTimeout(aplicar, 120);
 }
+var trocaTimer = null;
+/* setas, Home e End trocam de etiqueta (padrão de abas) */
+$('pagesBar').addEventListener('keydown', function(e){
+  if (MODE==='vendas') return;
+  var tabs = Array.prototype.slice.call($('pagesBar').querySelectorAll('[role=tab]'));
+  var i = tabs.indexOf(document.activeElement); if (i===-1) return;
+  var j = e.key==='ArrowRight' ? (i+1)%tabs.length : e.key==='ArrowLeft' ? (i-1+tabs.length)%tabs.length
+    : e.key==='Home' ? 0 : e.key==='End' ? tabs.length-1 : -1;
+  if (j===-1) return;
+  e.preventDefault();
+  tabs[j].focus();
+  trocarPasta(tabs[j].dataset.page==='all' ? null : tabs[j].dataset.page);
+});
 /* extrato excluído: a linha encolhe e some antes de a lista ser redesenhada */
 function sumirLinha(id){
   var li = document.querySelector('#savedList [data-sv="'+(window.CSS && CSS.escape ? CSS.escape(id) : id)+'"]');
@@ -330,6 +351,7 @@ function abrirDepoisDoEnvio(abrir, envio, total, selo){
      assim um envio antigo nunca troca o extrato que está na tela */
   return concluirProgresso(total, selo, vivo).then(function(){
     if (!vivo()) return;
+    if ((state.escolhaManual || 0) !== state.envioEscolha){ estadoEnvio('normal'); return 'outro'; }
     return abrir().then(function(){
       if (!vivo()) return;
       return passarParaDashboard().then(function(){ if (vivo()) estadoEnvio('normal'); });
@@ -350,6 +372,7 @@ function seguirLeitura(){
     return;
   }
   state.leitura = null;
+  if (!L.itens.length){ estadoEnvio('normal'); showMsg('Você pulou todos os arquivos. Nada foi lido.', false); return; }
   concluirLeitura(L.itens.map(function(it){ return it.r; }), L.envio);
 }
 function linhaArquivo(r, i){
@@ -372,7 +395,7 @@ $('upFiles').addEventListener('submit', function(e){
     if (state.leitura !== L) return;   /* outro envio começou enquanto a senha ia ao servidor */
     it.r = resp.arquivos[0];
     seguirLeitura();
-  }).catch(function(err){ f.querySelector('button[type=submit]').disabled = false; showMsg(err.message, true); });
+  }).catch(function(err){ if (state.leitura !== L) return; f.querySelector('button[type=submit]').disabled = false; showMsg(err.message, true); });
 });
 $('upFiles').addEventListener('click', function(e){
   var b = e.target.closest('[data-pular]'); if (!b || !state.leitura) return;
@@ -413,7 +436,11 @@ function concluirLeitura(results, envio){
         if (!atual()) return recarregarSalvos();   /* outro envio começou: este só entra na lista */
         return recarregarSalvos().then(function(){
           return abrirDepoisDoEnvio(function(){ lembrarAberto('extrato', meta.id); return carregarSalvo(meta.id); }, envio, total, selo);
-        }).then(function(){ if (atual()) toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'); });
+        }).then(function(como){
+          if (atual()) toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'+(como==='outro' ? ' Ele está na lista.' : ''));
+        }, function(){
+          if (atual()){ estadoEnvio('normal'); toast('Extrato salvo, mas não foi possível abrir agora. Ele está na lista.'); }
+        });
       }, function(e){
         if (!atual()) return;
         return abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(){
@@ -517,15 +544,16 @@ function mostrarAvisoLeitura(avisos){
   $('dAvisoLeitura').hidden = !t;
 }
 function lembrarAberto(tipo, id){ cfg.ultimoAberto = {tipo:tipo, id:id}; saveCfg(); }
+function escolheuAbrir(){ state.escolhaManual = (state.escolhaManual || 0) + 1; }
 function openPasta(id){
-  lembrarAberto('pasta', id);
+  lembrarAberto('pasta', id); escolheuAbrir();
   carregarPasta(id).then(function(){
     irPara('dashboard');
   }).catch(falhou);
 }
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
-  lembrarAberto('extrato', id);
+  lembrarAberto('extrato', id); escolheuAbrir();
   carregarSalvo(id).then(function(){
     irPara('dashboard');
   }).catch(falhou);
@@ -561,11 +589,12 @@ function renderSaved(){
   $('svTitle').textContent = desp ? 'Extratos salvos' : 'Planilhas de vendas salvas';
   var naRaiz = function(x){ return !x.page || !pages.some(function(p){ return p.id===x.page; }); };
   var cnt = function(pid){ return a.filter(function(x){ return pid==='none' ? naRaiz(x) : x.page===pid; }).length; };
-  var tab = function(id, label, n, on){ return '<button type="button" role="tab" class="ptab" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
+  var tab = function(id, label, n, on){ return '<button type="button" role="tab" class="ptab" data-page="'+esc(id)+'" aria-selected="'+on+'" tabindex="'+(on ? 0 : -1)+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
   var cur, shown;
   if (desp){
     state.page = Pastas.atualValida(state.page, pages, todos);
     cur = state.page;
+    $('newPageBtn').textContent = '+ Nova pasta';
     var grande = !!state.salvosProntos && !todos.length;
     var ini = $('inicioDesp');
     ini.classList.toggle('grande', grande); ini.classList.toggle('faixa', !grande);
@@ -574,7 +603,7 @@ function renderSaved(){
     else if (state.eraGrande) $('ajuda').open = false;   /* acabou de sair da primeira visita */
     state.eraGrande = grande;
     sincronizarPilulas();
-    $('upTitle').textContent = grande ? 'Comece pelo seu extrato' : 'Seus extratos';
+    $('upTitle').textContent = !state.salvosProntos ? 'Início' : grande ? 'Comece pelo seu extrato' : 'Seus extratos';
     /* até a lista chegar do servidor, nada aparece (para não piscar a primeira visita) */
     $('panelSalvos').hidden = !state.salvosProntos || grande;
     ini.style.visibility = state.salvosProntos ? '' : 'hidden';
@@ -599,6 +628,7 @@ function renderSaved(){
     cur = state.page || null;
     $('panelSalvos').hidden = false;
     $('pastaSug').hidden = true;
+    $('newPageBtn').textContent = '+ Nova página';
     $('pagesBar').innerHTML = tab('all','Todos',a.length,!cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('') + (pages.length ? tab('none','Sem página',cnt('none'),cur==='none') : '');
     shown = a.filter(function(x){ if (!cur) return true; return cur==='none' ? naRaiz(x) : x.page===cur; });
   }
