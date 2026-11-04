@@ -317,3 +317,18 @@ def test_pasta_inteira_mostra_os_avisos(cliente):
 def test_favicon_sem_login(app):
     r = app.test_client().get("/favicon.svg")
     assert r.status_code == 200 and r.mimetype == "image/svg+xml" and b"<svg" in r.data
+
+
+def test_exemplo_exige_login(app):
+    r = app.test_client().get("/api/exemplo")
+    assert r.status_code == 401
+
+
+def test_exemplo_devolve_lancamentos_categorizados(cliente):
+    r = cliente.get("/api/exemplo")
+    assert r.status_code == 200
+    dados = r.get_json()
+    assert dados["nome"] == "Extrato de exemplo"
+    assert len(dados["lancamentos"]) > 600
+    assert all("categoria_auto" in l for l in dados["lancamentos"])
+    assert any(l["categoria_auto"] for l in dados["lancamentos"])

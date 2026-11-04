@@ -693,7 +693,7 @@ function render(){
   $('srcBadge').className = 'badge' + (state.source==='sample' ? '' : ' real');
   var isSample = state.source==='sample';
   /* o título da página é o nome dela (setView); o período e o arquivo ficam na linha de baixo */
-  $('srcText').textContent = isSample ? 'Este é um extrato de exemplo, de agosto a outubro de 2026. Envie o extrato do seu banco para ver os seus números.'
+  $('srcText').textContent = isSample ? 'Este é um extrato de exemplo, de '+fmtDate(first)+' a '+fmtDate(last)+'. Envie o extrato do seu banco para ver os seus números.'
     : state.pastaId ? 'Pasta "'+state.fileName+'": todos os extratos somados, de '+fmtDate(first)+' a '+fmtDate(last)+'.'
     : 'Extrato de '+fmtDate(first)+' a '+fmtDate(last)+', a partir do arquivo "'+state.fileName+'".';
 
@@ -2251,6 +2251,14 @@ $('pastaSug').addEventListener('click', function(e){
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
+/* extrato de exemplo: abre o painel com dados inventados, sem salvar nada */
+function abrirExemplo(){
+  API.exemplo().then(function(r){
+    load(r.lancamentos.map(doServidor), 'sample', r.nome);
+    irPara('dashboard');
+  }).catch(falhou);
+}
+document.querySelectorAll('[data-exemplo]').forEach(function(b){ b.addEventListener('click', abrirExemplo); });
 /* pílulas Ajuda e Formatos: cada uma abre o seu quadro; abrir um fecha o outro */
 function sincronizarPilulas(){
   document.querySelectorAll('[data-abre]').forEach(function(b){ b.setAttribute('aria-expanded', $(b.dataset.abre).open ? 'true' : 'false'); });

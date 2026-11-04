@@ -329,6 +329,7 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .drop-big h2{font-size:22px}
 .drop-big .drop-actions{justify-content:center;margin-top:6px}
 .drop .so-faixa{display:none}
+.ajuda-exemplo{margin:12px 0 0;font-size:14px;color:var(--ink-2)}
 .drop-faixa{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 18px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
 .drop-faixa .drop-ico{width:28px;height:28px;flex:none}
 .drop-faixa .drop-txt{flex:1 1 220px;min-width:0}

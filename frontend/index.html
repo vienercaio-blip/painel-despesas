@@ -58,6 +58,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <div class="drop-actions">
           <label class="btn primary" for="file"><span class="so-big">Escolher arquivos</span><span class="so-faixa">Escolher arquivo</span></label>
           <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,.pdf,text/csv,application/pdf" multiple>
+          <button type="button" class="btn so-big" id="verExemplo" data-exemplo>Ver um exemplo</button>
         </div>
         <div id="upLendo" hidden>
           <p class="up-lendo-t" id="upLendoT" role="status"></p>
@@ -80,6 +81,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
           <li>Envie o arquivo aqui.</li>
         </ol>
+        <p class="ajuda-exemplo">Quer ver antes como fica? <button type="button" class="link-btn" data-exemplo>Ver um exemplo do painel</button></p>
       </details>
       <details class="card ajuda ini-bloco" id="formatos">
         <summary><h2>Formatos</h2></summary>

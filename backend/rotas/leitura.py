@@ -1,5 +1,7 @@
 """Recebe arquivos de extrato e devolve os lançamentos lidos e categorizados.
 Nada é salvo aqui: salvar é feito em /api/extratos."""
+from pathlib import Path
+
 from flask import jsonify, request
 
 from auth import login_obrigatorio
@@ -42,3 +44,15 @@ def ler_arquivos():
         except Exception:
             resultado.append({"nome": nome, "erro": "Não consegui ler este arquivo. Tente exportar de novo pelo site do banco."})
     return jsonify(arquivos=resultado)
+
+
+ARQUIVO_EXEMPLO = Path(__file__).resolve().parent.parent / "exemplo" / "extrato-exemplo.ofx"
+
+
+@api.get("/exemplo")
+@login_obrigatorio
+def extrato_de_exemplo():
+    """Extrato inventado para a pessoa ver o painel antes de enviar o dela. Nada é salvo."""
+    lista, _aviso = ler_arquivo_com_aviso(ARQUIVO_EXEMPLO.name, ARQUIVO_EXEMPLO.read_bytes(), None)
+    categorizador = carregar_categorizador(obter_banco(), uid())
+    return jsonify(nome="Extrato de exemplo", lancamentos=preparar_lancamentos(lista, categorizador))
