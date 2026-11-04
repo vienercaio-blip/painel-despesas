@@ -443,13 +443,16 @@ function concluirLeitura(results, envio){
         });
       }, function(e){
         if (!atual()) return;
-        return abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(){
-          if (atual()) toast('Não foi possível salvar o extrato ('+e.message+'). Você está vendo sem salvar: ele não vai aparecer na lista.');
+        return abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(como){
+          if (!atual()) return;
+          toast(como==='outro' ? 'Não foi possível salvar o extrato ('+e.message+') e ele não foi aberto, porque você abriu outro. Envie de novo para ver.'
+            : 'Não foi possível salvar o extrato ('+e.message+'). Você está vendo sem salvar: ele não vai aparecer na lista.');
         });
       }).catch(function(e){ if (atual()) estadoEnvio('normal'); falhou(e); });
     return;
   }
-  abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(){
+  abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(como){
+    if (como==='outro' && atual()){ toast('O extrato enviado não foi aberto, porque você abriu outro. Como estava em "Só ver agora", ele não foi guardado: envie de novo para ver.'); return; }
     if (dup && atual()) toast(dup+(dup===1 ? ' lançamento repetido foi ignorado.' : ' lançamentos repetidos foram ignorados.'));
   }).catch(function(e){ if (atual()) estadoEnvio('normal'); falhou(e); });
 }
@@ -515,8 +518,9 @@ function aplicarCorrecoes(correcoes){
   lastOv = JSON.stringify(mapaCorrecoes());
 }
 /* busca o extrato salvo no servidor e mostra nas telas */
-function carregarSalvo(id){
+function carregarSalvo(id, ainda){
   return API.abrirExtrato(id).then(function(x){
+    if (ainda && !ainda()) return;   /* a pessoa escolheu outra coisa enquanto carregava */
     load(x.lancamentos.map(doServidor), 'file', x.nome);
     state.savedId = id;
     aplicarCorrecoes(x.correcoes);
@@ -525,8 +529,9 @@ function carregarSalvo(id){
   });
 }
 /* busca a pasta inteira (os extratos dela somados, sem os repetidos) e mostra nas telas */
-function carregarPasta(id){
+function carregarPasta(id, ainda){
   return API.abrirPasta(id).then(function(x){
+    if (ainda && !ainda()) return;
     load(x.lancamentos.map(doServidor), 'file', x.nome);
     state.pastaId = id;
     aplicarCorrecoes(x.correcoes);
@@ -544,6 +549,14 @@ function mostrarAvisoLeitura(avisos){
   $('dAvisoLeitura').hidden = !t;
 }
 function lembrarAberto(tipo, id){ cfg.ultimoAberto = {tipo:tipo, id:id}; saveCfg(); }
+/* a pasta aberta mudou (extrato saiu, entrou ou foi excluído; pasta renomeada ou
+   excluída): recarrega os totais para o resumo e o painel não mostrarem números velhos */
+function atualizarPastaAberta(){
+  if (!state.pastaId) return Promise.resolve();
+  var pg = getPages().filter(function(p){ return p.id===state.pastaId; })[0];
+  if (!pg){ fecharExtrato(); return Promise.resolve(); }
+  return carregarPasta(state.pastaId).catch(falhou);
+}
 function escolheuAbrir(){ state.escolhaManual = (state.escolhaManual || 0) + 1; }
 function openPasta(id){
   lembrarAberto('pasta', id); escolheuAbrir();
@@ -2315,8 +2328,10 @@ function limparArrasto(){
   document.querySelectorAll('#pagesBar .alvo').forEach(function(x){ x.classList.remove('alvo'); });
 }
 $('savedList').addEventListener('dragend', limparArrasto);
+document.addEventListener('dragend', limparArrasto);   /* a linha pode ter sido redesenhada no meio do arrasto */
 function etiquetaAlvo(e){
-  if (!state.arrastando) return null;
+  var tipos = e.dataTransfer && e.dataTransfer.types;
+  if (!state.arrastando || !tipos || Array.prototype.indexOf.call(tipos, 'text/x-extrato')===-1) return null;
   var b = e.target.closest && e.target.closest('#pagesBar [data-page]');
   return b && b.dataset.page!=='all' ? b : null;
 }
@@ -2340,6 +2355,7 @@ $('pagesBar').addEventListener('drop', function(e){
   var nomeDest = para ? 'a pasta "'+pageName(para)+'"' : '"Sem pasta"';
   API.alterarExtrato(id, {pagina_id: para})
     .then(function(){ return recarregarSalvos(); })
+    .then(atualizarPastaAberta)
     .then(function(){ toast('Extrato movido para '+nomeDest+'.'); })
     .catch(falhou);
 });
@@ -2369,7 +2385,10 @@ function reabrirUltimo(){
   var existe = u.tipo==='pasta' ? getPages().some(function(p){ return p.id===u.id; })
                                 : getSaved().some(function(x){ return x.id===u.id; });
   if (!existe) return;
-  (u.tipo==='pasta' ? carregarPasta(u.id) : carregarSalvo(u.id)).catch(function(){ /* sem cartão; a lista continua */ });
+  /* se a pessoa abrir outro extrato, o exemplo ou enviar um arquivo enquanto isto carrega, a escolha dela vale */
+  var esc = state.escolhaManual || 0, env = state.envioId || 0;
+  var ainda = function(){ return !state.loaded && (state.escolhaManual || 0)===esc && (state.envioId || 0)===env; };
+  (u.tipo==='pasta' ? carregarPasta(u.id, ainda) : carregarSalvo(u.id, ainda)).catch(function(){ /* sem cartão; a lista continua */ });
 }
 function desenharResumo(){
   var card = $('iniResumo'), r = state.resumo;
@@ -2381,7 +2400,8 @@ function desenharResumo(){
   $('iniResumoDe').textContent = (state.pastaId ? 'Última pasta aberta · ' : 'Último extrato aberto · ')+state.fileName+' · '+r.periodo;
   $('iniResumoTit').textContent = r.ver.titulo;
   $('iniResumoTx').textContent = r.ver.texto;
-  $('iniResumoN').innerHTML = [['Entrou', r.ins], ['Saiu', r.outs], ['Sobrou', r.ins-r.outs]].map(function(c){
+  var res = r.ins-r.outs;
+  $('iniResumoN').innerHTML = [['Entrou', r.ins], ['Saiu', r.outs], [res>=0 ? 'Sobrou' : 'Faltou', Math.abs(res)]].map(function(c){
     return '<span>'+c[0]+(r.nM>1 ? ' por mês' : '')+'<b class="num">'+porMes(c[1])+'</b></span>';
   }).join('');
   $('iniResumoPesa').textContent = r.ver.pesa || '';
@@ -2390,6 +2410,7 @@ function desenharResumo(){
 $('iniResumoVer').addEventListener('click', function(){ irPara('dashboard'); });
 /* extrato de exemplo: abre o painel com dados inventados, sem salvar nada */
 function abrirExemplo(){
+  escolheuAbrir();
   API.exemplo().then(function(r){
     load(r.lancamentos.map(doServidor), 'sample', r.nome);
     irPara('dashboard');
@@ -2436,7 +2457,7 @@ $('pageHead').addEventListener('click', function(e){
     askX({ kind:'excluir-pagina', danger:true, title:'Excluir a pasta "'+pg.name+'"?', text:(n ? 'Os '+n+' extratos dela não serão apagados: eles voltam para '+raiz+'. ' : 'A pasta está vazia. ')+'Isso não pode ser desfeito.', yes:'Excluir pasta', back:del, onYes:function(){
       API.excluirPagina(pid).then(function(){
         state.page = null;
-        return recarregarSalvos().then(function(){ toast('Pasta "'+pg.name+'" excluída.'); });
+        return recarregarSalvos().then(atualizarPastaAberta).then(function(){ toast('Pasta "'+pg.name+'" excluída.'); });
       }).catch(falhou);
     } });
   }
@@ -2451,6 +2472,7 @@ $('pageHead').addEventListener('submit', function(e){
   askX({ kind:'renomear-pagina', title:'Renomear a pasta?', text:'"'+pg.name+'" passa a se chamar "'+name+'".', yes:'Salvar nome', cancel:'Continuar editando', onYes:function(){
     API.renomearPagina(pid, name).then(function(){
       state.editingPage = null;
+      if (state.pastaId===pid){ state.fileName = name; if (state.loaded) render(); }
       return recarregarSalvos().then(function(){ toast('Pasta renomeada para "'+name+'".'); });
     }).catch(falhou);
   } });
@@ -2469,7 +2491,7 @@ $('savedList').addEventListener('submit', function(e){
       onYes:function(){
         API.alterarExtrato(id, {pagina_id: to}).then(function(){
           state.movingSaved = null;
-          return recarregarSalvos().then(function(){ toast('Extrato movido para '+para+'.'); });
+          return recarregarSalvos().then(atualizarPastaAberta).then(function(){ toast('Extrato movido para '+para+'.'); });
         }).catch(falhou);
       } });
     return;
@@ -2507,7 +2529,7 @@ $('savedList').addEventListener('click', function(e){
     yes:'Excluir extrato', back:d, onYes:function(){
       API.excluirExtrato(id).then(function(){ return sumirLinha(id); }).then(function(){
         if (state.savedId===id){ if (MODE==='vendas'){ state.savedId = null; sales = []; salesFile = ''; renderSales(); refreshTabs(); } else fecharExtrato(); }
-        return recarregarSalvos().then(function(){ toast('Extrato excluído.'); });
+        return recarregarSalvos().then(atualizarPastaAberta).then(function(){ toast('Extrato excluído.'); });
       }).catch(falhou);
     } });
 });
