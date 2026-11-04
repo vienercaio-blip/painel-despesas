@@ -232,6 +232,48 @@ function estadoEnvio(qual, dados){
   if (qual==='lendo'){ $('upFiles').innerHTML = ''; $('upConta').textContent = '0'; $('upOk').textContent = ''; $('upOk').className = 'up-ok'; }
   if (qual==='normal') $('upFiles').innerHTML = '';
 }
+/* ---------- movimentos do Início ----------
+   Todos respeitam o "reduzir movimento" do aparelho: nesse caso o estado
+   final aparece na hora. */
+var REDUZIR = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
+function semMovimento(){ return REDUZIR.matches; }
+/* cascata ao entrar no Início: só na chegada, não a cada redesenho da lista */
+var entradaTimer = null;
+function animarEntrada(){
+  if (semMovimento()) return;
+  var v = $('viewEnviar');
+  v.classList.remove('entra'); void v.offsetWidth; v.classList.add('entra');
+  clearTimeout(entradaTimer);
+  entradaTimer = setTimeout(function(){ v.classList.remove('entra'); }, 1300);
+}
+/* a marcação dourada das etiquetas de pasta desliza até a escolhida */
+function posicionarPilula(animar){
+  var w = document.querySelector('.chips-wrap'), p = $('ptabPill');
+  var on = $('pagesBar').querySelector('[aria-selected="true"]');
+  if (!w || !on || !on.offsetWidth){ if (w) w.classList.remove('com-pilula'); return; }
+  w.classList.toggle('sem-trans', !animar || !w.classList.contains('com-pilula'));
+  p.style.left = on.offsetLeft+'px'; p.style.top = on.offsetTop+'px';
+  p.style.width = on.offsetWidth+'px'; p.style.height = on.offsetHeight+'px';
+  w.classList.add('com-pilula');
+}
+window.addEventListener('resize', function(){ posicionarPilula(false); });
+function trocarPasta(novo){
+  var lista = $('savedList');
+  var aplicar = function(){ keepScroll(function(){ state.page = novo; state.editingPage = null; renderSaved(); }); lista.classList.remove('trocando'); };
+  if (semMovimento()){ aplicar(); return; }
+  $('pagesBar').querySelectorAll('[role=tab]').forEach(function(b){ b.setAttribute('aria-selected', b.dataset.page===(novo===null ? 'all' : novo) ? 'true' : 'false'); });
+  posicionarPilula(true);
+  lista.classList.add('trocando');
+  setTimeout(aplicar, 120);
+}
+/* extrato excluído: a linha encolhe e some antes de a lista ser redesenhada */
+function sumirLinha(id){
+  var li = document.querySelector('#savedList [data-sv="'+(window.CSS && CSS.escape ? CSS.escape(id) : id)+'"]');
+  if (!li || semMovimento()) return Promise.resolve();
+  li.style.maxHeight = li.offsetHeight+'px';
+  li.classList.add('sv-saindo');
+  return new Promise(function(ok){ setTimeout(ok, 300); });
+}
 /* depois do envio: abre o extrato (abrir devolve uma promessa) e vai para o Dashboard */
 function abrirDepoisDoEnvio(abrir, envio){
   return abrir().then(function(){
@@ -353,8 +395,10 @@ function recarregarSalvos(){
   return Promise.all([API.listarExtratos(k), API.listarPaginas(k)]).then(function(r){
     savedCache[k] = r[0].map(metaLocal);
     pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, at:p.criado_em}; });
+    var primeira = !state.salvosProntos;
     state.salvosProntos = true;
     renderSaved();
+    if (primeira && !$('viewEnviar').hidden) animarEntrada();
   });
 }
 function isoD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -531,6 +575,7 @@ function renderSaved(){
   }).join('');
 
   posicionarMenu();
+  posicionarPilula(false);
   if (desp) return;
   var ssp = $('sSavePage'), keep2 = ssp.value;
   ssp.innerHTML = popts(null);
@@ -1751,7 +1796,13 @@ $('file').addEventListener('change', function(e){ readFiles(e.target.files); e.t
 var drop = $('drop');
 ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
-drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
+drop.addEventListener('drop', function(e){
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  var files = Array.prototype.slice.call(e.dataTransfer.files);
+  if (semMovimento()){ readFiles(files); return; }
+  drop.classList.add('soltou');   /* o ícone desce e some, como se a área engolisse o arquivo */
+  setTimeout(function(){ drop.classList.remove('soltou'); readFiles(files); }, 300);
+});
 document.querySelectorAll('.table-tools .seg button').forEach(function(b){
   b.addEventListener('click', function(){
     state.filter = b.dataset.f;
@@ -2123,7 +2174,9 @@ $('pMonths').addEventListener('click', function(e){
 });
 $('pagesBar').addEventListener('click', function(e){
   var b = e.target.closest('[data-page]'); if (!b) return;
-  keepScroll(function(){ state.page = b.dataset.page==='all' ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
+  if (b.getAttribute('aria-selected')==='true') return;
+  if (MODE==='vendas'){ keepScroll(function(){ state.page = b.dataset.page==='all' ? null : b.dataset.page; state.editingPage = null; renderSaved(); }); return; }
+  trocarPasta(b.dataset.page==='all' ? null : b.dataset.page);
 });
 /* sugestão "Pessoal e Empresa": um toque cria as pastas que faltam */
 $('pastaSug').addEventListener('click', function(e){
@@ -2235,7 +2288,7 @@ $('savedList').addEventListener('click', function(e){
   state.menuFor = null; renderSaved(); d = document.querySelector('[data-menu="'+id+'"]') || d;
   askX({ kind:'excluir-extrato', danger:true, title:'Excluir o extrato salvo?', text:'"'+(x.name||'Extrato')+'" ('+x.n+' lançamentos) será apagado. As suas regras e categorias continuam valendo. Isso não pode ser desfeito.',
     yes:'Excluir extrato', back:d, onYes:function(){
-      API.excluirExtrato(id).then(function(){
+      API.excluirExtrato(id).then(function(){ return sumirLinha(id); }).then(function(){
         if (state.savedId===id){ if (MODE==='vendas'){ state.savedId = null; sales = []; salesFile = ''; renderSales(); refreshTabs(); } else fecharExtrato(); }
         return recarregarSalvos().then(function(){ toast('Extrato excluído.'); });
       }).catch(falhou);
@@ -2257,6 +2310,13 @@ document.addEventListener('keydown', function(e){
    da criação de categoria rola de novo até o lançamento de onde a pessoa saiu) */
 function chegou(){
   setView();
+  var noInicio = !$('viewEnviar').hidden;
+  if (noInicio && state.vistaAntes!=='inicio'){
+    posicionarPilula(false);
+    if (state.salvosProntos) animarEntrada();
+    if (state.novoId){ setTimeout(function(){ state.novoId = null; }, 2500); }
+  }
+  state.vistaAntes = noInicio ? 'inicio' : 'outra';
   /* o Dashboard é desenhado com a largura real dos cartões: redesenha já visível */
   if (state.loaded && MODE==='despesas' && !$('viewDash').hidden) renderDashboard();
   window.scrollTo(0, 0);

@@ -435,7 +435,7 @@ td .in{color:var(--good);font-weight:500}
 
 .tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.4;max-width:240px;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .tip b{font-weight:600}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 
 /* usuário logado e botão Sair */
 .sair-form{margin:0}
@@ -559,3 +559,42 @@ input,select,textarea{border-radius:10px}
 /* "Para onde vai o dinheiro" se arruma pela largura do próprio cartão (na grade ele é estreito) */
 #dOnde{container-type:inline-size}
 @container (max-width:480px){.barra{grid-template-columns:1fr auto}.barra .bt{grid-column:1 / -1;grid-row:2}}
+
+/* ---------- Início: movimentos (só para quem não pediu "reduzir movimento") ---------- */
+.drop .so-over{display:none}
+.drop.over .drop-sub > span{display:none}
+.drop.over .drop-sub > .so-over{display:inline;color:var(--ink);font-weight:600}
+.chips-wrap .ptab{position:relative;z-index:1}
+.chips-wrap.com-pilula .ptab-pill{display:block;z-index:0;background:var(--accent-soft);border:1px solid var(--accent);border-radius:999px}
+.chips-wrap.com-pilula .ptab[aria-selected="true"]{background:transparent;border-color:transparent}
+.chips-wrap.sem-trans .ptab-pill{transition:none!important}
+@media (prefers-reduced-motion: no-preference){
+  #viewEnviar.entra .ini-bloco,
+  #viewEnviar.entra #savedList > li:nth-child(-n+6){animation:sobe .55s cubic-bezier(.2,.7,.2,1) both}
+  #viewEnviar.entra .up-head{animation-delay:0s}
+  #viewEnviar.entra #drop{animation-delay:.08s}
+  #viewEnviar.entra .ini-linha{animation-delay:.16s}
+  #viewEnviar.entra .ajuda{animation-delay:.2s}
+  #viewEnviar.entra .privacy{animation-delay:.24s}
+  #viewEnviar.entra #panelSalvos{animation-delay:.24s}
+  #viewEnviar.entra #savedList > li:nth-child(1){animation-delay:.32s}
+  #viewEnviar.entra #savedList > li:nth-child(2){animation-delay:.4s}
+  #viewEnviar.entra #savedList > li:nth-child(3){animation-delay:.48s}
+  #viewEnviar.entra #savedList > li:nth-child(4){animation-delay:.56s}
+  #viewEnviar.entra #savedList > li:nth-child(5){animation-delay:.64s}
+  #viewEnviar.entra #savedList > li:nth-child(6){animation-delay:.72s}
+  @keyframes sobe{from{opacity:0;transform:translateY(12px)}}
+  .ini .drop{transition:border-color .3s,background .3s,transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s}
+  .ini .drop.over{transform:scale(1.02);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 14%,transparent)}
+  .drop.over .drop-ico{animation:flutua 1s ease-in-out infinite}
+  @keyframes flutua{50%{transform:translateY(-6px)}}
+  .drop.soltou .drop-ico{transform:translateY(8px);opacity:0;transition:transform .3s cubic-bezier(.2,.7,.2,1),opacity .3s}
+  .ptab-pill{transition:left .4s cubic-bezier(.2,.7,.2,1),top .4s cubic-bezier(.2,.7,.2,1),width .4s cubic-bezier(.2,.7,.2,1),height .4s cubic-bezier(.2,.7,.2,1)}
+  #savedList{transition:opacity .12s}
+  #savedList.trocando{opacity:0}
+  .sv-novo{animation:entraNovo .5s cubic-bezier(.2,.7,.2,1) both,brilho 2s .5s both}
+  @keyframes entraNovo{from{opacity:0;transform:translateY(-8px)}}
+  @keyframes brilho{from{background:color-mix(in srgb,var(--accent) 20%,transparent)}to{background:transparent}}
+  .sv-saindo{animation:sai .3s cubic-bezier(.2,.7,.2,1) forwards;overflow:hidden}
+  @keyframes sai{to{opacity:0;transform:translateX(12px);max-height:0;padding-block:0;border-width:0}}
+}
