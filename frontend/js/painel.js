@@ -340,6 +340,7 @@ function recarregarSalvos(){
   return Promise.all([API.listarExtratos(k), API.listarPaginas(k)]).then(function(r){
     savedCache[k] = r[0].map(metaLocal);
     pagesCache[k] = r[1].map(function(p){ return {id:p.id, name:p.nome, at:p.criado_em}; });
+    state.salvosProntos = true;
     renderSaved();
   });
 }
@@ -431,31 +432,50 @@ var ICON_FOLDER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 var ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></path></svg>';
 var ICON_FOLDER_S ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
 /* Extratos: pastas livres, todas no mesmo nível, criadas pelo cliente.
-   state.page = id da pasta aberta, ou null = "Sem pasta".
+   state.page = null (Todos), 'none' (Sem pasta) ou o id da pasta escolhida.
+   Sem extrato salvo, o Início mostra a área grande de envio e o passo a passo;
+   com extratos, a faixa de envio, as etiquetas de pasta e a lista.
    Vendas (em pausa) continua com a lista simples de páginas. */
 function renderSaved(){
   var desp = MODE!=='vendas';
   var todos = getSaved(), pages = getPages(), a = todos;
-  var W = desp ? ['extrato','extratos','lançamentos'] : ['planilha','planilhas','vendas'];
   var PG = desp ? 'pasta' : 'página';
   $('svTitle').textContent = desp ? 'Extratos salvos' : 'Planilhas de vendas salvas';
-  if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
-  var cur = state.page || null;
-  $('savedCount').textContent = todos.length ? todos.length+(todos.length===1?' '+W[0]+' salvo':' '+W[1]+' salvos') : 'Nenhum '+W[0]+' salvo ainda';
-
   var naRaiz = function(x){ return !x.page || !pages.some(function(p){ return p.id===x.page; }); };
   var cnt = function(pid){ return a.filter(function(x){ return pid==='none' ? naRaiz(x) : x.page===pid; }).length; };
-  var tab = function(id, label, n, on, extra){ return '<button type="button" role="tab" class="ptab'+(extra||'')+'" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
+  var tab = function(id, label, n, on){ return '<button type="button" role="tab" class="ptab" data-page="'+esc(id)+'" aria-selected="'+on+'">'+(id==='all'||id==='none'?'':ICON_FOLDER_S)+'<span class="pn">'+esc(label)+'</span><span class="cnt">'+n+'</span></button>'; };
+  var cur, shown;
   if (desp){
-    $('pagesBar').innerHTML = tab('none', 'Sem pasta', cnt('none'), !cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('');
+    state.page = Pastas.atualValida(state.page, pages, todos);
+    cur = state.page;
+    var grande = !!state.salvosProntos && !todos.length;
+    var ini = $('inicioDesp');
+    ini.classList.toggle('grande', grande); ini.classList.toggle('faixa', !grande);
+    $('drop').classList.toggle('drop-big', grande); $('drop').classList.toggle('drop-faixa', !grande);
+    if (grande) $('ajuda').open = true;
+    else if (state.eraGrande) $('ajuda').open = false;   /* acabou de sair da primeira visita */
+    state.eraGrande = grande;
+    $('ajudaBtn').setAttribute('aria-expanded', $('ajuda').open ? 'true' : 'false');
+    $('upTitle').textContent = grande ? 'Comece pelo seu extrato' : 'Seus extratos';
+    /* até a lista chegar do servidor, nada aparece (para não piscar a primeira visita) */
+    $('panelSalvos').hidden = !state.salvosProntos || grande;
+    ini.style.visibility = state.salvosProntos ? '' : 'hidden';
+    var dest = Pastas.destino(cur, pages);
+    $('dropDestino').innerHTML = dest ? ' · vai para a pasta <b>'+esc(pageName(dest))+'</b>' : '';
+    $('pagesBar').innerHTML = Pastas.etiquetas(pages, todos, cur).map(function(e){ return tab(e.id, e.nome, e.n, e.marcada); }).join('');
     var sug = Pastas.sugerir(pages.map(function(p){ return p.name; }), cfg.sugestaoPastas==='dispensada');
     $('pastaSug').hidden = !sug.length;
     $('pastaSug').innerHTML = sug.length ? '<p>Tem empresa ou MEI? Crie as pastas Pessoal e Empresa com um toque.</p>'+
       '<div class="inline-row"><button type="button" class="btn btn-sm primary" data-sug="1">Criar '+(sug.length>1 ? 'as pastas' : 'a pasta '+esc(sug[0]))+'</button>'+
       '<button type="button" class="btn btn-sm ghost" data-sugno="1">Agora não</button></div>' : '';
+    shown = Pastas.filtrar(todos, pages, cur);
   } else {
+    if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
+    cur = state.page || null;
+    $('panelSalvos').hidden = false;
     $('pastaSug').hidden = true;
     $('pagesBar').innerHTML = tab('all','Todos',a.length,!cur) + pages.map(function(p){ return tab(p.id, p.name, cnt(p.id), cur===p.id); }).join('') + (pages.length ? tab('none','Sem página',cnt('none'),cur==='none') : '');
+    shown = a.filter(function(x){ if (!cur) return true; return cur==='none' ? naRaiz(x) : x.page===cur; });
   }
 
   var ph = $('pageHead');
@@ -467,20 +487,13 @@ function renderSaved(){
       : '<span class="ph-name">'+(desp ? 'Pasta ' : 'Página ')+'<b>'+esc(pg.name)+'</b></span><span class="sva">'+
         (desp && cnt(cur) ? '<button type="button" class="btn primary" data-pver="1">Ver a pasta inteira</button>' : '')+
         '<button type="button" class="btn" data-pren="1">Renomear '+PG+'</button><button type="button" class="btn" data-pdel="1">Excluir '+PG+'</button></span>';
-  } else if (desp){
-    ph.hidden = false; ph.innerHTML = '<span class="ph-name"><b>Sem pasta</b></span>';
   } else { ph.hidden = true; ph.innerHTML = ''; }
 
-  var shown = a.filter(function(x){
-    if (desp) return cur ? x.page===cur : naRaiz(x);
-    if (!cur) return true;
-    return cur==='none' ? naRaiz(x) : x.page===cur;
-  });
   $('savedEmpty').hidden = shown.length>0;
-  if (desp && cur) $('savedEmpty').innerHTML = 'Esta pasta ainda não tem extratos. <button type="button" class="btn btn-sm" data-enviar="1">Enviar um extrato</button>';
-  else $('savedEmpty').textContent = a.length
-    ? 'Nenhum '+W[0]+' '+(desp ? 'sem pasta' : 'nesta '+PG)+'. Use "Mover para" no menu de um '+W[0]+' para colocá-lo aqui.'
-    : 'Nenhum '+W[0]+' salvo ainda. Envie '+(desp?'um extrato':'uma planilha')+' com a opção "Salvar para acessar depois" marcada e ele aparece aqui.';
+  $('savedEmpty').textContent = desp
+    ? (cur && cur!=='none' ? 'Esta pasta ainda não tem extratos.' : 'Nenhum extrato aqui.')
+    : (a.length ? 'Nenhuma planilha nesta página. Use "Mover para" no menu de uma planilha para colocá-la aqui.'
+                : 'Nenhuma planilha salva ainda. Envie uma planilha com a opção "Salvar para acessar depois" marcada e ela aparece aqui.');
   var raizLabel = desp ? 'Sem pasta' : 'Sem página';
   var popts = function(sel){ return '<option value=""'+(!sel?' selected':'')+'>'+esc(raizLabel)+'</option>'+pages.map(function(p){ return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>'; }).join(''); };
   $('savedList').innerHTML = shown.map(function(x){
@@ -497,8 +510,9 @@ function renderSaved(){
     var nameBlock = state.editingSaved===x.id
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
       : '<strong>'+esc(x.name||'Extrato')+'</strong>'+(x.aviso ? ' <span class="why estorno" data-tip="'+esc(x.aviso)+'">⚠ Confira</span>' : '');
-    return '<li class="sv"><div class="svi">'+nameBlock+
-      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(MODE==='vendas'?'vendas':'lançamentos')+' · salvo em '+fmtDate(new Date(x.savedAt))+(pn && !cur && !desp ? ' · página '+esc(pn) : '')+'</span>'+
+    var naPasta = pn && !cur ? (desp ? ' · <span class="pasta-nome">Pasta '+esc(pn)+'</span>' : ' · página '+esc(pn)) : '';
+    return '<li class="sv'+(desp && x.id===state.novoId ? ' sv-novo' : '')+'" data-sv="'+esc(x.id)+'"><div class="svi">'+nameBlock+
+      '<span>'+(f?fmtDate(f)+' a '+fmtDate(l)+' · ':'')+x.n+' '+(desp?'lançamentos':'vendas')+' · '+(desp?'enviado em ':'salvo em ')+fmtDate(new Date(x.savedAt))+naPasta+'</span>'+
       (x.id===state.savedId?'<span class="open-now">Aberto agora</span>':'')+moveBlock+'</div>'+
       '<div class="sva sva-x"><button type="button" class="btn primary" data-open="'+esc(x.id)+'">Abrir</button>'+
       '<div class="menu-wrap"><button type="button" class="btn icon-btn" data-menu="'+esc(x.id)+'" aria-haspopup="menu" aria-expanded="'+open+'" aria-label="Configurações do extrato '+esc(x.name||'')+'">'+ICON_GEAR+'</button>'+menu+'</div>'+
@@ -506,14 +520,7 @@ function renderSaved(){
   }).join('');
 
   posicionarMenu();
-
-  if (desp){
-    var sp = $('savePage'), keep = sp.value;
-    sp.innerHTML = popts(null);
-    if (keep && pages.some(function(p){ return p.id===keep; })) sp.value = keep;
-    sp.parentNode.hidden = !pages.length;
-    return;
-  }
+  if (desp) return;
   var ssp = $('sSavePage'), keep2 = ssp.value;
   ssp.innerHTML = popts(null);
   if (keep2 && pages.some(function(p){ return p.id===keep2; })) ssp.value = keep2;
@@ -544,11 +551,9 @@ function keepScroll(fn){
   window.scrollTo(0, y);
   requestAnimationFrame(function(){ if (Math.abs((window.scrollY||0) - y) > 1) window.scrollTo(0, y); });
 }
-function showPanel(p){
-  $('panelNovo').hidden = p!=='novo' || MODE!=='despesas';
-  $('panelVendas').hidden = p!=='novo' || MODE!=='vendas';
-  $('panelSalvos').hidden = p!=='salvos';
-  document.querySelectorAll('.choice[data-panel]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.panel===p ? 'true':'false'); });
+function mostrarInicio(){
+  $('inicioDesp').hidden = MODE!=='despesas';
+  $('panelVendas').hidden = MODE!=='vendas';
 }
 
 function render(){
@@ -1604,14 +1609,11 @@ function setMode(m){
   $('modoTop').hidden = !MODE || !VENDAS_ATIVO;
   $('modeArea').hidden = !MODE;
   $('upTitle').textContent = isV ? 'Vendas' : 'Início';
-  $('upDesc').textContent = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Envie um extrato novo ou abra um que você já salvou. O painel separa suas despesas por categoria, por período e por origem.' : 'O que você quer analisar?');
+  $('upDesc').textContent = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Veja para onde vai o seu dinheiro, sem planilha.' : 'O que você quer analisar?');
   $('modoName').textContent = isV ? 'Vendas' : 'Despesas';
-  $('ctNovo').textContent = isV ? 'Enviar nova planilha' : 'Enviar novo extrato';
-  $('cdNovo').textContent = isV ? 'CSV com as colunas do modelo' : 'OFX ou CSV, um ou vários arquivos';
-  $('ctSalvos').textContent = isV ? 'Planilhas salvas' : 'Extratos salvos';
-  showPanel('novo');
+  mostrarInicio();
   renderSaved();
-  recarregarSalvos().catch(falhou);
+  recarregarSalvos().catch(function(e){ state.salvosProntos = true; renderSaved(); falhou(e); });
   refreshTabs();
   setView();
 }
@@ -2108,10 +2110,9 @@ $('pMonths').addEventListener('click', function(e){
   state.p = on ? {y:b.dataset.y, m:'all', w:'all'} : {y:b.dataset.y, m:b.dataset.m, w:'all'};
   render();
 });
-document.querySelectorAll('.choice[data-panel]').forEach(function(b){ b.addEventListener('click', function(){ keepScroll(function(){ showPanel(b.dataset.panel); }); }); });
 $('pagesBar').addEventListener('click', function(e){
   var b = e.target.closest('[data-page]'); if (!b) return;
-  keepScroll(function(){ state.page = (b.dataset.page==='all' || (MODE!=='vendas' && b.dataset.page==='none')) ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
+  keepScroll(function(){ state.page = b.dataset.page==='all' ? null : b.dataset.page; state.editingPage = null; renderSaved(); });
 });
 /* sugestão "Pessoal e Empresa": um toque cria as pastas que faltam */
 $('pastaSug').addEventListener('click', function(e){
@@ -2124,9 +2125,9 @@ $('pastaSug').addEventListener('click', function(e){
     .then(function(){ toast('Pastas criadas. Use "Mover para", no menu de cada extrato, para guardar os extratos nelas.'); })
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
-$('savedEmpty').addEventListener('click', function(e){
-  if (e.target.closest('[data-enviar]')) keepScroll(function(){ showPanel('novo'); });
-});
+$('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
+$('ajudaBtn').addEventListener('click', function(){ var d = $('ajuda'); d.open = !d.open; });
+$('ajuda').addEventListener('toggle', function(){ $('ajudaBtn').setAttribute('aria-expanded', $('ajuda').open ? 'true' : 'false'); });
 $('newPageBtn').addEventListener('click', function(){ $('newPageForm').hidden = false; $('newPageErr').hidden = true; $('newPageName').value = ''; $('newPageName').focus(); });
 $('newPageCancel').addEventListener('click', function(){ $('newPageForm').hidden = true; });
 $('newPageForm').addEventListener('submit', function(e){

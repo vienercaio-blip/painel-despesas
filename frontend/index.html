@@ -36,7 +36,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 <div class="wrap">
 
   <div class="view" id="viewEnviar" hidden>
-    <div class="up-head">
+    <div class="up-head ini-bloco">
       <h1 id="upTitle">Início</h1>
       <p id="upDesc">O que você quer analisar?</p>
     </div>
@@ -48,74 +48,44 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
     <div id="modeArea" hidden>
 
-    <div class="choices" role="group" aria-label="O que você quer fazer">
-      <button type="button" class="choice" data-panel="novo" aria-pressed="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
-        <span class="ct" id="ctNovo">Enviar novo extrato</span>
-        <span class="cd" id="cdNovo">OFX ou CSV, um ou vários arquivos</span>
-      </button>
-      <button type="button" class="choice" data-panel="salvos" aria-pressed="false">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M8 13h8"></path></svg>
-        <span class="ct" id="ctSalvos">Extratos salvos</span>
-        <span class="cd" id="savedCount">Nenhum extrato salvo ainda</span>
-      </button>
-    </div>
-
-    <div class="up-layout" id="panelNovo">
-      <div class="up-main">
-        <div class="drop drop-big" id="drop">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
-          <h2>Arraste o extrato para cá</h2>
-          <p>ou escolha o arquivo no computador ou no celular</p>
-          <div class="drop-actions">
-            <label class="btn primary" for="file">Escolher arquivos</label>
-            <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,.pdf,text/csv,application/pdf" multiple>
-          </div>
-          <div class="save-row">
-            <label class="check" for="saveMode"><input type="checkbox" id="saveMode" checked> Salvar para acessar depois</label>
-            <label class="save-page" for="savePage" hidden>na pasta <select id="savePage"></select></label>
-          </div>
+    <div class="ini" id="inicioDesp">
+      <div class="drop ini-bloco drop-faixa" id="drop">
+        <svg class="drop-ico" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
+        <div class="drop-txt">
+          <h2><span class="so-big">Arraste o extrato para cá</span><span class="so-faixa">Enviar extrato</span></h2>
+          <p class="drop-sub"><span class="so-big">PDF, OFX, CSV ou Excel · um ou vários arquivos</span><span class="so-faixa">Arraste aqui<span id="dropDestino"></span></span></p>
         </div>
-
-        <div id="msg" class="msg" role="status" hidden></div>
-
-        <section class="card" id="upResult" hidden aria-labelledby="upResTitle">
-          <div class="card-head"><h2 id="upResTitle">Últimos extratos</h2></div>
-          <ul class="up-files scrolly" id="upFiles"></ul>
-          <p class="up-sum" id="upSum"></p>
-          <div class="drop-actions">
-            <a class="btn primary" href="#dashboard">Ver dashboard</a>
-            <a class="btn" href="#despesas">Ver despesas</a>
-            <a class="btn" href="#categorias">Ver categorias</a>
-          </div>
-        </section>
-
-        <p class="privacy">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
-          O arquivo é enviado com segurança para o servidor do painel, que lê os lançamentos. Se a opção "Salvar para acessar depois" estiver desmarcada, o extrato não fica guardado.
-        </p>
+        <div class="drop-actions">
+          <label class="btn primary" for="file"><span class="so-big">Escolher arquivos</span><span class="so-faixa">Escolher arquivo</span></label>
+          <input type="file" id="file" accept=".csv,.ofx,.txt,.xlsx,.xls,.ods,.pdf,text/csv,application/pdf" multiple>
+        </div>
+        <div id="upLendo" hidden>
+          <p class="up-lendo-t" id="upLendoT" role="status"></p>
+          <div class="up-bar"><i id="upBar"></i></div>
+          <p class="up-conta-l"><span class="up-conta" id="upConta">0</span> lançamentos encontrados <span class="up-ok" id="upOk"></span></p>
+          <ul class="up-files" id="upFiles"></ul>
+          <p class="up-erro" id="upErro" hidden>Confira o formato do arquivo e tente de novo. <label class="btn btn-sm" for="file">Escolher outro arquivo</label></p>
+        </div>
       </div>
-
-      <aside class="up-side">
-        <section class="card" aria-labelledby="howTitle">
-          <h2 id="howTitle" style="font-size:18px">Como exportar do seu banco</h2>
-          <ol class="steps">
-            <li>Entre no internet banking ou no aplicativo do banco, na conta que você quer analisar (pessoal ou da empresa).</li>
-            <li>Abra o <b>extrato</b> e escolha o período (um mês ou vários).</li>
-            <li>Procure a opção <b>exportar</b>, <b>salvar</b> ou <b>baixar</b> e escolha o formato <b>OFX</b> ou <b>CSV</b>. Alguns bancos chamam o OFX de "Money".</li>
-            <li>Volte aqui e envie o arquivo baixado.</li>
-          </ol>
-        </section>
-        <section class="card" aria-labelledby="fmtTitle">
-          <h2 id="fmtTitle" style="font-size:18px">Formatos</h2>
-          <ul class="fmts">
-            <li><span class="fmt ok">OFX</span><span>Aceito. É o formato mais confiável.</span></li>
-            <li><span class="fmt ok">CSV</span><span>Aceito, com colunas de data, descrição e valor.</span></li>
-            <li><span class="fmt ok">Excel</span><span>Aceito (.xlsx, .xls, .ods). Cada aba com cabeçalho na primeira linha.</span></li>
-            <li><span class="fmt ok">PDF</span><span>Aceito. Lido com conferência no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago; nos outros bancos, em teste.</span></li>
-          </ul>
-        </section>
-      </aside>
+      <div class="ini-linha ini-bloco">
+        <button type="button" class="link-btn" id="ajudaBtn" aria-controls="ajuda" aria-expanded="false">Como baixar o extrato do seu banco</button>
+        <label class="check" for="soVer"><input type="checkbox" id="soVer"> Só ver agora, sem salvar</label>
+      </div>
+      <details class="card ajuda ini-bloco" id="ajuda">
+        <summary><h2>Como baixar o extrato do seu banco</h2></summary>
+        <ol class="steps">
+          <li>Abra o app ou o site do banco e entre no <b>extrato</b>.</li>
+          <li>Escolha o período (um mês ou vários).</li>
+          <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
+          <li>Envie o arquivo aqui.</li>
+        </ol>
+        <p class="ajuda-nota">O PDF é conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago.</p>
+      </details>
+      <div id="msg" class="msg" role="status" hidden></div>
+      <p class="privacy ini-bloco">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+        <span>Seu arquivo vai com segurança e só você vê os seus extratos.<span id="privNota" hidden> Este extrato não será guardado.</span></span>
+      </p>
     </div>
 
     <div class="up-layout" id="panelVendas" hidden>
@@ -164,31 +134,24 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       </aside>
     </div>
 
-    <section class="card" id="panelSalvos" hidden aria-labelledby="svTitle">
-      <div class="card-head"><h2 id="svTitle">Extratos salvos</h2><span class="hint">Guardados na sua conta</span></div>
-      <div class="pg-layout">
-        <nav class="pg-nav" aria-labelledby="pgNavT">
-          <div class="pg-nav-head">
-            <h3 id="pgNavT">Pastas</h3>
-            <button type="button" class="btn btn-sm" id="newPageBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-              Nova pasta
-            </button>
-          </div>
-          <form class="inline-form" id="newPageForm" hidden novalidate>
-            <label for="newPageName">Nome da nova pasta</label>
-            <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: Empresa, Casa, Nubank">
-            <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar pasta</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
-            <p class="form-err" id="newPageErr" role="alert" hidden></p>
-          </form>
-          <div class="pages-list" id="pagesBar" role="tablist" aria-orientation="vertical" aria-label="Escolha a pasta de extratos"></div>
-          <div class="pasta-sug" id="pastaSug" hidden></div>
-        </nav>
-        <div class="pg-main">
-          <div class="page-head" id="pageHead" hidden></div>
-          <ul class="saved scrolly" id="savedList"></ul>
-          <p class="empty" id="savedEmpty">Nenhum extrato salvo ainda. Envie um extrato com a opção "Salvar para acessar depois" marcada e ele aparece aqui.</p>
-        </div>
+    <section class="ini-salvos ini-bloco" id="panelSalvos" hidden aria-labelledby="svTitle">
+      <h2 class="sr-only" id="svTitle">Extratos salvos</h2>
+      <div class="chips-wrap">
+        <span class="ptab-pill" id="ptabPill" aria-hidden="true"></span>
+        <div class="pages-bar" id="pagesBar" role="tablist" aria-label="Escolha a pasta de extratos"></div>
+        <button type="button" class="ptab ptab-nova" id="newPageBtn">+ Nova pasta</button>
+      </div>
+      <form class="inline-form" id="newPageForm" hidden novalidate>
+        <label for="newPageName">Nome da nova pasta</label>
+        <input id="newPageName" maxlength="40" autocomplete="off" placeholder="Ex.: Empresa, Casa, Nubank">
+        <div class="inline-row"><button type="submit" class="btn primary btn-sm">Criar pasta</button><button type="button" class="btn ghost btn-sm" id="newPageCancel">Cancelar</button></div>
+        <p class="form-err" id="newPageErr" role="alert" hidden></p>
+      </form>
+      <div class="pasta-sug" id="pastaSug" hidden></div>
+      <div class="page-head" id="pageHead" hidden></div>
+      <div class="card ini-lista">
+        <ul class="saved" id="savedList"></ul>
+        <p class="empty" id="savedEmpty" hidden></p>
       </div>
     </section>
     </div>
