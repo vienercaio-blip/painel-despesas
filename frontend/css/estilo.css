@@ -633,3 +633,5 @@ input,select,textarea{border-radius:10px}
 .ini-resumo-n span{display:flex;flex-direction:column;font-size:13px;color:var(--ink-2)}
 .ini-resumo-n b{font-size:18px;color:var(--ink);font-weight:600}
 .ini-resumo-pesa{font-size:14px;color:var(--ink-2)}
+.ini-lembrete{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;background:var(--note-bg);color:var(--note-ink);border:1px solid var(--note-line);border-radius:10px;padding:10px 14px;font-size:14px}
+.ini-lembrete .btn{color:var(--note-ink)}

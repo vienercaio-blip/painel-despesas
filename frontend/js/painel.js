@@ -587,6 +587,7 @@ function renderSaved(){
       '<div class="inline-row"><button type="button" class="btn btn-sm primary" data-sug="1">Criar '+(sug.length>1 ? 'as pastas' : 'a pasta '+esc(sug[0]))+'</button>'+
       '<button type="button" class="btn btn-sm ghost" data-sugno="1">Agora não</button></div>' : '';
     shown = Pastas.filtrar(todos, pages, cur);
+    desenharLembrete(grande ? [] : shown);
   } else {
     if (state.page && state.page!=='none' && !pages.some(function(p){ return p.id===state.page; })) state.page = null;
     cur = state.page || null;
@@ -2259,6 +2260,23 @@ $('pastaSug').addEventListener('click', function(e){
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
+/* ---------- lembrete do mês que falta ----------
+   window.__hoje existe só para os testes simularem outra data */
+function HOJE(){ return window.__hoje ? new Date(window.__hoje) : new Date(); }
+function mesDe(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function desenharLembrete(extratos){
+  var hoje = HOJE(), ultima = null;
+  extratos.forEach(function(x){ if (x.last && (!ultima || x.last > ultima)) ultima = x.last; });
+  var texto = Pastas.textoLembrete(Pastas.mesesFaltando(ultima, hoje), hoje);
+  var mostrar = MODE==='despesas' && !!texto && cfg.lembreteVisto!==mesDe(hoje);
+  $('iniLembrete').hidden = !mostrar;
+  if (mostrar) $('iniLembreteT').textContent = texto;
+}
+$('iniLembrete').addEventListener('click', function(e){
+  if (!e.target.closest('[data-lemb-nao]')) return;
+  cfg.lembreteVisto = mesDe(HOJE()); saveCfg();
+  $('iniLembrete').hidden = true;
+});
 /* ---------- resumo do último extrato aberto (topo do Início) ----------
    Na entrada, o site reabre em segundo plano o último extrato (ou pasta) que a
    pessoa abriu. O cartão mostra o mesmo veredito e os mesmos números do Dashboard. */

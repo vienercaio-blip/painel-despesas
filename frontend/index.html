@@ -55,6 +55,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <p class="ini-resumo-pesa" id="iniResumoPesa"></p>
       <div><button type="button" class="btn primary" id="iniResumoVer">Ver o Dashboard</button></div>
     </section>
+    <div class="ini-lembrete ini-bloco" id="iniLembrete" role="status" hidden>
+      <span><span aria-hidden="true">📅 </span><span id="iniLembreteT"></span> Envie para manter a conta em dia.</span>
+      <button type="button" class="btn ghost btn-sm" data-lemb-nao>Agora não</button>
+    </div>
     <div class="ini" id="inicioDesp">
       <div class="drop ini-bloco drop-faixa" id="drop">
         <svg class="drop-ico" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
