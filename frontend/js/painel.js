@@ -229,8 +229,51 @@ function estadoEnvio(qual, dados){
     : qual==='erro' ? 'Não foi possível ler o extrato' : '';
   $('upConta').parentNode.hidden = true;   /* o número só aparece quando a leitura chega */
   d.querySelector('.up-bar').hidden = qual==='erro';
-  if (qual==='lendo'){ $('upFiles').innerHTML = ''; $('upConta').textContent = '0'; $('upOk').textContent = ''; $('upOk').className = 'up-ok'; }
-  if (qual==='normal') $('upFiles').innerHTML = '';
+  var barra = d.querySelector('.up-bar');
+  barra.classList.toggle('indet', qual==='lendo' || qual==='senha');   /* esperando: o brilho corre, sem fingir porcentagem */
+  if (qual==='lendo'){ $('upFiles').innerHTML = ''; $('upConta').textContent = '0'; $('upOk').textContent = ''; $('upOk').className = 'up-ok'; $('upBar').style.width = ''; }
+  if (qual==='normal'){ $('upFiles').innerHTML = ''; $('viewEnviar').classList.remove('saindo'); }
+}
+/* número que sobe contando até o total, desacelerando no fim */
+function contarAte(el, total, ms){
+  var fmt = function(n){ return n.toLocaleString('pt-BR'); };
+  if (semMovimento() || !window.requestAnimationFrame){ el.textContent = fmt(total); return Promise.resolve(); }
+  return new Promise(function(ok){
+    var ini = null;
+    var passo = function(t){
+      if (ini===null) ini = t;
+      var p = Math.min(1, (t-ini)/ms);
+      el.textContent = fmt(Math.round(total*(1-Math.pow(1-p, 3))));
+      if (p<1) requestAnimationFrame(passo); else ok();
+    };
+    requestAnimationFrame(passo);
+  });
+}
+/* a leitura chegou: completa a barra, conta os lançamentos e mostra a conferência */
+function concluirProgresso(total, comAviso){
+  var barra = $('drop').querySelector('.up-bar'), ok = $('upOk');
+  barra.classList.remove('indet');
+  $('upBar').style.width = '100%';
+  $('upConta').parentNode.hidden = false;
+  ok.textContent = comAviso ? '⚠ confira' : '✓ conferido';
+  ok.className = 'up-ok'+(comAviso ? ' aviso' : '');
+  var espera = function(ms){ return new Promise(function(r){ setTimeout(r, semMovimento() ? 0 : ms); }); };
+  return espera(400).then(function(){ return contarAte($('upConta'), total, 600); })
+    .then(function(){ ok.classList.add('mostra'); return espera(500); });
+}
+/* o Início sai para a esquerda e o Dashboard entra pela direita (só depois de um envio).
+   Só translate e opacity: os gráficos do Dashboard medem a largura real dos cartões */
+function passarParaDashboard(){
+  if (semMovimento()){ irPara('dashboard'); return Promise.resolve(); }
+  var vi = $('viewEnviar'), vd = $('viewDash');
+  vi.classList.add('saindo');
+  return new Promise(function(ok){
+    setTimeout(function(){
+      irPara('dashboard');
+      vd.classList.remove('entrando'); void vd.offsetWidth; vd.classList.add('entrando');
+      setTimeout(function(){ vd.classList.remove('entrando'); ok(); }, 350);
+    }, 250);
+  });
 }
 /* ---------- movimentos do Início ----------
    Todos respeitam o "reduzir movimento" do aparelho: nesse caso o estado
@@ -275,11 +318,10 @@ function sumirLinha(id){
   return new Promise(function(ok){ setTimeout(ok, 300); });
 }
 /* depois do envio: abre o extrato (abrir devolve uma promessa) e vai para o Dashboard */
-function abrirDepoisDoEnvio(abrir, envio){
-  return abrir().then(function(){
+function abrirDepoisDoEnvio(abrir, envio, total, comAviso){
+  return Promise.all([abrir(), concluirProgresso(total, comAviso)]).then(function(){
     if (envio !== state.envioId) return;
-    irPara('dashboard');
-    estadoEnvio('normal');
+    return passarParaDashboard().then(function(){ if (envio === state.envioId) estadoEnvio('normal'); });
   });
 }
 /* PDFs com senha: cada um ganha uma caixinha na lista de arquivos. A leitura

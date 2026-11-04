@@ -598,3 +598,19 @@ input,select,textarea{border-radius:10px}
   .sv-saindo{animation:sai .3s cubic-bezier(.2,.7,.2,1) forwards;overflow:hidden}
   @keyframes sai{to{opacity:0;transform:translateX(12px);max-height:0;padding-block:0;border-width:0}}
 }
+
+/* ---------- Início: progresso da leitura e passagem para o Dashboard ---------- */
+.up-bar i{transition:width .4s cubic-bezier(.2,.7,.2,1);background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#fff))}
+.up-bar.indet i{width:35%}
+.up-ok{opacity:0;transform:scale(.4);display:inline-block}
+.up-ok.mostra{opacity:1;transform:none}
+@media (prefers-reduced-motion: no-preference){
+  .up-bar.indet i{animation:corre 1.2s ease-in-out infinite}
+  @keyframes corre{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+  .up-ok{transition:opacity .35s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+  #viewEnviar.saindo{opacity:0;transform:translateX(-30%);transition:opacity .25s,transform .25s cubic-bezier(.2,.7,.2,1)}
+  #viewDash.entrando{animation:entraDir .35s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes entraDir{from{opacity:0;transform:translateX(40px)}}
+}
+@media (prefers-reduced-motion: reduce){.up-bar.indet i{width:100%;opacity:.5}}
+.wrap{overflow-x:clip}   /* a passagem animada não cria rolagem lateral */
