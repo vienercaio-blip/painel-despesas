@@ -3,7 +3,7 @@
 Atualizado em 03/11/2026. **Redesenho em 3 etapas:** 1 identidade visual "sobrou." (ramo `identidade-visual`, especificação `docs/superpowers/specs/2026-11-03-identidade-visual-design.md`), 2 arrumação das telas, 3 celular e PWA. Leia isto primeiro ao abrir um novo chat. A memória do Claude Code deste projeto (`C:\Users\CAIO\.claude\projects\c--Users-CAIO-Desktop-dados-site\memory\`) também tem estas informações.
 
 
-> **ONDE PARAMOS (04/11/2026):** a identidade visual "sobrou." (etapa 1) e o Dashboard em grade (etapa 2, parte 1) foram aprovados pelo usuário e estão no `main` e no GitHub (`40590aa`). Próximo: o resto da etapa 2 do redesenho (Início, Despesas, Lançamentos e Organizar) e depois a etapa 3 (celular e PWA). As pendências pequenas estão na memória do projeto.
+> **ONDE PARAMOS (04/11/2026):** a identidade visual "sobrou." (etapa 1) e o Dashboard em grade (etapa 2, parte 1) estão no `main` e no GitHub (`40590aa`). O **Início em lista, com movimentos** (etapa 2, parte 2) está no ramo `inicio-lista`, esperando revisão e o teste do usuário: especificação `docs/superpowers/specs/2026-11-04-inicio-design.md` e plano `docs/superpowers/plans/2026-11-04-inicio.md`. Quem não tem extrato vê a área grande de envio; quem tem vê a faixa de envio, as etiquetas de pasta (Todos, cada pasta, Sem pasta) e a lista; o envio salva na pasta escolhida e abre o Dashboard; seis movimentos, desligados com "reduzir movimento". Próximo: Despesas, Lançamentos e Organizar, e depois a etapa 3 (celular e PWA). As pendências pequenas estão na memória do projeto.
 
 ---
 

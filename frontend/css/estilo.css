@@ -99,6 +99,7 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .up-files .fn{font-weight:600;overflow-wrap:anywhere;min-width:0}
 .up-files .fc{color:var(--ink-2)}
 .up-files li.bad .fc{color:var(--bad)}
+.up-sum{margin:0;color:var(--ink-2)}
 .steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;color:var(--ink-2)}
 .steps b{color:var(--ink)}
 .fmts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--ink-2)}
@@ -114,7 +115,6 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .choice .cd{font-size:14px}
 .choice:hover{border-color:var(--ink-3)}
 .choice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .saved{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .sv{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
 .sv:last-child{border-bottom:0}
