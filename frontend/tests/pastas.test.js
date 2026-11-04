@@ -76,3 +76,25 @@ test('selo da leitura: conferido só para PDF sem aviso', () => {
   assert.deepEqual(Pastas.seloLeitura([{nome:'a.pdf'}, {nome:'b.csv'}]), {texto:'✓ lido', aviso:false});
   assert.deepEqual(Pastas.seloLeitura([{nome:'a.pdf', aviso:'Confira os totais.'}]), {texto:'⚠ confira', aviso:true});
 });
+
+test('meses que faltam: só meses completos depois do último extrato', () => {
+  assert.deepEqual(Pastas.mesesFaltando('2026-10-28', new Date(2026, 10, 4)), []);
+  assert.deepEqual(Pastas.mesesFaltando('2026-10-28', new Date(2026, 11, 5)), [{ano:2026, mes:10}]);
+  assert.deepEqual(Pastas.mesesFaltando('2026-10-28', new Date(2027, 1, 10)), [{ano:2026, mes:10}, {ano:2026, mes:11}, {ano:2027, mes:0}]);
+  assert.deepEqual(Pastas.mesesFaltando(null, new Date(2026, 11, 5)), []);
+  assert.deepEqual(Pastas.mesesFaltando('2026-12-31', new Date(2027, 0, 15)), []);
+});
+test('texto do lembrete', () => {
+  const dez = new Date(2026, 11, 5), fev27 = new Date(2027, 1, 10);
+  assert.equal(Pastas.textoLembrete([], dez), null);
+  assert.equal(Pastas.textoLembrete([{ano:2026, mes:10}], dez), 'Falta o extrato de novembro.');
+  assert.equal(Pastas.textoLembrete([{ano:2026, mes:10}, {ano:2026, mes:11}], new Date(2026, 11, 31)), 'Faltam os extratos de novembro e dezembro.');
+  assert.equal(Pastas.textoLembrete([{ano:2026, mes:10}, {ano:2026, mes:11}, {ano:2027, mes:0}], fev27), 'Faltam os extratos desde novembro de 2026.');
+  assert.equal(Pastas.textoLembrete([{ano:2026, mes:11}], new Date(2027, 0, 9)), 'Falta o extrato de dezembro de 2026.');
+});
+test('busca de extratos pelo nome, sem acento', () => {
+  const L = [{name:'Extrato Março'}, {name:'Nubank'}, {name:null}];
+  assert.deepEqual(Pastas.buscar(L, 'marco').map(x => x.name), ['Extrato Março']);
+  assert.equal(Pastas.buscar(L, '').length, 3);
+  assert.equal(Pastas.buscar(L, '  ').length, 3);
+});

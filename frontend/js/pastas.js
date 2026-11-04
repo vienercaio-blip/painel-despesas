@@ -74,7 +74,33 @@ function seloLeitura(arquivos){
   return {texto: pdf ? '✓ conferido' : '✓ lido', aviso:false};
 }
 
-return { seloLeitura:seloLeitura, atualValida:atualValida, etiquetas:etiquetas, filtrar:filtrar, destino:destino, sugerir:sugerir, avisoRepetidos:avisoRepetidos, textoAvisos:textoAvisos };
+var MESES_L = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+/* meses completos sem extrato: depois do mês do último extrato e antes do mês de hoje.
+   ultimaData = 'AAAA-MM-DD' (fim do extrato mais recente) ou null */
+function mesesFaltando(ultimaData, hoje){
+  var m = /^(\d{4})-(\d{2})/.exec(ultimaData || '');
+  if (!m) return [];
+  var ano = +m[1], mes = +m[2] - 1, lista = [];
+  var fim = hoje.getFullYear()*12 + hoje.getMonth();
+  for (var k = ano*12 + mes + 1; k < fim; k++) lista.push({ano: Math.floor(k/12), mes: k % 12});
+  return lista;
+}
+function textoLembrete(meses, hoje){
+  if (!meses.length) return null;
+  var nome = function(x){ return MESES_L[x.mes] + (x.ano !== hoje.getFullYear() ? ' de '+x.ano : ''); };
+  if (meses.length===1) return 'Falta o extrato de '+nome(meses[0])+'.';
+  if (meses.length===2) return 'Faltam os extratos de '+nome(meses[0])+' e '+nome(meses[1])+'.';
+  return 'Faltam os extratos desde '+nome(meses[0])+'.';
+}
+/* filtra os extratos pelo nome, sem ligar para maiúsculas e acentos */
+function buscar(lista, texto){
+  var t = chave(texto);
+  if (!t) return lista;
+  return lista.filter(function(x){ return chave(x.name).indexOf(t)!==-1; });
+}
+
+return { mesesFaltando:mesesFaltando, textoLembrete:textoLembrete, buscar:buscar, seloLeitura:seloLeitura, atualValida:atualValida, etiquetas:etiquetas, filtrar:filtrar, destino:destino, sugerir:sugerir, avisoRepetidos:avisoRepetidos, textoAvisos:textoAvisos };
 })();
 if (typeof window!=='undefined') window.Pastas = Pastas;
 if (typeof module!=='undefined') module.exports = Pastas;
