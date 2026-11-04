@@ -523,6 +523,8 @@ td .in{color:var(--good);font-weight:500}
 .cfg-btn svg{width:20px;height:20px;flex:none}
 @media (min-width:900px){
   .app{display:grid;grid-template-columns:220px minmax(0,1fr)}
+  /* margin:auto num item de grade faz ele encolher até o conteúdo: a largura mudava a cada troca de pasta */
+  .app > .wrap{width:100%;min-width:0}
   .lateral{position:sticky;top:0;height:100vh;overflow-y:auto}
 }
 @media (max-width:899.98px){
