@@ -566,10 +566,10 @@ function renderSaved(){
     var ini = $('inicioDesp');
     ini.classList.toggle('grande', grande); ini.classList.toggle('faixa', !grande);
     $('drop').classList.toggle('drop-big', grande); $('drop').classList.toggle('drop-faixa', !grande);
-    if (grande) $('ajuda').open = true;
+    if (grande && !state.eraGrande) $('ajuda').open = true;   /* só ao entrar na primeira visita: depois a pessoa decide */
     else if (state.eraGrande) $('ajuda').open = false;   /* acabou de sair da primeira visita */
     state.eraGrande = grande;
-    $('ajudaBtn').setAttribute('aria-expanded', $('ajuda').open ? 'true' : 'false');
+    sincronizarPilulas();
     $('upTitle').textContent = grande ? 'Comece pelo seu extrato' : 'Seus extratos';
     /* até a lista chegar do servidor, nada aparece (para não piscar a primeira visita) */
     $('panelSalvos').hidden = !state.salvosProntos || grande;
@@ -2251,8 +2251,19 @@ $('pastaSug').addEventListener('click', function(e){
     .catch(function(err){ b.disabled = false; falhou(err); });
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
-$('ajudaBtn').addEventListener('click', function(){ var d = $('ajuda'); d.open = !d.open; });
-$('ajuda').addEventListener('toggle', function(){ $('ajudaBtn').setAttribute('aria-expanded', $('ajuda').open ? 'true' : 'false'); });
+/* pílulas Ajuda e Formatos: cada uma abre o seu quadro; abrir um fecha o outro */
+function sincronizarPilulas(){
+  document.querySelectorAll('[data-abre]').forEach(function(b){ b.setAttribute('aria-expanded', $(b.dataset.abre).open ? 'true' : 'false'); });
+}
+document.querySelectorAll('[data-abre]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var d = $(b.dataset.abre), abrir = !d.open;
+    document.querySelectorAll('[data-abre]').forEach(function(o){ $(o.dataset.abre).open = false; });
+    d.open = abrir;
+    sincronizarPilulas();
+  });
+});
+['ajuda','formatos'].forEach(function(id){ $(id).addEventListener('toggle', sincronizarPilulas); });
 $('newPageBtn').addEventListener('click', function(){ $('newPageForm').hidden = false; $('newPageErr').hidden = true; $('newPageName').value = ''; $('newPageName').focus(); });
 $('newPageCancel').addEventListener('click', function(){ $('newPageForm').hidden = true; });
 $('newPageForm').addEventListener('submit', function(e){

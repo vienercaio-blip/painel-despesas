@@ -68,7 +68,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
       </div>
       <div class="ini-linha ini-bloco">
-        <button type="button" class="link-btn" id="ajudaBtn" aria-controls="ajuda" aria-expanded="false">Como baixar o extrato do seu banco</button>
+        <button type="button" class="ptab ini-pilula" id="ajudaBtn" data-abre="ajuda" aria-controls="ajuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
+        <button type="button" class="ptab ini-pilula" id="fmtBtn" data-abre="formatos" aria-controls="formatos" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h4"></path></svg>Formatos</button>
         <label class="check" for="soVer"><input type="checkbox" id="soVer"> Só ver agora, sem salvar</label>
       </div>
       <details class="card ajuda ini-bloco" id="ajuda">
@@ -79,7 +80,15 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
           <li>Envie o arquivo aqui.</li>
         </ol>
-        <p class="ajuda-nota">O PDF é conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago.</p>
+      </details>
+      <details class="card ajuda ini-bloco" id="formatos">
+        <summary><h2>Formatos</h2></summary>
+        <ul class="fmts">
+          <li><span class="fmt ok">PDF</span><span>Conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago. Nos outros bancos, em teste.</span></li>
+          <li><span class="fmt ok">OFX</span><span>O mais confiável. Alguns bancos chamam de "Money".</span></li>
+          <li><span class="fmt ok">CSV</span><span>Com colunas de data, descrição e valor.</span></li>
+          <li><span class="fmt ok">Excel</span><span>Arquivos .xlsx, .xls ou .ods, com o cabeçalho na primeira linha.</span></li>
+        </ul>
       </details>
       <div id="msg" class="msg" role="status" hidden></div>
       <p class="privacy ini-bloco">

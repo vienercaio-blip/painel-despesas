@@ -351,13 +351,17 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .ini-linha .check{font-size:13px;min-height:36px}
 .link-btn{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:3px;min-height:36px;display:inline-flex;align-items:center}
 .link-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-.ini.grande .ini-linha .link-btn{display:none}
-.ini.faixa .ajuda:not([open]){display:none}
+.ini .ajuda:not([open]){display:none}   /* Ajuda e Formatos abrem pelas pílulas */
+.ini-linha{gap:8px 10px}
+.ini-pilula{min-height:34px;padding:0 12px;font-size:13px;color:var(--ink-2)}
+.ini-pilula svg{color:var(--accent)}
+.ini-pilula[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.ini-linha .check{margin-left:6px}
+.ajuda .fmts{margin-top:12px}
 .ajuda summary{cursor:pointer;list-style:none}
 .ajuda summary::-webkit-details-marker{display:none}
 .ajuda summary h2{font-size:18px;display:inline}
 .ajuda .steps{margin-top:12px}
-.ajuda-nota{margin:12px 0 0;font-size:13px;color:var(--ink-3)}
 .ini-salvos{display:flex;flex-direction:column;gap:12px}
 .chips-wrap{position:relative;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pages-bar{display:flex;flex-wrap:wrap;gap:6px}
