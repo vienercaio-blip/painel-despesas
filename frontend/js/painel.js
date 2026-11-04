@@ -207,12 +207,38 @@ function xlsxToCsv(f){
 function readFiles(files){
   files = Array.prototype.slice.call(files);
   if (!files.length) return;
-  showMsg('Enviando '+(files.length===1?'o arquivo':files.length+' arquivos')+' para leitura…', false);
+  $('msg').hidden = true;
   state.leitura = null;   /* um envio novo anula caixinhas de senha pendentes do anterior */
+  var envio = state.envioId = (state.envioId || 0) + 1;
+  estadoEnvio('lendo', {n: files.length});
   API.lerArquivos(files).then(function(resp){
-    state.leitura = { itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
+    if (envio !== state.envioId) return;   /* outro envio começou depois deste */
+    state.leitura = { envio: envio, itens: resp.arquivos.map(function(r, i){ return { file: files[i], r: r }; }) };
     seguirLeitura();
-  }).catch(function(e){ showMsg(e.message, true); });
+  }).catch(function(e){ if (envio !== state.envioId) return; estadoEnvio('normal'); showMsg(e.message, true); });
+}
+/* estado da área de envio: 'normal', 'lendo' (esperando o servidor), 'senha'
+   (falta a senha de um PDF) ou 'erro' (nenhum arquivo pôde ser lido) */
+function estadoEnvio(qual, dados){
+  var d = $('drop'), n = dados && dados.n || 1;
+  d.classList.toggle('lendo', qual!=='normal');
+  $('upLendo').hidden = qual==='normal';
+  $('upErro').hidden = qual!=='erro';
+  $('upLendoT').textContent = qual==='lendo' ? (n===1 ? 'Lendo 1 arquivo…' : 'Lendo '+n+' arquivos…')
+    : qual==='senha' ? (n===1 ? 'Falta a senha de um arquivo' : 'Falta a senha de '+n+' arquivos')
+    : qual==='erro' ? 'Não foi possível ler o extrato' : '';
+  $('upConta').parentNode.hidden = true;   /* o número só aparece quando a leitura chega */
+  d.querySelector('.up-bar').hidden = qual==='erro';
+  if (qual==='lendo'){ $('upFiles').innerHTML = ''; $('upConta').textContent = '0'; $('upOk').textContent = ''; $('upOk').className = 'up-ok'; }
+  if (qual==='normal') $('upFiles').innerHTML = '';
+}
+/* depois do envio: abre o extrato (abrir devolve uma promessa) e vai para o Dashboard */
+function abrirDepoisDoEnvio(abrir, envio){
+  return abrir().then(function(){
+    if (envio !== state.envioId) return;
+    irPara('dashboard');
+    estadoEnvio('normal');
+  });
 }
 /* PDFs com senha: cada um ganha uma caixinha na lista de arquivos. A leitura
    só conclui quando não sobra nenhum pendente (senha informada ou pulado).
@@ -222,12 +248,13 @@ function seguirLeitura(){
   var pendentes = L.itens.filter(function(it){ return it.r.codigo; });
   if (pendentes.length){
     $('msg').hidden = true;
+    estadoEnvio('senha', {n: pendentes.length});
     $('upFiles').innerHTML = L.itens.map(function(it, i){ return linhaArquivo(it.r, i); }).join('');
     var campo = $('upFiles').querySelector('.pdf-senha input'); if (campo) campo.focus();
     return;
   }
   state.leitura = null;
-  concluirLeitura(L.itens.map(function(it){ return it.r; }));
+  concluirLeitura(L.itens.map(function(it){ return it.r; }), L.envio);
 }
 function linhaArquivo(r, i){
   var html = '<li class="'+(r.erro?'bad':'')+'"><span class="fn">'+esc(r.nome)+'</span><span class="fc">'+
@@ -256,7 +283,7 @@ $('upFiles').addEventListener('click', function(e){
   state.leitura.itens.splice(+b.dataset.pular, 1);
   seguirLeitura();
 });
-function concluirLeitura(results){
+function concluirLeitura(results, envio){
   var good = results.filter(function(r){return !r.erro;});
   /* lançamentos iguais são contados por arquivo: dois cafés de R$ 5 no mesmo
      dia ficam os dois; o mesmo período enviado em dois arquivos não duplica */
@@ -271,45 +298,31 @@ function concluirLeitura(results){
     });
   });
   $('upFiles').innerHTML = results.map(function(r){ return linhaArquivo(r); }).join('');
-  if (!good.length){
-    $('upResult').hidden = false; $('upResTitle').textContent = 'Não foi possível ler o extrato';
-    $('upSum').textContent = 'Confira o formato do arquivo e tente de novo.';
-    $('upResult').querySelector('.drop-actions').hidden = true;
-    $('msg').hidden = true;
-    return;
-  }
+  if (!good.length){ estadoEnvio('erro'); $('upFiles').innerHTML = results.map(function(r){ return linhaArquivo(r); }).join(''); return; }
   var nome = good.map(function(r){return r.nome;}).join(', ');
   var avisosL = good.filter(function(r){ return r.aviso; }).map(function(r){ return {nome:r.nome, aviso:r.aviso}; });
   /* um arquivo: só o aviso; vários: o nome de cada arquivo junto (guardado com o extrato) */
   var textoAv = avisosL.length===1 && good.length===1 ? avisosL[0].aviso
     : avisosL.map(function(a){ return a.nome+': '+a.aviso; }).join(' ') || null;
-  var salvar = $('saveMode').checked;
-  /* salvar só guarda o extrato: as telas do painel abrem quando o usuário
-     escolhe um extrato em "Extratos salvos" (ou envia sem salvar) */
-  var pronto = salvar
-    ? API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:$('savePage').value||null, lancamentos:combined, aviso:textoAv })
-        .then(function(){ fecharExtrato(); return recarregarSalvos().then(function(){ return true; }); },
-              function(e){ load(combined.map(doServidor), 'file', nome); toast(e.message); return false; })
-    : Promise.resolve(load(combined.map(doServidor), 'file', nome)).then(function(){ return null; });
-  pronto.then(function(saved){
-    if (saved!==true && textoAv) mostrarAvisoLeitura([{nome:nome, aviso:textoAv}]);
-    var lista = combined.map(doServidor).sort(function(x,y){ return x.date-y.date; });
-    var a = lista[0].date, b = lista[lista.length-1].date;
-    var months = {}; lista.forEach(function(t){ months[t.date.getFullYear()+'-'+t.date.getMonth()] = 1; });
-    var nm = Object.keys(months).length;
-    $('upResTitle').textContent = 'Últimos extratos';
-    $('upSum').textContent = lista.length+' lançamentos de '+fmtDate(a)+' a '+fmtDate(b)+' ('+nm+(nm===1?' mês':' meses')+')'+(dup?'. '+dup+(dup===1?' lançamento repetido foi ignorado':' lançamentos repetidos foram ignorados'):'')+'.'+
-      (saved===true ? ' Salvo em Extratos salvos. Abra o extrato na lista para ver o painel.' : saved===false ? ' Não foi possível salvar, mas você pode ver o painel agora.' : '');
-    $('upResult').querySelector('.drop-actions').hidden = saved===true;
-    $('upResult').hidden = false;
-    $('msg').hidden = true;
-    /* extrato salvo: leva o usuário direto para a lista de salvos */
-    if (saved===true){
-      showPanel('salvos');
-      $('panelSalvos').scrollIntoView({behavior:'smooth', block:'start'});
-      toast('Extrato salvo: '+lista.length+' lançamentos'+(dup ? ' ('+dup+' repetidos ignorados)' : '')+'. Clique nele para abrir o painel.'+
-        (textoAv ? ' Atenção: '+textoAv : ''));
-    }
+  var total = combined.length;
+  var soVer = function(){ load(combined.map(doServidor), 'file', nome); if (textoAv) mostrarAvisoLeitura([{nome:nome, aviso:textoAv}]); return Promise.resolve(); };
+  var repetidos = dup ? ' ('+dup+(dup===1 ? ' repetido ignorado' : ' repetidos ignorados')+')' : '';
+  /* salvar (padrão): guarda na pasta escolhida, abre o extrato salvo e vai para o Dashboard */
+  if (!$('soVer').checked){
+    API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:Pastas.destino(state.page, getPages()), lancamentos:combined, aviso:textoAv })
+      .then(function(meta){
+        state.novoId = meta.id;
+        return recarregarSalvos().then(function(){
+          return abrirDepoisDoEnvio(function(){ return carregarSalvo(meta.id); }, envio, total, !!textoAv);
+        }).then(function(){ toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'); });
+      }, function(e){
+        toast(e.message);
+        return abrirDepoisDoEnvio(soVer, envio, total, !!textoAv);
+      }).catch(function(e){ estadoEnvio('normal'); falhou(e); });
+    return;
+  }
+  abrirDepoisDoEnvio(soVer, envio, total, !!textoAv).then(function(){
+    if (dup) toast(dup+(dup===1 ? ' lançamento repetido foi ignorado.' : ' lançamentos repetidos foram ignorados.'));
   });
 }
 function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(err?' error':''); m.hidden=false; }
@@ -401,14 +414,12 @@ function mostrarAvisoLeitura(avisos){
 }
 function openPasta(id){
   carregarPasta(id).then(function(){
-    $('upResult').hidden = true;
     irPara('dashboard');
   }).catch(falhou);
 }
 function openSaved(id){
   if (MODE==='vendas'){ openSavedSales(id); return; }
   carregarSalvo(id).then(function(){
-    $('upResult').hidden = true;
     irPara('dashboard');
   }).catch(falhou);
 }

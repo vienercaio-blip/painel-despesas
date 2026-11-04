@@ -324,6 +324,7 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 /* ---------- Início: faixa de envio, etiquetas de pasta e lista ---------- */
 #modeArea{display:flex;flex-direction:column;gap:20px}
 .ini{display:flex;flex-direction:column;gap:12px}
+.ini .drop{flex:none}
 .drop-big{align-items:center;text-align:center;padding:48px 24px;gap:10px;border-width:2px}
 .drop-big h2{font-size:22px}
 .drop-big .drop-actions{justify-content:center;margin-top:6px}
@@ -365,7 +366,7 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .ptab-pill{display:none;position:absolute;pointer-events:none}
 .ini-lista{padding-top:6px;padding-bottom:6px}
 .sv .pasta-nome{color:var(--ink-3)}
-@media (max-width:560px){.drop-faixa{flex-direction:column;align-items:stretch;text-align:left}.drop-faixa .drop-actions .btn{width:100%;justify-content:center}}
+@media (max-width:560px){.drop-faixa{flex-direction:column;align-items:stretch;text-align:left}.drop-faixa .drop-txt{flex:none}.drop-faixa .drop-actions .btn{width:100%;justify-content:center}}
 
 .msg{padding:12px 16px;border-radius:10px;font-size:14px;border:1px solid var(--line);background:var(--surface)}
 .msg.error{border-color:var(--bad);color:var(--bad)}
