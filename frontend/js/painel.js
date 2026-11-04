@@ -1724,7 +1724,7 @@ function setMode(m){
   $('modoTop').hidden = !MODE || !VENDAS_ATIVO;
   $('modeArea').hidden = !MODE;
   $('upTitle').textContent = isV ? 'Vendas' : 'Início';
-  $('upDesc').textContent = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Veja para onde vai o seu dinheiro, sem planilha.' : 'O que você quer analisar?');
+  $('upDesc').textContent = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Descubra quanto sobra no fim do mês.' : 'O que você quer analisar?');
   $('modoName').textContent = isV ? 'Vendas' : 'Despesas';
   mostrarInicio();
   renderSaved();
