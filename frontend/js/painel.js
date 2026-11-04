@@ -232,15 +232,18 @@ function estadoEnvio(qual, dados){
   var barra = d.querySelector('.up-bar');
   barra.classList.toggle('indet', qual==='lendo' || qual==='senha');   /* esperando: o brilho corre, sem fingir porcentagem */
   if (qual==='lendo'){ $('upFiles').innerHTML = ''; $('upConta').textContent = '0'; $('upOk').textContent = ''; $('upOk').className = 'up-ok'; $('upBar').style.width = ''; }
-  if (qual==='normal'){ $('upFiles').innerHTML = ''; $('viewEnviar').classList.remove('saindo'); }
+  $('viewEnviar').classList.remove('saindo');   /* o Início nunca fica invisível */
+  if (qual==='normal') $('upFiles').innerHTML = '';
 }
 /* número que sobe contando até o total, desacelerando no fim */
-function contarAte(el, total, ms){
+function contarAte(el, total, ms, vivo){
   var fmt = function(n){ return n.toLocaleString('pt-BR'); };
-  if (semMovimento() || !window.requestAnimationFrame){ el.textContent = fmt(total); return Promise.resolve(); }
+  vivo = vivo || function(){ return true; };
+  if (semMovimento() || !window.requestAnimationFrame){ if (vivo()) el.textContent = fmt(total); return Promise.resolve(); }
   return new Promise(function(ok){
     var ini = null;
     var passo = function(t){
+      if (!vivo()){ ok(); return; }   /* outro envio começou: para de escrever */
       if (ini===null) ini = t;
       var p = Math.min(1, (t-ini)/ms);
       el.textContent = fmt(Math.round(total*(1-Math.pow(1-p, 3))));
@@ -249,17 +252,19 @@ function contarAte(el, total, ms){
     requestAnimationFrame(passo);
   });
 }
-/* a leitura chegou: completa a barra, conta os lançamentos e mostra a conferência */
-function concluirProgresso(total, comAviso){
+/* a leitura chegou: completa a barra, conta os lançamentos e mostra o selo.
+   vivo() diz se este ainda é o envio atual; um envio antigo não escreve na caixa do novo */
+function concluirProgresso(total, selo, vivo){
   var barra = $('drop').querySelector('.up-bar'), ok = $('upOk');
+  if (!vivo()) return Promise.resolve();
   barra.classList.remove('indet');
   $('upBar').style.width = '100%';
   $('upConta').parentNode.hidden = false;
-  ok.textContent = comAviso ? '⚠ confira' : '✓ conferido';
-  ok.className = 'up-ok'+(comAviso ? ' aviso' : '');
+  ok.textContent = selo.texto;
+  ok.className = 'up-ok'+(selo.aviso ? ' aviso' : '');
   var espera = function(ms){ return new Promise(function(r){ setTimeout(r, semMovimento() ? 0 : ms); }); };
-  return espera(400).then(function(){ return contarAte($('upConta'), total, 600); })
-    .then(function(){ ok.classList.add('mostra'); return espera(500); });
+  return espera(400).then(function(){ return contarAte($('upConta'), total, 600, vivo); })
+    .then(function(){ if (vivo()) ok.classList.add('mostra'); return espera(500); });
 }
 /* o Início sai para a esquerda e o Dashboard entra pela direita (só depois de um envio).
    Só translate e opacity: os gráficos do Dashboard medem a largura real dos cartões */
@@ -318,10 +323,17 @@ function sumirLinha(id){
   return new Promise(function(ok){ setTimeout(ok, 300); });
 }
 /* depois do envio: abre o extrato (abrir devolve uma promessa) e vai para o Dashboard */
-function abrirDepoisDoEnvio(abrir, envio, total, comAviso){
-  return Promise.all([abrir(), concluirProgresso(total, comAviso)]).then(function(){
-    if (envio !== state.envioId) return;
-    return passarParaDashboard().then(function(){ if (envio === state.envioId) estadoEnvio('normal'); });
+function abrirDepoisDoEnvio(abrir, envio, total, selo){
+  var vivo = function(){ return envio === state.envioId; };
+  if (!vivo()) return Promise.resolve();
+  /* abre o extrato só depois da contagem e só se ninguém enviou outro no meio:
+     assim um envio antigo nunca troca o extrato que está na tela */
+  return concluirProgresso(total, selo, vivo).then(function(){
+    if (!vivo()) return;
+    return abrir().then(function(){
+      if (!vivo()) return;
+      return passarParaDashboard().then(function(){ if (vivo()) estadoEnvio('normal'); });
+    });
   });
 }
 /* PDFs com senha: cada um ganha uma caixinha na lista de arquivos. A leitura
@@ -391,23 +403,28 @@ function concluirLeitura(results, envio){
   var total = combined.length;
   var soVer = function(){ load(combined.map(doServidor), 'file', nome); if (textoAv) mostrarAvisoLeitura([{nome:nome, aviso:textoAv}]); return Promise.resolve(); };
   var repetidos = dup ? ' ('+dup+(dup===1 ? ' repetido ignorado' : ' repetidos ignorados')+')' : '';
+  var selo = Pastas.seloLeitura(good.map(function(r){ return {nome:r.nome, aviso:r.aviso}; }));
+  var atual = function(){ return envio === state.envioId; };
   /* salvar (padrão): guarda na pasta escolhida, abre o extrato salvo e vai para o Dashboard */
   if (!$('soVer').checked){
     API.salvarExtrato({ tipo:'despesas', nome:nome.slice(0,120), pagina_id:Pastas.destino(state.page, getPages()), lancamentos:combined, aviso:textoAv })
       .then(function(meta){
         state.novoId = meta.id;
+        if (!atual()) return recarregarSalvos();   /* outro envio começou: este só entra na lista */
         return recarregarSalvos().then(function(){
-          return abrirDepoisDoEnvio(function(){ return carregarSalvo(meta.id); }, envio, total, !!textoAv);
-        }).then(function(){ toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'); });
+          return abrirDepoisDoEnvio(function(){ return carregarSalvo(meta.id); }, envio, total, selo);
+        }).then(function(){ if (atual()) toast('Extrato salvo: '+total+' lançamentos'+repetidos+'.'); });
       }, function(e){
-        toast(e.message);
-        return abrirDepoisDoEnvio(soVer, envio, total, !!textoAv);
-      }).catch(function(e){ estadoEnvio('normal'); falhou(e); });
+        if (!atual()) return;
+        return abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(){
+          if (atual()) toast('Não foi possível salvar o extrato ('+e.message+'). Você está vendo sem salvar: ele não vai aparecer na lista.');
+        });
+      }).catch(function(e){ if (atual()) estadoEnvio('normal'); falhou(e); });
     return;
   }
-  abrirDepoisDoEnvio(soVer, envio, total, !!textoAv).then(function(){
-    if (dup) toast(dup+(dup===1 ? ' lançamento repetido foi ignorado.' : ' lançamentos repetidos foram ignorados.'));
-  });
+  abrirDepoisDoEnvio(soVer, envio, total, selo).then(function(){
+    if (dup && atual()) toast(dup+(dup===1 ? ' lançamento repetido foi ignorado.' : ' lançamentos repetidos foram ignorados.'));
+  }).catch(function(e){ if (atual()) estadoEnvio('normal'); falhou(e); });
 }
 function showMsg(t, err){ var m=$('msg'); m.textContent=t; m.className='msg'+(err?' error':''); m.hidden=false; }
 

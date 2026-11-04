@@ -68,3 +68,11 @@ test('destino: só pasta que existe', () => {
   assert.equal(Pastas.destino('none', P), null);
   assert.equal(Pastas.destino('sumiu', P), null);
 });
+
+test('selo da leitura: conferido só para PDF sem aviso', () => {
+  assert.deepEqual(Pastas.seloLeitura([{nome:'c6.pdf', aviso:null}]), {texto:'✓ conferido', aviso:false});
+  assert.deepEqual(Pastas.seloLeitura([{nome:'a.PDF'}, {nome:'b.pdf'}]), {texto:'✓ conferido', aviso:false});
+  assert.deepEqual(Pastas.seloLeitura([{nome:'extrato.ofx'}]), {texto:'✓ lido', aviso:false});
+  assert.deepEqual(Pastas.seloLeitura([{nome:'a.pdf'}, {nome:'b.csv'}]), {texto:'✓ lido', aviso:false});
+  assert.deepEqual(Pastas.seloLeitura([{nome:'a.pdf', aviso:'Confira os totais.'}]), {texto:'⚠ confira', aviso:true});
+});

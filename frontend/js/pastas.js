@@ -66,7 +66,15 @@ function filtrar(extratos, pastas, atual){
 /* pasta que recebe o próximo envio (null = sem pasta) */
 function destino(atual, pastas){ return atual && atual!=='none' && existe(atual, pastas) ? atual : null; }
 
-return { atualValida:atualValida, etiquetas:etiquetas, filtrar:filtrar, destino:destino, sugerir:sugerir, avisoRepetidos:avisoRepetidos, textoAvisos:textoAvisos };
+/* selo no fim da leitura: só o PDF é conferido com os totais impressos pelo banco;
+   OFX, CSV e Excel são apenas lidos. arquivos = [{nome, aviso}] dos lidos */
+function seloLeitura(arquivos){
+  if (arquivos.some(function(a){ return a.aviso; })) return {texto:'⚠ confira', aviso:true};
+  var pdf = arquivos.length && arquivos.every(function(a){ return /\.pdf$/i.test(a.nome||''); });
+  return {texto: pdf ? '✓ conferido' : '✓ lido', aviso:false};
+}
+
+return { seloLeitura:seloLeitura, atualValida:atualValida, etiquetas:etiquetas, filtrar:filtrar, destino:destino, sugerir:sugerir, avisoRepetidos:avisoRepetidos, textoAvisos:textoAvisos };
 })();
 if (typeof window!=='undefined') window.Pastas = Pastas;
 if (typeof module!=='undefined') module.exports = Pastas;
