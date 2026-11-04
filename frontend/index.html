@@ -72,7 +72,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <label class="check" for="soVer"><input type="checkbox" id="soVer"> Só ver agora, sem salvar</label>
       </div>
       <details class="card ajuda ini-bloco" id="ajuda">
-        <summary><h2>Como baixar o extrato do seu banco</h2></summary>
+        <summary><h2>Ajuda</h2></summary>
         <ol class="steps">
           <li>Abra o app ou o site do banco e entre no <b>extrato</b>.</li>
           <li>Escolha o período (um mês ou vários).</li>
@@ -160,7 +160,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   <section class="intro" id="introSec">
     <div class="intro-text">
       <span id="srcBadge" class="badge">Exemplo · dados fictícios</span>
-      <h1 id="pageTitle">Para onde vai o seu dinheiro</h1>
+      <h1 id="pageTitle">Dashboard</h1>
       <p id="srcText"></p>
     </div>
   </section>
@@ -191,7 +191,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
     <div class="dash-grid2">
     <section class="card" id="dOnde" aria-labelledby="dOndeT">
-      <div class="card-head"><h2 id="dOndeT">Para onde vai o dinheiro</h2>
+      <div class="card-head"><h2 id="dOndeT">Categorias</h2>
         <div class="filtro-wrap">
           <button type="button" class="btn btn-sm" id="dFiltroBtn" aria-expanded="false" aria-controls="dFiltro">Todas as despesas ▾</button>
           <div class="filtro-painel" id="dFiltro" role="group" aria-label="Despesas analisadas" hidden>
@@ -211,14 +211,14 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     </section>
 
     <section class="card" id="dMesSec">
-        <div class="card-head"><h2 id="dResT">Resultado por mês</h2><span class="hint" id="dResH">Entradas menos saídas</span></div>
+        <div class="card-head"><h2 id="dResT">Meses</h2><span class="hint" id="dResH">Entradas menos saídas</span></div>
         <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
         <div class="chart-box" id="dRes"></div>
     </section>
     </div>
 
     <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
-      <div class="card-head"><h2 id="dAcoesT">O que fazer agora</h2></div>
+      <div class="card-head"><h2 id="dAcoesT">Dicas</h2></div>
       <div class="acoes dash-grid3" id="dAcoes"></div>
     </section>
 
@@ -229,18 +229,18 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
     <div class="dash-grid2">
     <section class="card">
-      <div class="card-head"><h2 id="dCumT">Caixa acumulado</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
+      <div class="card-head"><h2 id="dCumT">Saldo</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
       <div class="chart-box" id="dCum"></div>
     </section>
     <section class="card" aria-labelledby="dProjT">
-      <div class="card-head"><h2 id="dProjT">Projeção para o próximo mês</h2><span class="hint" id="dProjHint"></span></div>
+      <div class="card-head"><h2 id="dProjT">Previsão</h2><span class="hint" id="dProjHint"></span></div>
       <div class="kpis" id="dProj"></div>
       <p class="foot">É uma estimativa simples, pela média dos últimos meses. Não considera datas especiais, reajustes ou gastos fora do comum.</p>
     </section>
     </div>
 
     <section class="card" aria-labelledby="dChgT">
-      <div class="card-head"><h2 id="dChgT">Categorias que mais mudaram</h2><span class="hint" id="dChgHint"></span></div>
+      <div class="card-head"><h2 id="dChgT">Mudanças</h2><span class="hint" id="dChgHint"></span></div>
       <div class="table-box scroll-table" id="dChgBox">
         <table>
           <thead><tr><th scope="col">Categoria</th><th scope="col" class="r" id="dChgA">Mês anterior</th><th scope="col" class="r" id="dChgB">Último mês</th><th scope="col" class="r">Variação</th></tr></thead>
@@ -252,7 +252,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
 
     <section class="card" aria-labelledby="dInsT">
-      <div class="card-head"><h2 id="dInsT">Outras informações</h2><span class="hint" id="dSpan"></span></div>
+      <div class="card-head"><h2 id="dInsT">Detalhes</h2><span class="hint" id="dSpan"></span></div>
       <ul class="insights scrolly" id="dIns"></ul>
     </section>
       </div>
@@ -325,18 +325,18 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <section class="grid2">
     <div class="card">
-      <div class="card-head"><h2>Despesas por categoria</h2><span class="hint" id="catHint"></span></div>
+      <div class="card-head"><h2>Categorias</h2><span class="hint" id="catHint"></span></div>
       <ul class="cats scrolly" id="cats" style="max-height:240px"></ul>
     </div>
     <div class="card flow-card">
-      <div class="card-head"><h2 id="flowTitle">Entradas e saídas por semana</h2></div>
+      <div class="card-head"><h2 id="flowTitle">Fluxo</h2></div>
       <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Entradas</span><span><i class="sw" style="background:var(--s2)"></i>Saídas</span></div>
       <div class="chart-box" id="flow"></div>
     </div>
   </section>
 
   <section class="card" aria-labelledby="insTitle">
-    <div class="card-head"><h2 id="insTitle">O que os números mostram</h2></div>
+    <div class="card-head"><h2 id="insTitle">Resumo</h2></div>
     <ul class="insights scrolly" id="insights"></ul>
   </section>
 
@@ -345,7 +345,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewLanc" hidden>
   <section class="card" aria-labelledby="txTitle">
-    <div class="card-head"><h2 id="txTitle">Todos os lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
+    <div class="card-head"><h2 id="txTitle">Lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
     <div class="table-tools">
       <div class="seg" role="group" aria-label="Filtrar lançamentos">
         <button type="button" data-f="out" aria-pressed="true">Saídas</button>
@@ -381,7 +381,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   <div class="view" id="viewCategorias" hidden>
     <div class="cat-layout">
       <nav class="card cat-list" aria-labelledby="catListTitle">
-        <h2 id="catListTitle">Categorias de despesa</h2>
+        <h2 id="catListTitle">Categorias</h2>
         <div id="catList" class="scrolly cat-scroll"></div>
       </nav>
       <div class="cat-detail">
@@ -393,17 +393,17 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <p class="rule-msg" id="ruleMsg" role="status" hidden></p>
         </section>
         <div class="subnav" role="tablist" aria-label="Seções da categoria">
-          <button type="button" role="tab" id="tabOrigem" data-sub="origem" aria-selected="true" aria-controls="subOrigem">De onde veio</button>
-          <button type="button" role="tab" id="tabLanc" data-sub="lanc" aria-selected="false" aria-controls="subLanc">Lançamentos desta categoria <span class="cnt" id="cntLanc"></span></button>
-          <button type="button" role="tab" id="tabNova" data-sub="nova" aria-selected="false" aria-controls="subNova">Criar categoria</button>
-          <button type="button" role="tab" id="tabRegras" data-sub="regras" aria-selected="false" aria-controls="subRegras">Suas regras <span class="cnt" id="cntRegras"></span></button>
+          <button type="button" role="tab" id="tabOrigem" data-sub="origem" aria-selected="true" aria-controls="subOrigem">Origens</button>
+          <button type="button" role="tab" id="tabLanc" data-sub="lanc" aria-selected="false" aria-controls="subLanc">Lançamentos <span class="cnt" id="cntLanc"></span></button>
+          <button type="button" role="tab" id="tabNova" data-sub="nova" aria-selected="false" aria-controls="subNova">Criar</button>
+          <button type="button" role="tab" id="tabRegras" data-sub="regras" aria-selected="false" aria-controls="subRegras">Regras <span class="cnt" id="cntRegras"></span></button>
         </div>
         <section class="card" id="subOrigem" role="tabpanel" aria-labelledby="tabOrigem">
-          <div class="card-head"><h2 id="orTitle">De onde veio</h2><span class="hint">Pagamentos agrupados pela descrição do extrato</span></div>
+          <div class="card-head"><h2 id="orTitle">Origens</h2><span class="hint">Pagamentos agrupados pela descrição do extrato</span></div>
           <ul class="origins scrolly" id="origins"></ul>
         </section>
         <section class="card" id="subLanc" role="tabpanel" aria-labelledby="tabLanc" hidden>
-          <div class="card-head"><h2 id="clTitle">Lançamentos desta categoria</h2><span class="hint">"Identificado por" mostra a palavra do extrato que definiu a categoria</span></div>
+          <div class="card-head"><h2 id="clTitle">Lançamentos</h2><span class="hint">"Identificado por" mostra a palavra do extrato que definiu a categoria</span></div>
           <div class="table-box scroll-table">
             <table>
               <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Identificado por</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
@@ -412,15 +412,15 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           </div>
         </section>
         <section class="card" id="subRegras" role="tabpanel" aria-labelledby="tabRegras" hidden>
-      <div class="card-head"><h2 id="rlTitle">Suas regras</h2><span class="hint">Valem para todos os extratos, inclusive os próximos</span></div>
+      <div class="card-head"><h2 id="rlTitle">Regras</h2><span class="hint">Valem para todos os extratos, inclusive os próximos</span></div>
       <ul class="saved scrolly" id="rulesList"></ul>
       <p class="empty" id="rulesEmpty">Você ainda não criou nenhuma regra. Mude a categoria de um lançamento com a opção "Lembrar para esta origem" e ela aparece aqui.</p>
     </section>
         <section class="card" id="subNova" role="tabpanel" aria-labelledby="tabNova" hidden>
-          <div class="card-head"><h2>Criar categoria</h2><span class="hint">Fica disponível em todos os extratos</span></div>
+          <div class="card-head"><h2>Criar</h2><span class="hint">Fica disponível em todos os extratos</span></div>
           <div class="seg subseg" role="tablist" aria-label="Criar categoria">
-            <button type="button" role="tab" id="tabNcNew" data-nc="new" aria-selected="true" aria-controls="ncNew">Nova categoria</button>
-            <button type="button" role="tab" id="tabNcList" data-nc="list" aria-selected="false" aria-controls="ncList">Categorias criadas <span class="cnt" id="cntCustom"></span></button>
+            <button type="button" role="tab" id="tabNcNew" data-nc="new" aria-selected="true" aria-controls="ncNew">Nova</button>
+            <button type="button" role="tab" id="tabNcList" data-nc="list" aria-selected="false" aria-controls="ncList">Criadas <span class="cnt" id="cntCustom"></span></button>
           </div>
           <div id="ncNew" role="tabpanel" aria-labelledby="tabNcNew">
           <p class="aviso-pasta" id="ncPara" role="status" hidden></p>

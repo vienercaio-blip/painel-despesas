@@ -692,9 +692,10 @@ function render(){
   $('srcBadge').textContent = state.source==='sample' ? 'Exemplo · dados fictícios' : 'Seu extrato';
   $('srcBadge').className = 'badge' + (state.source==='sample' ? '' : ' real');
   var isSample = state.source==='sample';
-  $('pageTitle').textContent = isSample ? 'Para onde vai o seu dinheiro' : state.pastaId ? 'Pasta "'+state.fileName+'": todos os extratos somados, de '+fmtDate(first)+' a '+fmtDate(last)+'.' : 'Extrato de '+fmtDate(first)+' a '+fmtDate(last)+', a partir do arquivo "'+state.fileName+'".';
-  $('pageTitle').className = isSample ? '' : 'extrato-title';
-  $('srcText').textContent = isSample ? 'Este é um extrato de exemplo, de agosto a outubro de 2026. Envie o extrato do seu banco para ver os seus números.' : '';
+  /* o título da página é o nome dela (setView); o período e o arquivo ficam na linha de baixo */
+  $('srcText').textContent = isSample ? 'Este é um extrato de exemplo, de agosto a outubro de 2026. Envie o extrato do seu banco para ver os seus números.'
+    : state.pastaId ? 'Pasta "'+state.fileName+'": todos os extratos somados, de '+fmtDate(first)+' a '+fmtDate(last)+'.'
+    : 'Extrato de '+fmtDate(first)+' a '+fmtDate(last)+', a partir do arquivo "'+state.fileName+'".';
 
   renderPeriod(tx);
 
@@ -1019,7 +1020,7 @@ var resRange = 'ult12';
 /* Textos do dashboard que mudam conforme o tipo de conta. */
 var TEXTOS = {
   diasEntradas:function(n, fixedM){ return 'Suas contas fixas ('+brl.format(fixedM)+' por mês) equivalem a cerca de '+n+' dias de renda. Ou seja, o salário dos primeiros '+n+' dias do mês vai só para as contas fixas.'; },
-  caixaTitulo:'Saldo acumulado'
+  caixaTitulo:'Saldo'
 };
 function textos(){ return TEXTOS; }
 
@@ -1187,9 +1188,10 @@ function renderDashboard(){
   state.pdfMeses = { titulo:'Resultado por mês', linhas: chartM.map(function(o){ return {l:o.name, v:brl.format(o.res)}; }) };
   if (sel){
     var selNomes = sel.filter(function(c){ return byCat[c]; });
-    $('dResT').textContent = selNomes.length<=2 ? 'Gastos com '+selNomes.join(' e ')+', mês a mês' : 'Gastos com as '+selNomes.length+' categorias escolhidas, mês a mês';
-    $('dResH').textContent = 'Soma das categorias escolhidas';
-    state.pdfMeses = { titulo:$('dResT').textContent, linhas: chartM.map(function(o){
+    var gastosCom = selNomes.length<=2 ? 'Gastos com '+selNomes.join(' e ') : 'Gastos com as '+selNomes.length+' categorias escolhidas';
+    $('dResT').textContent = 'Meses';
+    $('dResH').textContent = gastosCom;
+    state.pdfMeses = { titulo:gastosCom+', mês a mês', linhas: chartM.map(function(o){
       return {l:o.name, v:brl.format(sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0))}; }) };
     $('dRes').innerHTML = barSVG(chartM.map(function(o){
       var v = sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0);
@@ -1197,7 +1199,7 @@ function renderDashboard(){
         more: moreHTML('Neste mês', sel.filter(function(c){ return o.cat[c]; }).sort(function(a,b){ return o.cat[b]-o.cat[a]; }).map(function(c){ return [c, brl.format(o.cat[c])]; }), '')};
     }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:larguraDe('dRes'), aria:$('dResT').textContent});
   } else {
-  $('dResT').textContent = 'Resultado por mês'; $('dResH').textContent = 'Entradas menos saídas';
+  $('dResT').textContent = 'Meses'; $('dResH').textContent = 'Entradas menos saídas';
   $('dRes').innerHTML = barSVG(chartM.map(function(o){
     return {label:o.label, v:o.res, fill: o.res>=0 ? 'var(--s1)' : 'var(--bad)',
       tip:'<b>'+esc(o.name)+'</b><br>Entradas: '+brl.format(o.ins)+'<br>Saídas: '+brl.format(o.outs)+'<br>Resultado: '+brl.format(o.res)+'<br>Margem: '+pct.format(o.ins?o.res/o.ins:0),
@@ -1709,6 +1711,7 @@ function setView(){
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
+  $('pageTitle').textContent = {dashboard:'Dashboard', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
   if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
@@ -1734,8 +1737,7 @@ function setMode(m){
 }
 
 function renderFlow(tx, mode){
-  var titles = {year:'por ano', month:'por mês', week:'por semana', day:'por dia'};
-  $('flowTitle').textContent = 'Entradas e saídas '+titles[mode];
+  $('flowTitle').textContent = 'Fluxo';
   var groups = {}, order = [];
   function add(key, label){ if (!groups[key]){ groups[key]={label:label,inn:0,out:0}; order.push(key); } return groups[key]; }
   if (mode==='day'){
