@@ -912,3 +912,10 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @keyframes x-abre{from{opacity:0;transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.x-div i,.x-cat .bar,.x-b .x-barra,.x-aberta{animation:none}}
 .x-calmo .x-div i,.x-calmo .x-cat .bar{animation:none}
+.x-gm{display:block;width:100%;height:auto}
+.x-pilulas{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.x-pil{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13.5px;color:var(--ink-2)}
+.x-pil:hover{background:var(--surface-2)}
+.x-pil:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.x-pil.sobe b{color:var(--bad)}.x-pil.cai b{color:var(--good)}
+.x-pil b{font-weight:600;font-variant-numeric:tabular-nums}

@@ -1069,6 +1069,40 @@ var TEXTOS = {
 };
 function textos(){ return TEXTOS; }
 
+function agruparMeses(list){
+  var M = {}, mk = [];
+  list.forEach(function(t){
+    var k = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
+    if (!M[k]){ M[k] = {k:k, y:t.date.getFullYear(), m:t.date.getMonth(), ins:0, outs:0, cat:{}}; mk.push(k); }
+    var o = M[k];
+    if (ehInterno(t)) return;
+    if (ehEntrada(t)) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
+  });
+  mk.sort();
+  return mk.map(function(k){ var o = M[k], aj = Analise.ajustarEstornos(o); o.ins = aj.ins; o.outs = aj.outs; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
+}
+/* o par de meses comparado (Dashboard e Despesas): os dois últimos meses do período,
+   ou o mês escolhido e o anterior; com "(até dd/mm)"/"(desde dd/mm)" quando o extrato corta.
+   Semana ou dias exatos: sem par. */
+function parMeses(tx){
+  if (state.p.tipo==='semana' || (state.p.tipo==='intervalo' && state.p.dias) || !tx.length) return null;
+  var months = agruparMeses(tx), cmpA = null, cmpB = null, txA = null;
+  if (months.length>=2){ cmpA = months[months.length-2]; cmpB = months[months.length-1]; }
+  else {
+    var only = months[0], pm = only.m-1, py = only.y; if (pm<0){ pm = 11; py--; }
+    var pk = py+'-'+String(pm).padStart(2,'0');
+    var prevM = agruparMeses(state.tx).filter(function(o){return o.k===pk;})[0];
+    if (prevM){ cmpA = prevM; cmpB = only; txA = state.tx.filter(function(t){ return t.date.getFullYear()===py && t.date.getMonth()===pm; }); }
+  }
+  if (!cmpA) return null;
+  var dIni = null, dFim = null;
+  state.tx.forEach(function(t){ if (!dIni || t.date<dIni) dIni = t.date; if (!dFim || t.date>dFim) dFim = t.date; });
+  var ddmm = function(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+  var com = function(o, nome, rot){ var c = {}; for (var kk in o) c[kk] = o[kk]; c.name = nome; c.label = rot; return c; };
+  if (dFim && dFim.getFullYear()===cmpB.y && dFim.getMonth()===cmpB.m && dFim.getDate()<new Date(cmpB.y, cmpB.m+1, 0).getDate()) cmpB = com(cmpB, cmpB.name+' (até '+ddmm(dFim)+')', cmpB.label+' (até '+ddmm(dFim)+')');
+  if (dIni && dIni.getFullYear()===cmpA.y && dIni.getMonth()===cmpA.m && dIni.getDate()>1) cmpA = com(cmpA, cmpA.name+' (desde '+ddmm(dIni)+')', cmpA.label+' (desde '+ddmm(dIni)+')');
+  return {A:cmpA, B:cmpB, txA:txA};
+}
 function renderDashboard(){
   var X = textos();
   /* despesas analisadas (null = todas). Não muda veredito, números, ações, saldo nem projeção */
@@ -1080,19 +1114,7 @@ function renderDashboard(){
   $('dSpan').textContent = (state.p.tipo==='tudo' ? 'Todo o extrato' : 'Período: '+Periodo.nome(state.p))+', de '+fmtDate(first)+' a '+fmtDate(last);
 
   /* por mês */
-  function groupMonths(list){
-    var M = {}, mk = [];
-    list.forEach(function(t){
-      var k = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
-      if (!M[k]){ M[k] = {k:k, y:t.date.getFullYear(), m:t.date.getMonth(), ins:0, outs:0, cat:{}}; mk.push(k); }
-      var o = M[k];
-      if (ehInterno(t)) return;
-      if (ehEntrada(t)) o.ins += t.value; else { o.outs -= t.value; var c = catOf(t); o.cat[c] = (o.cat[c]||0) - t.value; }
-    });
-    mk.sort();
-    return mk.map(function(k){ var o = M[k], aj = Analise.ajustarEstornos(o); o.ins = aj.ins; o.outs = aj.outs; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
-  }
-  var months = groupMonths(tx), allMonths = groupMonths(state.tx);
+  var months = agruparMeses(tx), allMonths = agruparMeses(state.tx);
   var fmes = Periodo.fatorMes(state.p, months.length);
   var nM = isWeek ? 1 : fmes.divisor;  /* semana: valores da semana inteira; dias exatos: média de 30 dias */
   var T = sums(tx), res = T.ins - T.outs;
@@ -1311,23 +1333,9 @@ function renderDashboard(){
   var order = domAvg.map(function(v,i){return i;}).sort(function(a,b){return domAvg[b]-domAvg[a];});
   var top3 = order.slice(0,3), top3sum = top3.reduce(function(s,i){return s+domAvg[i];},0);
   /* categorias que mais mudaram */
-  var chg = [], cmpA = null, cmpB = null;
-  if (diasP){ /* meses cortados pelo intervalo de dias: sem comparação de meses */ }
-  else if (months.length>=2){ cmpA = months[months.length-2]; cmpB = months[months.length-1]; }
-  else if (!isWeek){
-    var only = months[0], pm = only.m-1, py = only.y; if (pm<0){ pm = 11; py--; }
-    var pk = py+'-'+String(pm).padStart(2,'0');
-    var prevM = allMonths.filter(function(o){return o.k===pk;})[0];
-    if (prevM){ cmpA = prevM; cmpB = only; monthTx[pk] = state.tx.filter(function(t){ return t.date.getFullYear()===py && t.date.getMonth()===pm; }); }
-  }
+  var chg = [], par = parMeses(tx), cmpA = par ? par.A : null, cmpB = par ? par.B : null;
+  if (par && par.txA) monthTx[cmpA.k] = par.txA;
   if (cmpA){
-    /* o extrato pode começar ou terminar no meio de um mês: a comparação avisa */
-    var dIni = null, dFim = null;
-    state.tx.forEach(function(t){ if (!dIni || t.date<dIni) dIni = t.date; if (!dFim || t.date>dFim) dFim = t.date; });
-    var ddmm = function(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
-    var com = function(o, nome){ var c = {}; for (var kk in o) c[kk] = o[kk]; c.name = nome; return c; };
-    if (dFim && dFim.getFullYear()===cmpB.y && dFim.getMonth()===cmpB.m && dFim.getDate()<new Date(cmpB.y, cmpB.m+1, 0).getDate()) cmpB = com(cmpB, cmpB.name+' (até '+ddmm(dFim)+')');
-    if (dIni && dIni.getFullYear()===cmpA.y && dIni.getMonth()===cmpA.m && dIni.getDate()>1) cmpA = com(cmpA, cmpA.name+' (desde '+ddmm(dIni)+')');
     var A = cmpA, B = cmpB;
     $('dChgA').textContent = A.label; $('dChgB').textContent = B.label;
     $('dChgHint').textContent = 'Comparando '+A.name+' com '+B.name;
@@ -1814,7 +1822,7 @@ function setView(){
   $('viewEconomia').hidden = !(v==='economia' && isD);
   var chegouDesp = v==='despesas' && $('viewDespesas').hidden;
   $('viewDespesas').hidden = v!=='despesas';
-  if (chegouDesp && state.loaded && state.despAberta) despesasCalmo();
+  if (chegouDesp && state.loaded) despesasCalmo();   /* os gráficos são desenhados na largura real da página */
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
@@ -3089,7 +3097,37 @@ function renderDespesas(tx, prev){
   var bt = $('xCatTodas');
   bt.hidden = cats.length<=CAT_VISIVEIS + 1;
   bt.textContent = state.despTodas ? 'Mostrar menos' : 'Ver todas as '+cats.length+' categorias';
-  ['xMeses','xMudou','xGastos','xResumo'].forEach(function(id){ $(id).hidden = true; });
+  /* gastos mês a mês */
+  var un = unidadeDe(p), nomeUn = {dia:'dia', semana:'semana', mes:'mês', ano:'ano'}[un];
+  var gm = svgBarras(un, unidadesSaida(p, un), {cls:'x-gm', aria:'Saídas por '+nomeUn, W:Math.max(300, larguraDe('xCats')-34), H:190, rotulos:Math.max(4, Math.floor((larguraDe('xCats')-34)/56))});
+  $('xMeses').hidden = !(gm && gm.n>1);
+  if (gm){ $('xMesesG').innerHTML = gm.svg; $('xMesesT').textContent = {dia:'Gastos dia a dia', semana:'Gastos semana a semana', mes:'Gastos mês a mês', ano:'Gastos ano a ano'}[un];
+    $('xMesesH').innerHTML = '<span class="x-media-leg">- - -</span> média '+brl0.format(gm.media)+' por '+nomeUn+(un==='dia' ? '' : ' (só '+(un==='semana' ? 'semanas' : un==='ano' ? 'anos' : 'meses')+' completos)'); }
+  /* o que mudou: o mesmo par de meses do Dashboard */
+  var par = parMeses(tx);
+  var mu = par ? Despesas.mudancas(par.A.cat, par.B.cat, 2) : null;
+  $('xMudou').hidden = !mu || !(mu.subiram.length + mu.cairam.length);
+  if (mu){
+    $('xMudouH').textContent = par.B.label+' contra '+par.A.label;
+    var pil = function(x, cls){ return '<button type="button" class="x-pil '+cls+'" data-cat="'+esc(x.nome)+'">'+esc(x.nome)+' <b>'+(x.d>0 ? '+' : '−')+brl0.format(Math.abs(x.d))+' ('+esc(x.txt)+')</b></button>'; };
+    $('xMudouL').innerHTML = mu.subiram.map(function(x){ return pil(x, 'sobe'); }).join('')+mu.cairam.map(function(x){ return pil(x, 'cai'); }).join('');
+  }
+  /* maiores gastos: um por origem, sem estornos nem movimentos internos */
+  var gastos = Analise.maioresGastos(tx.filter(function(t){ return saiDaConta(t) && !t.estorno; })
+    .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, chave:t.origin}; }), 5);
+  $('xGastos').hidden = !gastos.length;
+  $('xGastosL').innerHTML = gastos.map(function(g){
+    return '<li><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd">'+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>';
+  }).join('');
+  /* resumo em frases, só sobre gastos */
+  var semCat = tx.filter(function(t){ return ehSaida(t) && catOf(t)===OTHER; });
+  var nDias = Math.round((tx[tx.length-1].date - tx[0].date)/864e5)+1, insDia = T.ins/nDias, fixMes = dv.fixas/div;
+  var fr = Despesas.frases({ semCat: byCat[OTHER] ? {n:semCat.length, v:byCat[OTHER]} : null,
+    taxas: byCat[feesName()] ? {v:byCat[feesName()], ins:T.ins} : null,
+    cats: cats.filter(function(c){ return c.nome!==OTHER; }).map(function(c){ return {nome:c.nome, v:c.v}; }), outs:outs,
+    diasRenda: !isWeek && insDia>0 && fixMes>0 ? Math.round(fixMes/insDia) : null });
+  $('xResumo').hidden = !fr.length;
+  $('xResumoL').innerHTML = fr.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
 }
 /* o detalhe da categoria aberta: mês a mês (gráfico B), onde foi o dinheiro e o atalho */
 function detalheCategoria(nome, tx, isWeek){
@@ -3132,13 +3170,15 @@ $('xCatList').addEventListener('click', function(e){
   despesasCalmo();
   var nb = document.querySelector('#xCatList .x-cat[data-cat="'+CSS.escape(nome)+'"]'); if (nb) nb.focus();
 });
+$('xMudouL').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (b) abrirLancamentos(b.dataset.cat); });
+$('xGastosL').addEventListener('click', function(e){ var b = e.target.closest('[data-gasto]'); if (!b) return; state.q = b.dataset.gasto; $('q').value = state.q; abrirLancamentos('all'); });
 $('xCatTodas').addEventListener('click', function(){ state.despTodas = !state.despTodas; despesasCalmo(); });
 function despesasCalmo(){ state.despCalmo = true; try { render(); } finally { state.despCalmo = false; } }
-/* o gráfico da categoria aberta é desenhado na largura real: redesenha ao chegar na página e ao redimensionar */
+/* os gráficos de Despesas são desenhados na largura real: redesenha ao chegar na página e ao redimensionar */
 var despTimer = null;
 window.addEventListener('resize', function(){
   clearTimeout(despTimer);
-  despTimer = setTimeout(function(){ if (state.loaded && !$('viewDespesas').hidden && state.despAberta) despesasCalmo(); }, 150);
+  despTimer = setTimeout(function(){ if (state.loaded && !$('viewDespesas').hidden) despesasCalmo(); }, 150);
 });
 
 function abrirLancamentos(cat){
