@@ -110,7 +110,7 @@ function lerData(txt){
   if ((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t))){ y = +m[1]; mo = +m[2]; d = +m[3]; }
   else if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t))){ d = +m[1]; mo = +m[2]; y = +m[3]; }
   else return null;
-  if (mo<1 || mo>12 || d<1 || d>ultimoDia(y, mo-1)) return null;
+  if (y<1900 || y>2100 || mo<1 || mo>12 || d<1 || d>ultimoDia(y, mo-1)) return null;
   return y+'-'+p2(mo)+'-'+p2(d);
 }
 function validar(p, n){
@@ -119,10 +119,30 @@ function validar(p, n){
   return null;
 }
 function fatorMes(p, mesesComDados){
-  if (p && p.tipo==='intervalo' && p.dias){ var d = diasEntre(p.de, p.ate); return {divisor:d/30, nota:'média de 30 dias', dias:d}; }
+  if (p && p.tipo==='intervalo' && p.dias){
+    var d = diasEntre(p.de, p.ate);
+    /* menos de 30 dias: nunca multiplica; mostra o total "em N dias" */
+    return d<30 ? {divisor:1, nota:null, dias:d} : {divisor:d/30, nota:'média de 30 dias', dias:d};
+  }
   if (p && p.tipo==='semana') return {divisor:1, nota:null, dias:null};
   return {divisor:Math.max(1, mesesComDados||0), nota:null, dias:null};
 }
+
+/* começo e fim (ISO) de um período; tudo → null */
+function limites(p){
+  if (!p || p.tipo==='tudo') return null;
+  if (p.tipo==='mes') return {de:chave(p.y, p.m)+'-01', ate:chave(p.y, p.m)+'-'+p2(ultimoDia(p.y, p.m))};
+  if (p.tipo==='semana') return {de:p.w, ate:somaDias(p.w, 6)};
+  return {de:p.de, ate:p.ate};
+}
+/* quanto do período o extrato (inicio..fim, ISO) cobre de fato */
+function cobertura(p, inicio, fim){
+  var l = limites(p) || {de:inicio, ate:fim};
+  var de = l.de>inicio ? l.de : inicio, ate = l.ate<fim ? l.ate : fim;
+  if (de>ate) return {de:de, ate:ate, dias:0, parcial:true};
+  return {de:de, ate:ate, dias:diasEntre(de, ate), parcial: de!==l.de || ate!==l.ate};
+}
+function sobrepoe(a, b){ var x = limites(a), y = limites(b); return !x || !y || (x.de<=y.ate && y.de<=x.ate); }
 
 /* comparação de dois períodos, sempre por mês */
 function comparar(A, B){
@@ -150,7 +170,7 @@ function comparar(A, B){
 }
 
 return { contem:contem, anterior:anterior, nomeAnterior:nomeAnterior, nome:nome, curto:curto, deMeses:deMeses, deDias:deDias,
-  atalhos:atalhos, atalhosComparar:atalhosComparar, lerData:lerData, validar:validar, fatorMes:fatorMes, comparar:comparar,
+  atalhos:atalhos, atalhosComparar:atalhosComparar, limites:limites, cobertura:cobertura, sobrepoe:sobrepoe, ddmmaaaa:ddmmaaaa, lerData:lerData, validar:validar, fatorMes:fatorMes, comparar:comparar,
   chaveDe:function(d){ return chave(d.getFullYear(), d.getMonth()); }, iso:iso };
 })();
 if (typeof window!=='undefined') window.Periodo = Periodo;

@@ -114,3 +114,30 @@ test('comparar: veredito, linhas, categorias e o que mais mudou', () => {
   assert.equal(neg.linhas[2].rotulo, 'Faltou');
   assert.match(neg.veredito.texto, /^Piorou: faltou R\$\s100 a mais por mês que em b\.$/);
 });
+
+// ---- correções da revisão ----
+test('fatorMes: intervalo de dias com menos de 30 dias não é multiplicado (mostra o total)', () => {
+  assert.deepEqual(P.fatorMes(P.deDias('2026-03-01', '2026-03-16'), 1), {divisor: 1, nota: null, dias: 16});
+  assert.equal(P.fatorMes(P.deDias('2026-03-01', '2026-04-14'), 2).divisor, 1.5);
+});
+test('limites: começo e fim de cada tipo', () => {
+  assert.deepEqual(P.limites({tipo: 'mes', y: 2026, m: 1}), {de: '2026-02-01', ate: '2026-02-28'});
+  assert.deepEqual(P.limites({tipo: 'semana', w: '2026-09-28'}), {de: '2026-09-28', ate: '2026-10-04'});
+  assert.deepEqual(P.limites(P.deDias('2026-03-10', '2026-03-19')), {de: '2026-03-10', ate: '2026-03-19'});
+  assert.equal(P.limites({tipo: 'tudo'}), null);
+});
+test('cobertura: quanto do período o extrato cobre', () => {
+  assert.deepEqual(P.cobertura({tipo: 'mes', y: 2026, m: 10}, '2025-11-01', '2026-11-10'), {de: '2026-11-01', ate: '2026-11-10', dias: 10, parcial: true});
+  assert.deepEqual(P.cobertura({tipo: 'mes', y: 2026, m: 9}, '2025-11-01', '2026-11-10'), {de: '2026-10-01', ate: '2026-10-31', dias: 31, parcial: false});
+  assert.equal(P.cobertura(P.deMeses('2025-10', '2026-03'), '2026-01-01', '2026-09-30').parcial, true);
+});
+test('sobrepoe: períodos que se cruzam', () => {
+  assert.equal(P.sobrepoe(P.deMeses('2026-01', '2026-06'), P.deMeses('2026-04', '2026-09')), true);
+  assert.equal(P.sobrepoe(P.deMeses('2026-01', '2026-06'), P.deMeses('2026-07', '2026-09')), false);
+  assert.equal(P.sobrepoe({tipo: 'mes', y: 2026, m: 3}, P.deMeses('2026-01', '2026-06')), true);
+});
+test('lerData: só anos entre 1900 e 2100', () => {
+  assert.equal(P.lerData('01/01/0001'), null);
+  assert.equal(P.lerData('01/01/2101'), null);
+  assert.equal(P.lerData('01/01/1999'), '1999-01-01');
+});

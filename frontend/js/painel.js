@@ -56,6 +56,14 @@ function inP(t, p){
   return true;
 }
 function cur(){ return state.tx.filter(function(t){ return Periodo.contem(t.date, state.p); }); }
+/* primeiro e último dia (ISO) com lançamentos no extrato */
+function extratoLimites(){
+  var a = null, b = null;
+  state.tx.forEach(function(t){ var d = Periodo.iso(t.date); if (!a || d<a) a = d; if (!b || d>b) b = d; });
+  return {inicio:a, fim:b};
+}
+/* o extrato cobre o período inteiro? (para não comparar com um período pela metade) */
+function cobreInteiro(p){ var L = extratoLimites(); return !!L.inicio && !Periodo.cobertura(p, L.inicio, L.fim).parcial; }
 /* chaves 'AAAA-MM' dos meses do extrato, em ordem */
 function mesesDoExtrato(){ var k = {}; state.tx.forEach(function(t){ k[Periodo.chaveDe(t.date)] = 1; }); return Object.keys(k).sort(); }
 /* escolher um período (atalho, mês, semana, Personalizado): sai da comparação */
@@ -742,7 +750,7 @@ function render(){
   var first = all[0].date, last = all[all.length-1].date;
 
   var pAnt = Periodo.anterior(state.p), prev = null;
-  if (pAnt){ var pl = all.filter(function(t){ return Periodo.contem(t.date, pAnt); }); if (pl.length){ prev = sums(pl); prev.label = Periodo.nomeAnterior(state.p); } }
+  if (pAnt && cobreInteiro(pAnt)){ var pl = all.filter(function(t){ return Periodo.contem(t.date, pAnt); }); if (pl.length){ prev = sums(pl); prev.label = Periodo.nomeAnterior(state.p); } }
 
   $('srcBadge').textContent = state.source==='sample' ? 'Exemplo · dados fictícios' : 'Seu extrato';
   $('srcBadge').className = 'badge' + (state.source==='sample' ? '' : ' real');
@@ -1150,7 +1158,8 @@ function renderDashboard(){
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
 
   /* contexto para as contas do dashboard (js/analise.js) */
-  var ctx = { escopo: isWeek ? 'semana' : state.p.tipo==='mes' ? 'mes' : 'meses', nM:nM, notaMes:fmes.nota, dias:fmes.dias,
+  var diasP = state.p.tipo==='intervalo' && !!state.p.dias;   /* dias exatos: meses das pontas podem estar cortados */
+  var ctx = { escopo: isWeek ? 'semana' : state.p.tipo==='mes' ? 'mes' : (fmes.dias && !fmes.nota) ? 'dias' : 'meses', nM:nM, notaMes:fmes.nota, dias:fmes.dias,
     ins:T.ins, outs:T.outs, byCat:byCat, fixas:FIXED, outros:OTHER,
     meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }),
     nomes: {delivery:catByCode('delivery'), tarifas:catByCode('tarifas'), assinaturas:catByCode('assinaturas'),
@@ -1165,7 +1174,7 @@ function renderDashboard(){
   $('dVerT').textContent = ver.titulo;
   $('dVerTx').textContent = ver.texto;
   $('dVerPesa').textContent = ver.pesa || '';
-  var pAntD = Periodo.anterior(state.p), pp = pAntD ? {p:pAntD, label:Periodo.nomeAnterior(state.p)} : null, ant = null;
+  var pAntD = Periodo.anterior(state.p), pp = pAntD && cobreInteiro(pAntD) ? {p:pAntD, label:Periodo.nomeAnterior(state.p)} : null, ant = null;
   if (pp && (isWeek || state.p.tipo==='mes')){  /* compara só mês com mês ou semana com semana */ var pl = state.tx.filter(function(t){ return Periodo.contem(t.date, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
   var nums = Analise.numeros(ctx);
   if (ant){  /* comparação com o mês (ou a semana) anterior */
@@ -1221,7 +1230,7 @@ function renderDashboard(){
   $('dEcoAtalho').textContent = rz.n ? 'Dá para economizar ~'+brl0.format(rz.total)+'/mês em '+rz.n+(rz.n===1 ? ' item' : ' itens')+' →' : 'Veja onde dá para economizar →';
 
   /* Parte 3: para onde vai o dinheiro */
-  var bar = Analise.barras(ctx, sel);
+  var bar = Analise.barras(diasP ? Object.assign({}, ctx, {meses:[]}) : ctx, sel);   /* sem setas de "último mês" com meses cortados */
   var nTodas = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).length;
   var maxV = bar.linhas.reduce(function(m,l){ return Math.max(m, l.mes); }, 0);
   /* as porcentagens vêm de Analise.fatias: a lista, o PDF e a legenda mostram os mesmos números */
@@ -1304,7 +1313,7 @@ function renderDashboard(){
     return {label:o.label, v:o.res, fill: o.res>=0 ? 'var(--s1)' : 'var(--bad)',
       tip:'<b>'+esc(o.name)+'</b><br>Entradas: '+brl.format(o.ins)+'<br>Saídas: '+brl.format(o.outs)+'<br>Resultado: '+brl.format(o.res)+'<br>Margem: '+pct.format(o.ins?o.res/o.ins:0),
       more: moreHTML('Maiores saídas do mês', Object.keys(o.cat).sort(function(a,b){return o.cat[b]-o.cat[a];}).slice(0,4).map(function(c){return [c, brl.format(o.cat[c])];}),
-        nM>1 ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
+        nM>1 && !diasP ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
   }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:alturaMeses(), largura:larguraDe('dRes'), aria:'Resultado por mês'});
   }
 
@@ -1330,7 +1339,8 @@ function renderDashboard(){
   var top3 = order.slice(0,3), top3sum = top3.reduce(function(s,i){return s+domAvg[i];},0);
   /* categorias que mais mudaram */
   var chg = [], cmpA = null, cmpB = null;
-  if (nM>=2){ cmpA = months[nM-2]; cmpB = months[nM-1]; }
+  if (diasP){ /* meses cortados pelo intervalo de dias: sem comparação de meses */ }
+  else if (months.length>=2){ cmpA = months[months.length-2]; cmpB = months[months.length-1]; }
   else if (!isWeek){
     var only = months[0], pm = only.m-1, py = only.y; if (pm<0){ pm = 11; py--; }
     var pk = py+'-'+String(pm).padStart(2,'0');
@@ -1395,7 +1405,7 @@ function renderDashboard(){
 
   /* outras informações (o que virou veredito ou ação já aparece no topo) */
   var L = [];
-  if (nM>=2){
+  if (months.length>=2 && !diasP){
     var best = months.slice().sort(function(a,b){return b.res-a.res;})[0], worst = months.slice().sort(function(a,b){return a.res-b.res;})[0];
     L.push({w:false, t:'O melhor mês foi '+best.name+' (resultado de '+brl.format(best.res)+') e o mais fraco, '+worst.name+' ('+brl.format(worst.res)+').'});
   }
@@ -2367,7 +2377,9 @@ $('pPersAplicar').addEventListener('click', function(){
   var p, erro = null;
   if (state.persAba==='dias'){
     var de = Periodo.lerData($('pDeD').value), ate = Periodo.lerData($('pAteD').value);
-    if (!de || !ate) erro = 'Digite as duas datas no formato dd/mm/aaaa.';
+    var Lx = extratoLimites();
+    if (!de || !ate) erro = 'Digite as duas datas no formato dd/mm/aaaa (uma data que existe).';
+    else if (de<Lx.inicio || ate>Lx.fim) erro = 'Escolha datas entre '+Periodo.ddmmaaaa(Lx.inicio)+' e '+Periodo.ddmmaaaa(Lx.fim)+'.';
     else p = Periodo.deDias(de, ate);
   } else p = Periodo.deMeses($('pDeM').value, $('pAteM').value);
   if (!erro && p.tipo==='intervalo' && !p.dias && $('pDeM').value>$('pAteM').value) erro = 'Escolha a data final depois da inicial.';
@@ -2384,7 +2396,18 @@ function dadosPeriodo(p){
   var tx = state.tx.filter(function(t){ return Periodo.contem(t.date, p); });
   var T = sums(tx), cat = {}, ms = {};
   tx.forEach(function(t){ ms[Periodo.chaveDe(t.date)] = 1; if (saiDaConta(t)){ var c = catOf(t); cat[c] = (cat[c]||0) - t.value; } });
-  return { nome:Periodo.curto(p), ins:T.ins, outs:T.outs, divisor:Periodo.fatorMes(p, Object.keys(ms).length).divisor, cat:cat, n:tx.length };
+  var nome = Periodo.curto(p), divisor = Periodo.fatorMes(p, Object.keys(ms).length).divisor, aviso = null;
+  /* o extrato cobre só parte do período (começa ou termina no meio): por mês estimado pelos dias com dados */
+  var L = extratoLimites(), cov = L.inicio ? Periodo.cobertura(p, L.inicio, L.fim) : null, lim = Periodo.limites(p);
+  var estimado = false;
+  if (cov && cov.parcial && cov.dias>0){
+    var total = Periodo.cobertura(p, lim.de, lim.ate).dias;
+    estimado = cov.dias/total < 0.8;   /* falta mais de 20% do período: estima o por mês pelos dias com dados */
+    if (estimado) divisor = cov.dias/30;
+    var ddmm = function(x){ return x.slice(8,10)+'/'+x.slice(5,7); };
+    aviso = nome+' só tem dados '+(cov.de!==lim.de ? 'desde '+ddmm(cov.de)+(cov.ate!==lim.ate ? ' ' : '') : '')+(cov.ate!==lim.ate ? 'até '+ddmm(cov.ate) : '');
+  }
+  return { nome:nome, ins:T.ins, outs:T.outs, divisor:divisor, cat:cat, n:tx.length, aviso:aviso, estimado:estimado, dias: cov ? cov.dias : 0 };
 }
 function renderComparacao(){
   var on = !!state.cmp;
@@ -2393,7 +2416,10 @@ function renderComparacao(){
   $('pdfBtn').hidden = on;
   if (!on) return;
   var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b), r = Periodo.comparar(A, B);
-  $('dCmpTopo').innerHTML = 'Comparando <b class="cmp-p1">'+esc(A.nome)+'</b> × <b class="cmp-p2">'+esc(B.nome)+'</b> · <button type="button" class="link-btn" data-sair>Sair da comparação</button>';
+  var avisos = [A, B].filter(function(d){ return d.aviso; }).map(function(d){ return d.aviso+(d.estimado ? ' (o valor por mês é uma estimativa a partir desses dias).' : '.'); });
+  if (Periodo.sobrepoe(state.cmp.a, state.cmp.b)) avisos.push('Os períodos se sobrepõem.');
+  $('dCmpTopo').innerHTML = 'Comparando <b class="cmp-p1">'+esc(A.nome)+'</b> × <b class="cmp-p2">'+esc(B.nome)+'</b> · <button type="button" class="link-btn" data-sair>Sair da comparação</button>'+
+    (avisos.length ? '<span class="cmp-aviso">'+avisos.map(esc).join(' ')+'</span>' : '');
   $('dCmpVer').className = 'card verdict faixa '+r.veredito.cor;
   $('dCmpVer').textContent = r.veredito.texto;
   $('dCmpA').textContent = A.nome; $('dCmpB').textContent = B.nome;
@@ -2474,6 +2500,7 @@ function iniciarComparacao(a, b){
   var erro = null;
   [a, b].some(function(p){ erro = Periodo.validar(p, state.tx.filter(function(t){ return Periodo.contem(t.date, p); }).length); return !!erro; });
   if (!erro && JSON.stringify(a)===JSON.stringify(b)) erro = 'Escolha dois períodos diferentes.';
+  if (!erro) [a, b].some(function(p, i){ var d = dadosPeriodo(p); if (d.aviso && d.dias<7){ erro = 'O Período '+(i+1)+' tem só '+d.dias+(d.dias===1 ? ' dia' : ' dias')+' de dados no extrato; escolha um período maior.'; } return !!erro; });
   if (erro){ $('pCmpErro').textContent = erro; $('pCmpErro').hidden = false; return; }
   $('pCmp').hidden = true;
   state.p = JSON.parse(JSON.stringify(a)); state.cmp = {a:a, b:b}; state.cmpNovo = true; state.cmpTodas = false;
@@ -2492,7 +2519,9 @@ $('pCmpOk').addEventListener('click', function(){
   var a, b;
   if (state.cmpAba==='dias'){
     var v = ['pC1DeD','pC1AteD','pC2DeD','pC2AteD'].map(function(id){ return Periodo.lerData($(id).value); });
-    if (v.some(function(x){ return !x; })){ $('pCmpErro').textContent = 'Digite as quatro datas no formato dd/mm/aaaa.'; $('pCmpErro').hidden = false; return; }
+    var Lc = extratoLimites();
+    if (v.some(function(x){ return !x; })){ $('pCmpErro').textContent = 'Digite as quatro datas no formato dd/mm/aaaa (datas que existem).'; $('pCmpErro').hidden = false; return; }
+    if (v.some(function(x){ return x<Lc.inicio || x>Lc.fim; })){ $('pCmpErro').textContent = 'Escolha datas entre '+Periodo.ddmmaaaa(Lc.inicio)+' e '+Periodo.ddmmaaaa(Lc.fim)+'.'; $('pCmpErro').hidden = false; return; }
     a = Periodo.deDias(v[0], v[1]); b = Periodo.deDias(v[2], v[3]);
   } else {
     if ($('pC1De').value>$('pC1Ate').value || $('pC2De').value>$('pC2Ate').value){ $('pCmpErro').textContent = 'Escolha a data final depois da inicial.'; $('pCmpErro').hidden = false; return; }

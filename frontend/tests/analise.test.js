@@ -424,3 +424,8 @@ test('dias exatos: "por mês" vira média de 30 dias nos números e no veredito'
   assert.match(n[0].sub, /^em 169 dias · R\$\s[\d.,]+ por mês \(média de 30 dias\)$/);
   assert.match(Analise.veredito(c).texto, /por mês \(média de 30 dias\)/);
 });
+test('intervalo curto de dias: mostra o total "em N dias", sem "por mês"', () => {
+  const c = ctx({ins: 3000, outs: 1000, nM: 1, escopo: 'dias', dias: 16});
+  assert.equal(Analise.numeros(c)[0].sub, 'em 16 dias');
+  assert.match(Analise.veredito(c).texto, /nestes 16 dias/);
+});

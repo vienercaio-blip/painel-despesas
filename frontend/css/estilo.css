@@ -829,3 +829,4 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cmp-tab{table-layout:fixed;min-width:0}
 .cmp-tab th,.cmp-tab td{white-space:normal;overflow-wrap:anywhere}
 @media (max-width:560px){.cmp-tab th,.cmp-tab td{font-size:12px;padding:6px 3px}.cmp-tab th:first-child{width:24%}}
+.cmp-aviso{display:block;margin-top:4px;font-size:13px;color:var(--warn)}

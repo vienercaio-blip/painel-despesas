@@ -12,6 +12,7 @@ var Analise = (function(){
 
 function quando(c){
   if (c.notaMes) return 'por mês ('+c.notaMes+')';   /* dias exatos: média de 30 dias */
+  if (c.escopo==='dias') return 'nestes '+c.dias+' dias';
   if (c.nM>1) return 'por mês';
   return c.escopo==='semana' ? 'nesta semana' : 'neste mês';
 }
@@ -59,6 +60,7 @@ function numeros(c){
   var res = c.ins - c.outs;
   function sub(v){
     if (c.escopo==='semana') return 'nesta semana';
+    if (c.escopo==='dias') return 'em '+c.dias+' dias';
     if (c.notaMes) return 'em '+c.dias+' dias · '+c.brl(v/c.nM)+' por mês ('+c.notaMes+')';
     return c.nM>1 ? 'em '+c.nM+' meses · '+c.brl(v/c.nM)+' por mês' : 'neste mês';
   }
