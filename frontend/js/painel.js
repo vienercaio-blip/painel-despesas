@@ -881,12 +881,13 @@ function renderCategorias(){
   $('oRegras').setAttribute('aria-pressed', String(view==='regras'));
   /* detalhe: entra deslizando quando a escolha muda */
   var escolhaAgora = view+'|'+(view==='cat' || view==='rev' ? state.cat : '');
-  var entra = state.orgEscolha!==undefined && escolhaAgora!==state.orgEscolha && !REDUZIR.matches;
+  var visivelOrg = !$('viewCategorias').hidden;
+  var entra = visivelOrg && state.orgEscolha!==undefined && escolhaAgora!==state.orgEscolha && !REDUZIR.matches;
   state.orgEscolha = escolhaAgora; state.orgEntra = entra;
   var det = document.querySelector('#viewCategorias .cat-detail');
   det.classList.remove('o-entra'); if (entra){ void det.offsetWidth; det.classList.add('o-entra'); }
   /* 8: Para revisar acabou de zerar */
-  var festa = state.orgRevAntes>0 && nRev===0 && !REDUZIR.matches;
+  var festa = visivelOrg && state.orgRevAntes>0 && nRev===0 && !REDUZIR.matches;
   state.orgRevAntes = nRev;
   $('subLanc').hidden = true;
   $('oCatAcoes').hidden = view!=='cat';
@@ -1869,7 +1870,9 @@ function setView(){
   var chegouDesp = v==='despesas' && $('viewDespesas').hidden;
   $('viewDespesas').hidden = v!=='despesas';
   if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; $('xSaiu').dataset.v = '0'; state.despChegou = true; render(); }   /* chegar: desenha na largura real e com movimento */
+  var chegouOrg = v==='categorias' && $('viewCategorias').hidden;
   $('viewCategorias').hidden = v!=='categorias';
+  if (chegouOrg && state.loaded) renderOrganizar();
   var chegouLanc = v==='lancamentos' && $('viewLanc').hidden;
   $('viewLanc').hidden = v!=='lancamentos';
   if (chegouLanc && state.loaded){ state.lancChegou = true; renderTable(); }
@@ -2187,7 +2190,7 @@ function animarListaOrg(view){
   var lista = $('catList'), a = lista.querySelector('[aria-current="true"]');
   var m = document.createElement('span'); m.id = 'oMarca'; m.setAttribute('aria-hidden', 'true');
   lista.insertBefore(m, lista.firstChild);
-  if (!a){ m.hidden = true; state.orgMarca = null; }
+  if (!a || lista.offsetParent===null){ m.hidden = !a; if (!a) state.orgMarca = null; if (a) m.classList.add('sem-medida'); }
   else {
     var ant = state.orgMarca, alvo = {top:a.offsetTop, h:a.offsetHeight};
     if (ant && !REDUZIR.matches){ m.style.top = ant.top+'px'; m.style.height = ant.h+'px'; void m.offsetWidth; m.classList.add('anda'); }
