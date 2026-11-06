@@ -2607,7 +2607,11 @@ function chegou(){
   if (noDash) renderDashboard();
   if (noDash && state.vistaDash!=='dashboard') animarDashboard();
   state.vistaDash = noDash ? 'dashboard' : 'outra';
-  if (state.loaded && MODE==='despesas' && !$('viewEconomia').hidden) renderEconomia();
+  var noEco = state.loaded && MODE==='despesas' && !$('viewEconomia').hidden;
+  if (noEco && state.vistaEco!=='economia'){ state.ecoAntes = null; state.ecoBrilhou = false; state.ecoPassou = undefined; }
+  if (noEco) renderEconomia();
+  if (noEco && state.vistaEco!=='economia') animarEconomia();
+  state.vistaEco = noEco ? 'economia' : 'outra';
   window.scrollTo(0, 0);
   if (state.depois){ var f = state.depois; state.depois = null; f(); }
 }
@@ -2856,13 +2860,26 @@ function atualizarEconomia(){
     if (sobra<0) tx = 'Faltou '+brl.format(-sobra)+' por mês no período';
     else if (sobra>=meta) tx = 'Meta batida: sobrou '+brl.format(sobra)+' de '+brl.format(meta);
     else tx = 'Sobrou '+brl.format(sobra)+' de '+brl.format(meta)+' · faltam '+brl.format(meta-sobra);
-    if (extra>0.005) tx += ' · com o que você marcou: '+(sobra+extra>=0 ? brl.format(sobra+extra) : 'ainda faltaria '+brl.format(-(sobra+extra)));
   }
   $('eMetaBarra').hidden = !meta;
   $('eMetaBarra').querySelector('.eco-cheia').style.width = cheia.toFixed(2)+'%';
   $('eMetaBarra').querySelector('.eco-extra').style.width = clara.toFixed(2)+'%';
+  var comMarc = meta && extra>0.005 ? sobra+extra : null;
   $('eMetaTx').textContent = tx;
-  $('eMetaTx').dataset.extra = extra>0.005 ? brl.format(sobra+extra) : '';
+  if (comMarc!==null){
+    $('eMetaTx').appendChild(document.createTextNode(' · com o que você marcou: '+(comMarc>=0 ? '' : 'ainda faltaria ')));
+    var sp = document.createElement('span'); sp.className = 'eco-conta'; sp.textContent = brl.format(Math.abs(comMarc)); $('eMetaTx').appendChild(sp);
+  }
+  $('eMetaTx').dataset.extra = comMarc!==null ? (comMarc>=0 ? '' : 'ainda faltaria ')+brl.format(Math.abs(comMarc)) : '';
+  contarEco(comMarc);
+  /* brilho: a primeira vez nesta visita que o total passa da meta */
+  var passou = meta && sobra+extra>=meta, antes = state.ecoPassou;
+  state.ecoPassou = passou;
+  if (passou && antes===false && !state.ecoBrilhou && !semMovimento()){
+    state.ecoBrilhou = true;
+    var bar = $('eMetaBarra'); bar.classList.remove('brilha'); void bar.offsetWidth; bar.classList.add('brilha');
+    setTimeout(function(){ bar.classList.remove('brilha'); }, 1300);
+  }
   /* objetivo */
   var o = C.objetivo, form = !!state.ecoObjForm;
   $('eObjForm').hidden = !form;
@@ -2886,6 +2903,36 @@ function atualizarEconomia(){
   /* total */
   $('eTotal').textContent = extra>0.005 ? 'Com o que você marcou: ~'+brl0.format(extra)+'/mês · '+brl0.format(extra*12)+'/ano'
     : (state.ecoResumo && state.ecoResumo.n ? 'Tudo somado: ~'+brl0.format(state.ecoResumo.total)+'/mês' : '');
+}
+/* "com o que você marcou" conta do valor anterior até o novo; o texto final é o exato */
+function contarEco(alvo){
+  var de = state.ecoAntes; state.ecoAntes = alvo;
+  var token = state.ecoToken = (state.ecoToken || 0) + 1;
+  var sp = document.querySelector('#eMetaTx .eco-conta');
+  if (!sp || alvo===null || de===null || de===undefined || Math.abs(de-alvo)<0.005 || semMovimento() || !window.requestAnimationFrame) return;
+  var final = sp.textContent, ini = null;
+  var passo = function(t){
+    if (token!==state.ecoToken) return;
+    if (ini===null) ini = t;
+    var p = Math.min(1, (t-ini)/800), v = de + (alvo-de)*(1-Math.pow(1-p, 3));
+    sp.textContent = p<1 ? brl.format(Math.abs(v)) : final;
+    if (p<1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+/* chegada: blocos em cascata e barras enchendo do zero */
+var ecoTimer = null;
+function animarEconomia(){
+  var v = $('viewEconomia');
+  if (semMovimento()) return;
+  v.classList.remove('entra'); void v.offsetWidth; v.classList.add('entra');
+  var barras = Array.prototype.slice.call(v.querySelectorAll('.eco-barra i'));
+  var alvos = barras.map(function(b){ return b.style.width; });
+  barras.forEach(function(b){ b.style.transition = 'none'; b.style.width = '0%'; });
+  void v.offsetWidth;
+  barras.forEach(function(b, i){ b.style.transition = ''; b.style.width = alvos[i]; });
+  clearTimeout(ecoTimer);
+  ecoTimer = setTimeout(function(){ v.classList.remove('entra'); }, 1400);
 }
 function cssEsc(s){ return String(s).replace(/["\\]/g, '\\$&'); }
 function ecoItem(id){ return (state.ecoItens || []).filter(function(x){ return x.id===id; })[0]; }
