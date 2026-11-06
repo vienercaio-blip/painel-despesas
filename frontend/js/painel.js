@@ -186,7 +186,7 @@ function load(list, source, name){
   if (typeof esquecerCriacao==='function' && CRIAR_PARA) esquecerCriacao();
   $('dAvisoPasta').hidden = true;
   $('dAvisoLeitura').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
-  state.txPor = 50; state.txOrd = {col:'data', dir:'desc'}; state.dashCats = null; state.dashDet = false; state.dashTodas = false;
+  state.txPor = 50; state.txOrd = {col:'data', dir:'desc'}; state.txGen = (state.txGen||0)+1; state.dashCats = null; state.dashDet = false; state.dashTodas = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
@@ -1885,8 +1885,10 @@ function renderTable(){
   var modo = state.lancChegou ? 'entrada' : (state.lancOrdAntes && ordAgora!==state.lancOrdAntes) ? 'ordem' : state.lancDir ? 'pagina' : state.lancBusca ? 'calmo'
     : (state.lancChaveF!==undefined && chaveF!==state.lancChaveF) ? 'troca' : 'calmo';
   var contaNums = state.lancChegou ? 'zero' : (state.lancChaveP!==undefined && chaveP!==state.lancChaveP) ? 'antigo' : null;
-  var dirPag = state.lancDir, pulsa = state.lancPulsa, okAntes = state.lancOkAntes;
-  state.lancChegou = false; state.lancDir = 0; state.lancBusca = false; state.lancPulsa = false; state.lancOkAntes = null;
+  var doTimer = !!state.lancTimerRender;
+  var dirPag = state.lancDir, pulsa = state.lancPulsa, okAntes = doTimer ? null : state.lancOkAntes;
+  state.lancChegou = false; state.lancDir = 0; state.lancBusca = false; state.lancPulsa = false; state.lancTimerRender = false;
+  if (!doTimer) state.lancOkAntes = null;
   state.lancOrdAntes = ordAgora; state.lancChaveF = chaveF; state.lancChaveP = chaveP;
   if (REDUZIR.matches){ modo = 'calmo'; contaNums = null; pulsa = false; }
   var posAntes = null;
@@ -1920,13 +1922,23 @@ function renderTable(){
     if (tOk && catOk!==okAntes.cat && !passa(tOk)) mantem = tOk.id;
   }
   var list = base.filter(function(t){ return t.id===mantem || passa(t); });
+  clearTimeout(state.lancMantemTimer); clearTimeout(state.lancMantemTimer2); state.lancMantido = mantem;
   if (mantem!==null){
-    clearTimeout(state.lancMantemTimer);
-    state.lancMantemTimer = setTimeout(function(){
+    var tira = function(){
+      if (state.lancMantido!==mantem) return;
+      /* alguém está escolhendo outra categoria ou respondendo a pergunta: espera */
+      var ativo = document.activeElement;
+      if (!$('askBg').hidden || (ativo && ativo.matches && ativo.matches('#rows select') && ativo.dataset.id!==String(mantem))){ state.lancMantemTimer = setTimeout(tira, 600); return; }
       var tr = $('rows').querySelector('tr[data-tx="'+mantem+'"]');
       if (tr) tr.classList.add('l-saindo');
-      setTimeout(function(){ state.lancBusca = true; renderTable(); }, tr ? 300 : 0);
-    }, 1300);
+      state.lancMantemTimer2 = setTimeout(function(){
+        if (state.lancMantido!==mantem) return;
+        var foco = document.activeElement && document.activeElement.matches && document.activeElement.matches('#rows select') ? document.activeElement.dataset.id : null;
+        state.lancMantido = null; state.lancBusca = true; state.lancTimerRender = true; renderTable();
+        if (foco){ var nb = $('rows').querySelector('select[data-id="'+foco+'"]') || $('rows').querySelector('select[data-id]'); if (nb) nb.focus({preventScroll:true}); }
+      }, tr ? 300 : 0);
+    };
+    state.lancMantemTimer = setTimeout(tira, 1300);
   }
   /* ordem: data (mais nova primeiro) ou valor (o maior primeiro), clicando no título */
   var ord = state.txOrd || {col:'data', dir:'desc'};
@@ -1946,7 +1958,8 @@ function renderTable(){
   /* quantos lançamentos por vez; 0 = todos. Começa em 50 */
   var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 50;
   $('txPor').value = String(por);
-  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length - (mantem!==null ? 1 : 0), ord.col, ord.dir].join('|');
+  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, state.txGen, ord.col, ord.dir].join('|');
+  var voltaTopo = chave!==state.txChave || !!dirPag;
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
   var nPag = por ? Math.max(1, Math.ceil(list.length/por)) : 1;
   state.txPag = Math.min(state.txPag||0, nPag-1);
@@ -1964,6 +1977,7 @@ function renderTable(){
     var perCell = cmp ? '<td>'+(emA(t) ? '<span class="tag-per tag-per-a">'+esc(CA.nome)+'</span>' : '')+(emB(t) ? '<span class="tag-per tag-per-b">'+esc(CB.nome)+'</span>' : '')+'</td>' : '';
     return '<tr data-tx="'+t.id+'" style="--d:'+Math.min(iLin, 20)+'"><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+realce(t.desc, state.q)+'</td><td>'+catCell+'</td><td class="r num'+(t.value>0 ? ' pos' : '')+'">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="'+(cmp ? 5 : 4)+'">Nenhum lançamento encontrado.</td></tr>';
+  if (voltaTopo && $('txBox')) $('txBox').scrollTop = 0;
   animarLinhas(modo, dirPag, posAntes, okAntes, pulsa);
   var tot = list.reduce(function(s,t){return s+t.value;},0);
   if (cmp){
@@ -2034,7 +2048,8 @@ function renderNumerosLanc(fc){
   if (state.cmp){
     /* comparando: por mês do Período 1, com o Período 2 embaixo; para revisar dos dois, sem repetir */
     var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b);
-    rev = Analise.paraRevisar(state.tx.filter(function(t){ return Periodo.contem(t.date, state.cmp.a) || Periodo.contem(t.date, state.cmp.b); }), ehRevisar);
+    var perN = state.txPer || 'ambos';
+    rev = Analise.paraRevisar(state.tx.filter(function(t){ var a = Periodo.contem(t.date, state.cmp.a), b = Periodo.contem(t.date, state.cmp.b); return perN==='a' ? a : perN==='b' ? b : (a || b); }), ehRevisar);
     var vals = {in:A.ins/A.divisor, out:A.outs/A.divisor};
     entrou = item('in', 'Entrou por mês · '+esc(A.nome), brl.format(A.ins/A.divisor), esc(B.nome)+': '+brl.format(B.ins/B.divisor), 'pos');
     saiu = item('out', 'Saiu por mês · '+esc(A.nome), brl.format(A.outs/A.divisor), esc(B.nome)+': '+brl.format(B.outs/B.divisor));
@@ -2152,6 +2167,11 @@ function closeAsk(choice){
   if ((choice==='yes' || choice==='no' || choice==='alt') && $('askSkip').checked){ state.askPrefs[a.o.kind] = choice; savePrefs(); renderPrefNotes(); }
   if (choice==='yes') a.o.onYes(); else if (choice==='alt') a.o.onAlt(); else if (choice==='no') a.o.onNo(); else if (a.o.onCancel) a.o.onCancel();
   if (a.back && a.back.focus && document.body.contains(a.back)) a.back.focus({preventScroll:true});
+  else if (a.back && a.back.dataset && a.back.dataset.id && a.back.closest && !document.body.contains(a.back)){
+    /* o seletor da linha foi redesenhado: o foco vai para o novo (ou para o primeiro da lista) */
+    var nb = document.querySelector('#rows select[data-id="'+a.back.dataset.id+'"]') || document.querySelector('#rows select[data-id]');
+    if (nb) nb.focus({preventScroll:true});
+  }
 }
 $('askYes').addEventListener('click', function(){ closeAsk('yes'); });
 $('askNo').addEventListener('click', function(){ closeAsk('no'); });

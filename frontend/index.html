@@ -690,7 +690,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <input id="q" type="search" placeholder="Buscar descrição" aria-label="Buscar descrição" style="border:0;background:transparent;outline:none;min-width:0;flex:1;min-height:40px">
       </label>
     </div>
-    <div class="table-box scroll-table">
+    <div class="table-box scroll-table" id="txBox">
       <table>
         <thead><tr><th scope="col" aria-sort="descending"><button type="button" class="th-ord" data-ord="data">Data <span class="ord-seta" aria-hidden="true">▼</span></button></th><th scope="col" class="col-per" hidden>Período</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r" aria-sort="none"><button type="button" class="th-ord" data-ord="valor">Valor <span class="ord-seta" aria-hidden="true">▼</span></button></th></tr></thead>
         <tbody id="rows"></tbody>
