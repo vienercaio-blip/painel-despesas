@@ -203,18 +203,23 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewDash" hidden>
     <div id="dashBank">
-    <section class="card verdict" id="dVer" aria-live="polite">
-      <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span></p>
-      <p class="verdict-pesa" id="dVerPesa"></p>
-      <div class="kpis kpis3" id="dNums"></div>
+    <section class="card verdict faixa" id="dVer" aria-live="polite">
+      <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span> <span class="verdict-pesa" id="dVerPesa"></span></p>
       <p class="aviso-pasta" id="dAvisoPasta" role="status" hidden></p>
       <p class="aviso-pasta" id="dInterno" role="status" hidden></p>
       <p class="aviso-pasta aviso-leitura" id="dAvisoLeitura" role="status" hidden></p>
     </section>
 
-    <div class="dash-grid2">
-    <section class="card" id="dOnde" aria-labelledby="dOndeT">
-      <div class="card-head"><h2 id="dOndeT">Categorias</h2>
+    <section class="card faixa faixa-nums" aria-label="Entrou, saiu e sobrou">
+      <div class="kpis kpis3" id="dNums"></div>
+    </section>
+
+    <section class="card faixa" id="dCmp" aria-labelledby="dCmpT" hidden>
+      <p class="faixa-linha"><b class="faixa-t" id="dCmpT">Comparação</b> <span id="dCmpTx"></span></p>
+    </section>
+
+    <section class="card faixa" id="dOnde" aria-labelledby="dOndeT">
+      <div class="faixa-head"><h2 class="faixa-t" id="dOndeT">Categorias</h2>
         <div class="filtro-wrap">
           <button type="button" class="btn btn-sm" id="dFiltroBtn" aria-expanded="false" aria-controls="dFiltro">Todas as despesas ▾</button>
           <div class="filtro-painel" id="dFiltro" role="group" aria-label="Despesas analisadas" hidden>
@@ -227,40 +232,44 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
             <ul class="filtro-lista" id="dFiltroLista"></ul>
           </div>
         </div>
+        <button type="button" class="link-btn" id="dTodasBtn" aria-expanded="false" aria-controls="dBarras">Ver todas as categorias</button>
       </div>
+      <div class="fatias" id="dFatias" role="group" aria-label="Divisão dos gastos por categoria"></div>
+      <ul class="legenda" id="dLegenda"></ul>
       <p class="filtro-aviso" id="dFiltroAviso" hidden></p>
+      <ul class="barras" id="dBarras" hidden></ul>
       <p class="hint" id="dFixLinha"></p>
-      <ul class="barras" id="dBarras"></ul>
     </section>
 
-    <section class="card" id="dMesSec">
-        <div class="card-head"><h2 id="dResT">Meses</h2><span class="hint" id="dResH">Entradas menos saídas</span></div>
-        <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div>
-        <div class="chart-box" id="dRes"></div>
-    </section>
-    </div>
-
-    <section class="card" id="dAcoesSec" aria-labelledby="dAcoesT">
-      <div class="card-head"><h2 id="dAcoesT">Dicas</h2></div>
-      <div class="acoes dash-grid3" id="dAcoes"></div>
+    <section class="card faixa" id="dMesSec">
+      <div class="faixa-head"><h2 class="faixa-t" id="dResT">Meses</h2><span class="hint" id="dResH">Entradas menos saídas</span>
+        <div class="chart-tools"><div class="field"><label for="rPeriod">Período do gráfico</label><select id="rPeriod"></select></div></div></div>
+      <div class="chart-box" id="dRes"></div>
     </section>
 
+    <section class="card faixa" id="dGastosSec" aria-labelledby="dGastosT">
+      <h2 class="faixa-t" id="dGastosT">Maiores gastos</h2>
+      <ul class="gastos" id="dGastos"></ul>
+    </section>
+
+    <section class="card faixa" id="dPrev" aria-labelledby="dPrevT">
+      <p class="faixa-linha"><b class="faixa-t" id="dPrevT">Previsão</b> <span id="dPrevTx"></span></p>
+      <p class="hint" id="dProjHint"></p>
+    </section>
+
+    <section class="card faixa" id="dAcoesSec" aria-labelledby="dAcoesT">
+      <div class="faixa-head"><h2 class="faixa-t" id="dAcoesT">Dicas</h2></div>
+      <div class="acoes acoes-pilulas" id="dAcoes"></div>
+    </section>
 
     <details class="det" id="dDet">
       <summary>Ver mais detalhes</summary>
       <div class="det-corpo">
 
-    <div class="dash-grid2">
     <section class="card">
       <div class="card-head"><h2 id="dCumT">Saldo</h2><span class="hint">Entradas menos saídas, somadas dia a dia desde o início do extrato</span></div>
       <div class="chart-box" id="dCum"></div>
     </section>
-    <section class="card" aria-labelledby="dProjT">
-      <div class="card-head"><h2 id="dProjT">Previsão</h2><span class="hint" id="dProjHint"></span></div>
-      <div class="kpis" id="dProj"></div>
-      <p class="foot">É uma estimativa simples, pela média dos últimos meses. Não considera datas especiais, reajustes ou gastos fora do comum.</p>
-    </section>
-    </div>
 
     <section class="card" aria-labelledby="dChgT">
       <div class="card-head"><h2 id="dChgT">Mudanças</h2><span class="hint" id="dChgHint"></span></div>
