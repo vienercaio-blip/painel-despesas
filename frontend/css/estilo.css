@@ -160,7 +160,7 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .dash-subnav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 .sales-actions{display:flex;gap:10px;flex-wrap:wrap}
 #sBody:not([hidden]){display:flex;flex-direction:column;gap:20px}
-#dashBank{display:flex;flex-direction:column;gap:10px}
+#dashBank{display:flex;flex-direction:column;gap:8px}
 #modeArea:not([hidden]){display:flex;flex-direction:column;gap:20px}
 .hbars{display:flex;flex-direction:column;gap:10px}
 .hbar{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;font-size:14px}
@@ -685,3 +685,16 @@ input,select,textarea{border-radius:10px}
 .acao.acao-pilula:hover{border-color:var(--accent)}
 .acao-pilula .eco{color:var(--good);font-weight:600}
 @media (max-width:560px){.faixa-head .filtro-wrap,.faixa-head .chart-tools{margin-left:0}.gastos button{grid-template-columns:minmax(0,1fr) auto}.gastos .gdt{grid-column:1/-1;font-size:12px}}
+/* compacto: os números sem caixas internas e o cabeçalho das páginas mais baixo */
+.faixa-nums .kpis3{gap:8px 24px}
+.faixa-nums .kpi{border:0;background:transparent;padding:0;box-shadow:none}
+.faixa-nums .kpi .value{font-size:24px}
+#dVer .aviso-pasta{margin-top:6px}
+.intro{gap:12px}
+.intro-text{gap:4px}
+.intro-text h1{font-size:clamp(26px,3vw,32px)}
+.intro-text p{max-width:none}
+.faixa-head{margin-bottom:8px}
+.faixa-head .btn{min-height:34px}
+.faixa-nums .kpi svg{max-height:24px}
+.wrap{gap:14px}

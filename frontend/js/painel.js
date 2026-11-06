@@ -1190,9 +1190,9 @@ function renderDashboard(){
   $('dAcoes').innerHTML = ac.lista.length ? ac.lista.map(function(a){
     var origens = a.cat ? topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===a.cat; }), 3, nM) : [];
     var mais = moreHTML(a.cat ? 'De onde vem: '+a.cat : a.titulo, origens.map(function(o){ return [o.l, brl.format(o.v)+(nM>1?'/mês':'')]; }), '');
-    return '<div class="acao hoverable" tabindex="0" data-tip="'+esc('<b>'+esc(a.titulo)+'</b><br>'+esc(a.motivo))+'" data-more="'+esc(mais)+'">'+
-      '<h3>'+esc(a.titulo)+'</h3><p>'+esc(a.motivo)+'</p>'+
-      (a.economia ? '<p class="eco">Economia: ~'+brl0.format(a.economia)+'/mês · '+brl0.format(a.economia*12)+'/ano</p>' : '')+
+    return '<div class="acao acao-pilula hoverable" tabindex="0" data-tip="'+esc('<b>'+esc(a.titulo)+'</b><br>'+esc(a.motivo))+'" data-more="'+esc(mais)+'">'+
+      '<span>'+esc(a.titulo)+'</span>'+
+      (a.economia ? '<span class="eco">~'+brl0.format(a.economia)+'/mês</span>' : '')+
       (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
   }).join('') : '<p class="acoes-vazio'+(isWeek?' neutro':'')+'">'+esc(ac.vazio)+'</p>';
 
@@ -1202,9 +1202,8 @@ function renderDashboard(){
   var maxV = bar.linhas.reduce(function(m,l){ return Math.max(m, l.mes); }, 0);
   /* o PDF lista todas as categorias; a tela mostra as 5 maiores (ou todas) */
   state.pdfBarras = bar.linhas.map(function(l){ return {l:l.nome, v:brl.format(l.mes)+(nM>1?'/mês':'')+' · '+pct.format(Math.max(0,l.pct))}; });
-  var vis = Analise.visiveis(bar.linhas, !!state.dashTodas, 5);
-  var maisBarras = vis.escondidas || state.dashTodas && bar.linhas.length>5
-    ? '<li class="barras-mais"><button type="button" data-todas="1">'+(state.dashTodas ? 'Ver menos' : 'Ver todas as '+bar.linhas.length+' categorias')+'</button></li>' : '';
+  var vis = Analise.visiveis(bar.linhas, true, 5);
+  var maisBarras = '';
   $('dBarras').innerHTML = vis.linhas.length ? vis.linhas.map(function(l){
     return '<li class="barra'+(l.outros?' outros':'')+(l.negativo?' neg':'')+'" data-cat="'+esc(l.nome)+'" role="link" tabindex="0" title="Ver os lançamentos de '+esc(l.nome)+'">'+
       '<span class="bn">'+esc(l.nome)+(l.fixa?'<span class="tag-fixa">fixa</span>':'')+
@@ -1213,6 +1212,19 @@ function renderDashboard(){
       '<span class="bv"><span class="num">'+brl.format(l.mes)+(nM>1?'/mês':'')+'</span><small>'+pct.format(Math.max(0,l.pct))+'</small>'+
         (l.outros?' <a href="#categorias" data-classificar="1">classificar →</a>':'')+'</span></li>';
   }).join('') + maisBarras : '<li class="barras-vazio">Nenhuma saída neste período.</li>';
+  /* barra fatiada: as 5 maiores + Outros, na mesma ordem e regra da lista */
+  var fat = Analise.fatias(bar.linhas, 5);
+  var corFatia = function(f, i){ return f.outros ? '' : 'color-mix(in srgb, var(--s1) '+[100, 78, 58, 40, 26][Math.min(i, 4)]+'%, var(--s2))'; };
+  $('dFatias').innerHTML = fat.map(function(f, i){
+    return '<button type="button" class="'+(f.outros ? 'outros' : '')+'" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+' data-flex="'+f.pct+'" style="flex-grow:'+f.pct+(f.outros ? '' : ';background:'+corFatia(f, i))+'" title="'+esc(f.nome)+' · '+f.pct+'%" aria-label="'+esc(f.nome)+', '+f.pct+'% dos gastos"></button>';
+  }).join('');
+  $('dLegenda').innerHTML = fat.map(function(f, i){
+    return '<li><button type="button" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+'><i class="'+(f.outros ? 'outros' : '')+'" style="'+(f.outros ? 'background:var(--surface-2);border:1px dashed var(--line)' : 'background:'+corFatia(f, i))+'"></i>'+esc(f.nome)+' <b>'+f.pct+'%</b></button></li>';
+  }).join('');
+  $('dBarras').hidden = !state.dashTodas;
+  $('dTodasBtn').hidden = !fat.some(function(f){ return f.demais; }) && !state.dashTodas;
+  $('dTodasBtn').textContent = state.dashTodas ? 'Ver menos' : 'Ver todas as '+bar.linhas.length+' categorias';
+  $('dTodasBtn').setAttribute('aria-expanded', state.dashTodas ? 'true' : 'false');
   var fixAn = bar.linhas.filter(function(l){ return l.fixa; }).reduce(function(s2,l){ return s2+l.mes*nM; }, 0);
   $('dFixLinha').textContent = fixAn>0 ? 'Contas fixas: '+brl.format(fixAn/nM)+(nM>1?' por mês':'')+', '+pct.format(bar.total>0 ? fixAn/bar.total : 0)+' das saídas'+(sel?' analisadas':'')+'.' : '';
   var aviso = $('dFiltroAviso');
@@ -1257,7 +1269,7 @@ function renderDashboard(){
       var v = sel.reduce(function(s2,c){ return s2+(o.cat[c]||0); }, 0);
       return {label:o.label, v:v, fill:'var(--accent)', tip:'<b>'+esc(o.name)+'</b><br>Gastos: '+brl.format(v),
         more: moreHTML('Neste mês', sel.filter(function(c){ return o.cat[c]; }).sort(function(a,b){ return o.cat[b]-o.cat[a]; }).map(function(c){ return [c, brl.format(o.cat[c])]; }), '')};
-    }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:larguraDe('dRes'), aria:$('dResT').textContent});
+    }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:alturaMeses(), largura:larguraDe('dRes'), aria:$('dResT').textContent});
   } else {
   $('dResT').textContent = 'Meses'; $('dResH').textContent = 'Entradas menos saídas';
   $('dRes').innerHTML = barSVG(chartM.map(function(o){
@@ -1265,7 +1277,7 @@ function renderDashboard(){
       tip:'<b>'+esc(o.name)+'</b><br>Entradas: '+brl.format(o.ins)+'<br>Saídas: '+brl.format(o.outs)+'<br>Resultado: '+brl.format(o.res)+'<br>Margem: '+pct.format(o.ins?o.res/o.ins:0),
       more: moreHTML('Maiores saídas do mês', Object.keys(o.cat).sort(function(a,b){return o.cat[b]-o.cat[a];}).slice(0,4).map(function(c){return [c, brl.format(o.cat[c])];}),
         nM>1 ? 'Resultado '+(o.res>=avgRes?'acima':'abaixo')+' da média dos meses em '+brl.format(Math.abs(o.res-avgRes))+'.' : '')};
-  }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:160, largura:larguraDe('dRes'), aria:'Resultado por mês'});
+  }), {valueLabels: chartM.length<=6, labelEvery: chartM.length>18 ? 3 : chartM.length>8 ? 2 : 1, altura:alturaMeses(), largura:larguraDe('dRes'), aria:'Resultado por mês'});
   }
 
   /* caixa acumulado */
@@ -1326,10 +1338,24 @@ function renderDashboard(){
   var pIns = lastN.reduce(function(s,o){return s+o.ins;},0)/pn, pOut = lastN.reduce(function(s,o){return s+o.outs;},0)/pn, pRes = pIns-pOut;
   $('dProjHint').textContent = 'Média '+(pn===1?'do último mês':'dos últimos '+pn+' meses')+' do extrato, independente do período escolhido';
   var projBase = function(key, title){ return esc(moreHTML(title, lastN.map(function(o){ return [o.name, brl.format(o[key])]; }), 'A projeção é a média desses meses.')); };
-  $('dProj').innerHTML =
-    '<div class="kpi hoverable" data-tip="<b>Entradas esperadas</b>" data-more="'+projBase('ins','Entradas dos meses usados')+'"><span class="label">Entradas esperadas</span><span class="value num">'+brl.format(pIns)+'</span></div>'+
-    '<div class="kpi hoverable" data-tip="<b>Saídas esperadas</b>" data-more="'+projBase('outs','Saídas dos meses usados')+'"><span class="label">Saídas esperadas</span><span class="value num">'+brl.format(pOut)+'</span></div>'+
-    '<div class="kpi hoverable" data-tip="<b>Resultado esperado</b>" data-more="'+projBase('res','Resultado dos meses usados')+'"><span class="label">Resultado esperado</span><span class="value num">'+brl.format(pRes)+'</span><span class="pill '+(pRes>=0?'pos':'neg')+'">'+(pRes>=0?'Deve sobrar dinheiro':'Atenção: deve faltar dinheiro')+'</span></div>';
+  /* faixa de previsão: uma linha */
+  $('dPrevTx').textContent = 'Próximo mês: entra ~'+brl0.format(pIns)+', sai ~'+brl0.format(pOut)+', '+(pRes>=0 ? 'sobra' : 'falta')+' ~'+brl0.format(Math.abs(pRes))+'.';
+
+  /* faixa de comparação: o mesmo par de meses de "Mudanças" */
+  if (cmpA && !isWeek){
+    var cp = Analise.comparacao(cmpA, cmpB, function(n){ return brl.format(n); }, function(n){ return pct0.format(n); });
+    var catBtn = function(x, cls){ return '<button type="button" class="cmp-cat" data-cat="'+esc(x.nome)+'">'+esc(x.nome)+'</button> <span class="'+cls+'">'+esc(x.txt)+'</span>'; };
+    $('dCmpTx').innerHTML = esc(cp.frase)+(cp.alta ? ' <span>Maior alta: '+catBtn(cp.alta, 'cmp-alta')+'.</span>' : '')+(cp.queda ? ' <span>Maior queda: '+catBtn(cp.queda, 'cmp-queda')+'.</span>' : '');
+  }
+  $('dCmp').hidden = !cmpA || isWeek;
+
+  /* faixa dos maiores gastos (lançamentos individuais, sem estornos) */
+  var gastos = Analise.maioresGastos(tx.filter(function(t){ return ehSaida(t) && !t.estorno; })
+    .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, chave:t.origin}; }), 3);
+  $('dGastos').innerHTML = gastos.map(function(g){
+    return '<li><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd">'+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>';
+  }).join('');
+  $('dGastosSec').hidden = !gastos.length;
 
   /* outras informações (o que virou veredito ou ação já aparece no topo) */
   var L = [];
@@ -2598,6 +2624,16 @@ document.addEventListener('mousemove', function(e){
 document.addEventListener('mouseleave', hideTip);
 window.addEventListener('scroll', hideTip, true);
 
+/* ---------- dashboard em faixas: altura do gráfico e cliques das faixas ---------- */
+function alturaMeses(){ return window.innerWidth < 560 ? 140 : 120; }
+var pct0 = new Intl.NumberFormat('pt-BR', {style:'percent', maximumFractionDigits:0});
+$('dTodasBtn').addEventListener('click', function(){ state.dashTodas = !state.dashTodas; renderDashboard(); $('dTodasBtn').focus(); });
+$('dCmp').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (b) abrirLancamentos(b.dataset.cat); });
+$('dGastos').addEventListener('click', function(e){
+  var b = e.target.closest('[data-gasto]'); if (!b) return;
+  state.q = b.dataset.gasto; $('q').value = state.q;
+  abrirLancamentos('all');
+});
 /* ---------- dashboard: filtro de despesas, barras e detalhes ---------- */
 function abrirFiltro(abrir){
   $('dFiltro').hidden = !abrir; $('dFiltroBtn').setAttribute('aria-expanded', abrir ? 'true' : 'false');
@@ -2616,7 +2652,8 @@ $('dOnde').addEventListener('click', function(e){
     renderDashboard(); return;
   }
   if (e.target.closest('[data-classificar]')) return;  /* o link segue para a aba Organizar */
-  var b = e.target.closest('.barra');
+  if (e.target.closest('[data-demais]')){ state.dashTodas = true; renderDashboard(); return; }   /* "Outras categorias" abre a lista completa */
+  var b = e.target.closest('.barra, #dFatias [data-cat], #dLegenda [data-cat]');
   if (b) abrirLancamentos(b.dataset.cat);
 });
 $('dOnde').addEventListener('keydown', function(e){

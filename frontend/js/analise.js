@@ -215,24 +215,39 @@ function comparacao(A, B, brl, pct){
     : 'Em '+B.name+' saiu '+brl(Math.abs(dif))+(dif>0 ? ' a mais' : ' a menos')+' que em '+A.name+'.';
   var nomes = {};
   Object.keys(A.cat).concat(Object.keys(B.cat)).forEach(function(n){ nomes[n] = 1; });
-  var vars = Object.keys(nomes).map(function(n){ var a = A.cat[n]||0, b = B.cat[n]||0; return {nome:n, a:a, d:b-a}; })
-    .filter(function(v){ return Math.abs(v.d) >= 0.01; })
+  /* categorias com estornos maiores que os gastos (valor negativo) não entram:
+     dariam variações impossíveis, como "−109%" */
+  var vars = Object.keys(nomes).map(function(n){ var a = A.cat[n]||0, b = B.cat[n]||0; return {nome:n, a:a, b:b, d:b-a}; })
+    .filter(function(v){ return v.a >= 0 && v.b >= 0 && Math.abs(v.d) >= 0.01; })
     .sort(function(x, y){ return Math.abs(y.d)-Math.abs(x.d) || (x.nome < y.nome ? -1 : 1); });
   var txt = function(v){ return v.a<=0 ? 'nova' : (v.d>0 ? '+' : '−')+pct(Math.abs(v.d)/v.a); };
   var alta = vars.filter(function(v){ return v.d>0; })[0], queda = vars.filter(function(v){ return v.d<0; })[0];
   return { frase:frase, alta: alta ? {nome:alta.nome, txt:txt(alta)} : null, queda: queda ? {nome:queda.nome, txt:txt(queda)} : null };
 }
-/* as n maiores saídas (valor positivo), desempatando pela data mais recente */
+/* as n maiores saídas (valor positivo), desempatando pela data mais recente;
+   com "chave" (a origem), entra só a maior de cada origem: o aluguel não aparece três vezes */
 function maioresGastos(lista, n){
-  return lista.slice().sort(function(a, b){ return b.valor-a.valor || b.data-a.data; }).slice(0, n);
+  var vistos = {};
+  return lista.slice().sort(function(a, b){ return b.valor-a.valor || b.data-a.data; })
+    .filter(function(x){ if (!x.chave) return true; if (vistos[x.chave]) return false; vistos[x.chave] = 1; return true; })
+    .slice(0, n);
 }
 /* pedaços da barra de categorias: porcentagens inteiras que somam 100,
    sem as categorias negativas (estornos maiores que os gastos) */
-function fatias(linhas){
+function fatias(linhas, n){
   var pos = linhas.filter(function(l){ return !l.negativo && l.pct>0; });
+  /* com n: as n maiores (pelo valor) e o resto somado numa fatia só, para as
+     porcentagens continuarem sendo do total */
+  if (n && pos.length>n){
+    var ord = pos.slice().sort(function(a, b){ return b.pct-a.pct; });
+    var top = ord.slice(0, n), resto = ord.slice(n);
+    var outrosCat = top.filter(function(l){ return l.outros; });
+    pos = top.filter(function(l){ return !l.outros; }).concat(outrosCat)
+      .concat([{nome:'Outras categorias', pct:resto.reduce(function(s2, l){ return s2+l.pct; }, 0), demais:true}]);
+  }
   var tot = pos.reduce(function(s, l){ return s+l.pct; }, 0);
   if (!tot) return [];
-  var f = pos.map(function(l){ return {nome:l.nome, pct:Math.round(l.pct/tot*100), outros:!!l.outros}; });
+  var f = pos.map(function(l){ return {nome:l.nome, pct:Math.round(l.pct/tot*100), outros:!!l.outros || !!l.demais, demais:!!l.demais}; });
   var resto = 100 - f.reduce(function(s, x){ return s+x.pct; }, 0);
   if (resto){
     var maior = f.filter(function(x){ return !x.outros; }).sort(function(a, b){ return b.pct-a.pct; })[0] || f[0];

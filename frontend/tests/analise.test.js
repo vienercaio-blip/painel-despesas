@@ -387,3 +387,19 @@ test('fatias: somam 100, negativos de fora, Outros por último', () => {
   assert.deepEqual(f.map(x => x.nome), ['A', 'B', 'Outros']);
   assert.equal(f[2].outros, true);
 });
+test('comparação: categoria com estornos maiores que os gastos fica de fora', () => {
+  const r = Analise.comparacao(SET, {name:'outubro de 2026', outs:950, cat:{Mercado:400, Moradia:600, Compras:-50}}, brlT, pctT);
+  assert.equal(r.queda, null);
+  assert.equal(r.alta, null);
+});
+test('maiores gastos: um por origem (o maior de cada)', () => {
+  const d = (dia) => new Date(2026, 9, dia);
+  const L = [{data:d(5), desc:'ALUGUEL', valor:1650, chave:'aluguel'}, {data:d(7), desc:'ALUGUEL', valor:1650, chave:'aluguel'}, {data:d(2), desc:'TV', valor:900, chave:'tv'}, {data:d(3), desc:'PNEUS', valor:700, chave:'pneus'}];
+  assert.deepEqual(Analise.maioresGastos(L, 3).map(x => x.desc), ['ALUGUEL', 'TV', 'PNEUS']);
+});
+test('fatias com n: as n maiores e o resto somado em "Outras categorias", em % do total', () => {
+  const L = [{nome:'A', pct:.27}, {nome:'B', pct:.20}, {nome:'C', pct:.14}, {nome:'D', pct:.08}, {nome:'E', pct:.06}, {nome:'F', pct:.15}, {nome:'G', pct:.10}];
+  const f = Analise.fatias(L, 5);
+  assert.deepEqual(f.map(x => [x.nome, x.pct]), [['A', 27], ['B', 20], ['F', 15], ['C', 14], ['G', 10], ['Outras categorias', 14]]);
+  assert.equal(f[5].demais, true);
+});
