@@ -1193,10 +1193,21 @@ function renderDashboard(){
   state.pdfAcoes = ac.lista.map(function(a){ return [a.titulo, a.motivo, a.economia ? '~'+brl0.format(a.economia)+'/mês' : '']; });
   state.pdfSemAcao = ac.vazio || '';
 
-  /* a página Economia usa exatamente estes números do período */
-  var gastoCat = {}; Object.keys(byCat).forEach(function(c){ if (byCat[c]>0) gastoCat[c] = byCat[c]/nM; });
-  state.eco = { semana:isWeek, nM:nM, sobraMes:(T.ins-T.outs)/nM, gastoCat:gastoCat, ctx:ctx,
-    guardado:aplicado-resgatado, meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }) };
+  /* a página Economia usa sempre o extrato inteiro (não tem quadro de Período):
+     as mesmas contas do Dashboard com "Ver todo o período" */
+  var Ta = sums(state.tx), nA = allMonths.length || 1, byCatA = {}, aplA = 0, resA = 0;
+  state.tx.forEach(function(t){
+    var c = catOf(t);
+    if (saiDaConta(t)) byCatA[c] = (byCatA[c]||0) - t.value;
+    if (c===nInv){ if (ehEntrada(t)) resA += t.value; else aplA -= t.value; }
+  });
+  var gastoCat = {}; Object.keys(byCatA).forEach(function(c){ if (byCatA[c]>0) gastoCat[c] = byCatA[c]/nA; });
+  var mesesA = allMonths.map(function(o){ return {name:o.name, cat:o.cat}; });
+  var rot = function(o){ return MESES[o.m].slice(0,3)+'/'+o.y; };
+  state.eco = { semana:false, nM:nA, sobraMes:(Ta.ins-Ta.outs)/nA, gastoCat:gastoCat, guardado:aplA-resA, meses:mesesA,
+    base: allMonths.length ? 'Com base em todo o extrato: '+rot(allMonths[0])+(allMonths.length>1 ? ' a '+rot(allMonths[allMonths.length-1]) : '')+' ('+(nA===1 ? '1 mês' : nA+' meses')+').' : '',
+    ctx: { escopo: nA>1 ? 'meses' : 'mes', nM:nA, ins:Ta.ins, outs:Ta.outs, byCat:byCatA, fixas:FIXED, outros:OTHER, meses:mesesA,
+      nomes:ctx.nomes, brl:ctx.brl, pct:ctx.pct } };
   if (!$('viewEconomia').hidden) renderEconomia();
   /* faixa Dicas: atalho com o total que dá para economizar (com o limite por categoria) */
   var rz = resumoEconomia();
@@ -1817,7 +1828,11 @@ function setView(){
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
   $('pageTitle').textContent = {dashboard:'Dashboard', economia:'Economia', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
-  $('periodSec').hidden = !((v==='dashboard' && isD) || v==='economia' || v==='despesas' || v==='lancamentos');
+  $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
+  /* em Lançamentos o Período fica dentro do quadro dos lançamentos; nas outras, no lugar de sempre */
+  var ps = $('periodSec');
+  if (v==='lancamentos' && ps.parentNode!==$('lancPeriodo')){ $('lancPeriodo').appendChild(ps); ps.classList.add('embutido'); }
+  else if (v!=='lancamentos' && ps.parentNode===$('lancPeriodo')){ $('introSec').insertAdjacentElement('afterend', ps); ps.classList.remove('embutido'); }
   if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
@@ -2819,6 +2834,7 @@ function renderEconomia(){
   $('eSemana').hidden = !E.semana;
   $('eCorpo').hidden = !!E.semana;
   if (E.semana) return;
+  $('eBase').textContent = E.base || '';
   var lista = state.ecoItens = itensEconomia(E);
   state.ecoResumo = resumoEconomia();
   $('eLista').innerHTML = lista.length ? lista.map(function(it){
@@ -2969,15 +2985,6 @@ function abrirObjetivo(){
   $('eObjErro').hidden = true;
   atualizarEconomia(); $('eObjNome').focus();
 }
-/* "Como funciona": abre e fecha a explicação da página */
-function ajudaEconomia(abrir){
-  $('eAjuda').hidden = !abrir;
-  $('eAjudaBtn').setAttribute('aria-expanded', abrir ? 'true' : 'false');
-  if (abrir) $('eAjudaT').focus(); else $('eAjudaBtn').focus();
-}
-$('eAjudaBtn').addEventListener('click', function(){ ajudaEconomia($('eAjuda').hidden); });
-$('eAjudaFechar').addEventListener('click', function(){ ajudaEconomia(false); });
-$('eAjuda').addEventListener('keydown', function(e){ if (e.key==='Escape') ajudaEconomia(false); });
 $('eObjAbrir').addEventListener('click', abrirObjetivo);
 $('eObjEditar').addEventListener('click', abrirObjetivo);
 $('eObjSalvar').addEventListener('click', function(){
@@ -2987,6 +2994,24 @@ $('eObjSalvar').addEventListener('click', function(){
   state.ecoObjForm = false; saveCfg(); atualizarEconomia(); $('eObjEditar').focus();
 });
 $('eObjRemover').addEventListener('click', function(){ ecoCfg().objetivo = null; state.ecoObjForm = false; saveCfg(); atualizarEconomia(); $('eObjAbrir').focus(); });
+
+/* ---------- "Como funciona": a pílula de cada página abre e fecha a explicação dela ---------- */
+function ajudaAbrir(btn, abrir){
+  var q = $(btn.getAttribute('aria-controls'));
+  q.hidden = !abrir;
+  btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  if (abrir){ var h = q.querySelector('h2'); if (h) h.focus(); } else btn.focus();
+}
+document.addEventListener('click', function(e){
+  var b = e.target.closest('.ajuda-btn');
+  if (b){ ajudaAbrir(b, $(b.getAttribute('aria-controls')).hidden); return; }
+  var f = e.target.closest('[data-ajuda-fechar]');
+  if (f){ var q = f.closest('.ajuda-quadro'); ajudaAbrir(document.querySelector('.ajuda-btn[aria-controls="'+q.id+'"]'), false); }
+});
+document.addEventListener('keydown', function(e){
+  var q = e.key==='Escape' && e.target.closest && e.target.closest('.ajuda-quadro');
+  if (q) ajudaAbrir(document.querySelector('.ajuda-btn[aria-controls="'+q.id+'"]'), false);
+});
 
 /* ---------- inicialização: busca tudo no servidor ---------- */
 state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};

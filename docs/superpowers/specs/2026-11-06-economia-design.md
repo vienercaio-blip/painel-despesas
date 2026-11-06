@@ -17,7 +17,7 @@ Uma página só sobre economizar, para leigos sem tempo. Em poucos segundos a pe
 
 - **Menu:** item novo "Economia" (`#economia`, `data-view="economia"`, classe `dash-tab`), logo abaixo de Dashboard, com ícone de cofrinho no mesmo traço dos outros. Aparece quando há extrato aberto, como os outros itens. Só no modo despesas.
 - **Título da página:** "Economia" (uma palavra, como as outras).
-- **Período:** o mesmo `state.p` do Dashboard, com a mesma faixa de Período no topo. Com o período em semana, a página mostra só "Escolha um mês ou mais para ver onde economizar."
+- **Período (mudado em 06/11, pedido do usuário):** a página **não tem o quadro de Período** e usa sempre o **extrato inteiro** (as mesmas contas do Dashboard em "Ver todo o período"). No topo, a linha "Com base em todo o extrato: ago/2026 a out/2026 (3 meses)." Não há mais aviso de semana. O atalho do Dashboard também usa o extrato inteiro.
 - **Dashboard:** a faixa Dicas (`#dAcoesSec`) vira um atalho de uma linha: "Dá para economizar ~R$ X/mês em N itens →", que leva a `#economia`. X e N são o total e a contagem dos itens com valor da lista da Economia, sem marcar nada, já com o limite por categoria (§3.4). Sem itens: "Veja onde dá para economizar →".
 
 ## 2. Topo: meta, objetivo e quanto guardou

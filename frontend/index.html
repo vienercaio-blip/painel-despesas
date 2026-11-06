@@ -203,6 +203,48 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </section>
 
   <div class="view" id="viewDash" hidden>
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="dAjudaBtn" aria-controls="dAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    </div>
+    <section class="card ajuda-quadro" id="dAjuda" aria-labelledby="dAjudaT" hidden>
+      <div class="ajuda-head"><h2 class="faixa-t" id="dAjudaT" tabindex="-1">Como funciona o Dashboard</h2>
+        <button type="button" class="btn btn-sm" data-ajuda-fechar>Fechar</button></div>
+      <p class="ajuda-lead">O resumo do extrato numa tela só, de cima para baixo, começando pelo veredito. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
+      <div class="ajuda-grade">
+        <div>
+          <h3>1. Veredito</h3>
+          <p>Uma frase diz como está o período:</p>
+          <ul><li><b>Tudo certo</b> (verde): sobra 10% ou mais do que entra.</li><li><b>Atenção</b> (amarelo): sobra menos de 10%; um imprevisto já aperta.</li><li><b>Alerta</b> (vermelho): saiu mais do que entrou.</li></ul>
+          <p>Ao lado, "O que mais pesa" mostra a categoria que mais levou dinheiro.</p>
+        </div>
+        <div>
+          <h3>2. Entrou, Saiu e Sobrou</h3>
+          <p>O total do período e, embaixo, a média por mês. O minigráfico mostra cada mês.</p>
+          <p>Dinheiro guardado (aplicação, poupança, caixinha) e transferências entre as suas contas <b>não contam</b> como entrada nem saída: aparecem numa linha à parte. Estornos descontam do gasto.</p>
+        </div>
+        <div>
+          <h3>3. Comparação</h3>
+          <p>O último mês do período comparado com o anterior: quanto saiu a mais ou a menos e as categorias que mais subiram e caíram. Se o extrato termina no meio do mês, aparece "(até dd/mm)". Clique numa categoria para ver os lançamentos.</p>
+        </div>
+        <div>
+          <h3>4. Categorias</h3>
+          <p>A barra colorida mostra as 5 categorias que mais levaram dinheiro e "Outras categorias" com o resto, em porcentagem do total que saiu.</p>
+          <ul><li><b>Ver todas as categorias</b> abre a lista completa, com o valor por mês.</li><li><b>Todas as despesas</b> escolhe quais categorias entram na análise.</li><li>Clique numa cor ou num nome para ver os lançamentos.</li></ul>
+        </div>
+        <div>
+          <h3>5. Meses, Maiores gastos e Previsão</h3>
+          <ul><li><b>Meses</b>: quanto sobrou (dourado) ou faltou (vermelho) em cada mês. Passe o mouse para ver os detalhes.</li>
+          <li><b>Maiores gastos</b>: os 3 maiores lançamentos do período, um de cada origem. Clique para encontrá-los nos lançamentos.</li>
+          <li><b>Previsão</b>: a média dos últimos 3 meses do extrato, seja qual for o período escolhido.</li></ul>
+        </div>
+        <div>
+          <h3>6. Dicas, detalhes e PDF</h3>
+          <ul><li><b>Dá para economizar…</b> leva à página Economia, com o plano de ação.</li>
+          <li><b>Ver mais detalhes</b> abre o Saldo (o dinheiro acumulado dia a dia), as Mudanças (categorias que mais mudaram) e outros detalhes.</li>
+          <li><b>Exportar PDF</b>, no quadro de Período, gera um relatório para guardar ou imprimir.</li></ul>
+        </div>
+      </div>
+    </section>
     <div id="dashBank">
     <section class="card verdict faixa" id="dVer" aria-live="polite">
       <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span> <span class="verdict-pesa" id="dVerPesa"></span></p>
@@ -293,22 +335,22 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </div>
 
   <div class="view eco" id="viewEconomia" hidden>
-    <div class="eco-topo">
-      <button type="button" class="ptab ini-pilula" id="eAjudaBtn" aria-controls="eAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="eAjudaBtn" aria-controls="eAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
     </div>
-    <section class="card eco-ajuda" id="eAjuda" aria-labelledby="eAjudaT" hidden>
-      <div class="eco-ajuda-head"><h2 class="faixa-t" id="eAjudaT" tabindex="-1">Como funciona a página Economia</h2>
-        <button type="button" class="btn btn-sm" id="eAjudaFechar">Fechar</button></div>
-      <p class="eco-ajuda-lead">Esta página responde três perguntas: <b>quanto está sobrando</b>, <b>se você está perto da sua meta</b> e <b>o que cortar primeiro</b>. Tudo sai do extrato que está aberto. Nenhum número é inventado.</p>
+    <section class="card ajuda-quadro" id="eAjuda" aria-labelledby="eAjudaT" hidden>
+      <div class="ajuda-head"><h2 class="faixa-t" id="eAjudaT" tabindex="-1">Como funciona a página Economia</h2>
+        <button type="button" class="btn btn-sm" id="eAjudaFechar" data-ajuda-fechar>Fechar</button></div>
+      <p class="ajuda-lead">Esta página responde três perguntas: <b>quanto está sobrando</b>, <b>se você está perto da sua meta</b> e <b>o que cortar primeiro</b>. Tudo sai do extrato que está aberto. Nenhum número é inventado.</p>
 
-      <div class="eco-ajuda-grade">
+      <div class="ajuda-grade">
         <div>
           <h3>1. Meta do mês</h3>
-          <p>Digite quanto você quer que sobre por mês. O site compara com o <b>Sobrou por mês</b> do período escolhido, o mesmo número do Dashboard.</p>
+          <p>Digite quanto você quer que sobre por mês. O site compara com o <b>Sobrou por mês</b> de todo o extrato, o mesmo número do Dashboard em "Ver todo o período".</p>
           <ul>
             <li>A parte <b>dourada</b> da barra é o que já sobrou.</li>
             <li>A parte <b>clara</b> é o que passaria a sobrar a mais com os itens que você marcou na lista.</li>
-            <li>Se no período faltou dinheiro, a barra fica vazia e o texto mostra quanto faltou.</li>
+            <li>Se faltou dinheiro, a barra fica vazia e o texto mostra quanto faltou.</li>
           </ul>
         </div>
         <div>
@@ -322,7 +364,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
         <div>
           <h3>3. Quanto já guardou</h3>
-          <p>O dinheiro que foi para investimentos e reservas no período (aplicação, poupança, caixinha). Ele não conta como gasto, porque continua sendo seu.</p>
+          <p>O dinheiro que foi para investimentos e reservas no extrato (aplicação, poupança, caixinha). Ele não conta como gasto, porque continua sendo seu.</p>
         </div>
         <div>
           <h3>4. Onde dá para economizar</h3>
@@ -330,7 +372,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <ul>
             <li><b>dica</b>: as sugestões do site, como pedir delivery metade das vezes ou trocar para uma conta sem tarifa.</li>
             <li><b>repete todo mês</b>: a mesma cobrança, com valor parecido (variação de até 20%), nos últimos 3 meses seguidos do extrato. Nunca entram aluguel, mercado, saúde, contas de casa, impostos, dívidas, escola, seguros, Pix para pessoas nem aplicações.</li>
-            <li><b>acima do normal</b>: categorias que, no último mês, ficaram mais de 20% e pelo menos R$ 50 acima da média dos meses anteriores. Aparece com 3 meses ou mais no período.</li>
+            <li><b>acima do normal</b>: categorias que, no último mês, ficaram mais de 20% e pelo menos R$ 50 acima da média dos meses anteriores. Aparece com 3 meses ou mais no extrato.</li>
           </ul>
           <p>Marque a caixinha do que você topa fazer. Nas dicas e nas categorias, aparece um controle para escolher quanto cortar, de 10% a 100%. Clique no nome do item para ver os lançamentos.</p>
           <p>A economia de uma categoria <b>nunca passa do que você gasta nela</b>. Se duas sugestões forem da mesma categoria, a soma para no limite, e a linha avisa.</p>
@@ -340,13 +382,13 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <p>Um valor livre, para quem já sabe quanto consegue separar. Ele só serve para calcular o prazo do objetivo e não mexe na barra da meta.</p>
         </div>
         <div>
-          <h3>6. Período e onde fica salvo</h3>
-          <p>A página segue o <b>Período</b> escolhido no topo, como o Dashboard. Com uma semana escolhida, ela pede um mês ou mais.</p>
+          <h3>6. Extrato inteiro e onde fica salvo</h3>
+          <p>Esta página usa sempre o <b>extrato inteiro</b>, por isso não tem o quadro de Período: hábitos de gasto aparecem melhor em vários meses. A linha no topo mostra quais meses entraram.</p>
           <p>A meta, o objetivo e o que você marcou ficam salvos na sua conta e valem em qualquer computador.</p>
         </div>
       </div>
 
-      <div class="eco-ajuda-exemplo">
+      <div class="ajuda-ex">
         <h3>Exemplo</h3>
         <ol>
           <li>Entram R$ 5.000 e saem R$ 4.700 por mês: <b>sobram R$ 300</b>.</li>
@@ -357,6 +399,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       </div>
     </section>
     <p class="card faixa eco-semana" id="eSemana" role="status" hidden>Escolha um mês ou mais para ver onde economizar.</p>
+    <p class="eco-base" id="eBase"></p>
     <div class="eco-corpo" id="eCorpo">
       <section class="card faixa eco-bloco" id="eMeta" aria-labelledby="eMetaT">
         <div class="faixa-head"><h2 class="faixa-t" id="eMetaT">Meta do mês</h2>
@@ -451,6 +494,33 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </div>
 
   <div class="view" id="viewDespesas">
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="pAjudaBtn" aria-controls="pAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    </div>
+    <section class="card ajuda-quadro" id="pAjuda" aria-labelledby="pAjudaT" hidden>
+      <div class="ajuda-head"><h2 class="faixa-t" id="pAjudaT" tabindex="-1">Como funciona a página Despesas</h2>
+        <button type="button" class="btn btn-sm" data-ajuda-fechar>Fechar</button></div>
+      <p class="ajuda-lead">Os números do período, a lista de categorias, o fluxo do dinheiro e um resumo em frases. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
+      <div class="ajuda-grade">
+        <div>
+          <h3>1. Os quatro números</h3>
+          <ul><li><b>Entradas</b> e <b>Saídas</b>: o total do período.</li><li><b>Resultado do período</b>: entradas menos saídas.</li><li><b>Maior despesa</b>: a categoria que mais levou dinheiro, com a parte que ela representa das saídas.</li></ul>
+          <p>Dinheiro guardado e transferências entre as suas contas não contam como entrada nem saída.</p>
+        </div>
+        <div>
+          <h3>2. Categorias</h3>
+          <p>Quanto saiu em cada categoria, da maior para a menor, com a porcentagem de cada uma. Clique numa categoria para ver o detalhe dela.</p>
+        </div>
+        <div>
+          <h3>3. Fluxo</h3>
+          <p>O gráfico mostra as entradas e as saídas lado a lado ao longo do tempo. Elas são agrupadas por dia (com uma semana escolhida), por semana (com um mês), por mês (com um ano) ou por ano (em extratos muito longos).</p>
+        </div>
+        <div>
+          <h3>4. Resumo</h3>
+          <p>Frases automáticas sobre o período: quanto sobrou ou faltou, a maior despesa, o maior pagamento e a comparação com o período anterior. O que merece atenção aparece com o sinal ⚠.</p>
+        </div>
+      </div>
+    </section>
   <section class="kpis" aria-label="Resumo do período">
     <div class="kpi"><span class="label">Entradas</span><span class="value num" id="kIn">—</span><span class="sub" id="kInSub"></span></div>
     <div class="kpi"><span class="label">Saídas</span><span class="value num" id="kOut">—</span><span class="sub" id="kOutSub"></span></div>
@@ -479,8 +549,38 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </div>
 
   <div class="view" id="viewLanc" hidden>
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="lAjudaBtn" aria-controls="lAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    </div>
+    <section class="card ajuda-quadro" id="lAjuda" aria-labelledby="lAjudaT" hidden>
+      <div class="ajuda-head"><h2 class="faixa-t" id="lAjudaT" tabindex="-1">Como funciona a página Lançamentos</h2>
+        <button type="button" class="btn btn-sm" data-ajuda-fechar>Fechar</button></div>
+      <p class="ajuda-lead">Todos os lançamentos do extrato, um por linha. O <b>Período</b> fica dentro deste quadro, logo abaixo do título.</p>
+      <div class="ajuda-grade">
+        <div>
+          <h3>1. Período</h3>
+          <p>Escolha o ano, o mês e a semana, ou clique num dos meses. "Ver todo o período" volta ao extrato inteiro. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
+        </div>
+        <div>
+          <h3>2. Encontrar um lançamento</h3>
+          <ul><li><b>Saídas</b>, <b>Entradas</b> ou <b>Todos</b>: o que aparece na lista.</li><li>A busca procura pela descrição do extrato, e o filtro de categoria mostra só uma categoria.</li>
+          <li><b>Mostrar por vez</b> e os botões Anterior e Próxima passam as páginas. O rodapé mostra quantos lançamentos são e a soma deles.</li></ul>
+        </div>
+        <div>
+          <h3>3. Corrigir uma categoria</h3>
+          <p>Clique em <b>Editar categorias</b> e escolha a categoria certa na linha do lançamento. O site pergunta se a mudança deve valer nos próximos extratos:</p>
+          <ul><li><b>Sim, manter</b>: cria uma regra para aquela origem, que aparece em Organizar › Regras.</li><li><b>Não, só neste extrato</b>: muda só aqui.</li></ul>
+          <p>Ao terminar, clique em <b>Concluir edição</b>.</p>
+        </div>
+        <div>
+          <h3>4. Etiquetas</h3>
+          <ul><li><b>estorno</b>: dinheiro de volta de uma despesa; desconta do total da categoria.</li><li>Investimentos e transferências entre as suas contas são <b>movimento interno</b>: não contam como entrada nem saída.</li></ul>
+        </div>
+      </div>
+    </section>
   <section class="card" aria-labelledby="txTitle">
     <div class="card-head"><h2 id="txTitle">Lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
+    <div class="lanc-periodo" id="lancPeriodo"></div>
     <div class="table-tools">
       <div class="seg" role="group" aria-label="Filtrar lançamentos">
         <button type="button" data-f="out" aria-pressed="true">Saídas</button>
@@ -514,6 +614,36 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </div>
 
   <div class="view" id="viewCategorias" hidden>
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="oAjudaBtn" aria-controls="oAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    </div>
+    <section class="card ajuda-quadro" id="oAjuda" aria-labelledby="oAjudaT" hidden>
+      <div class="ajuda-head"><h2 class="faixa-t" id="oAjudaT" tabindex="-1">Como funciona a página Organizar</h2>
+        <button type="button" class="btn btn-sm" data-ajuda-fechar>Fechar</button></div>
+      <p class="ajuda-lead">Aqui você ensina o site a classificar os seus gastos. O que você muda aqui pode valer também para os próximos extratos.</p>
+      <div class="ajuda-grade">
+        <div>
+          <h3>1. Categorias</h3>
+          <p>À esquerda, a lista de categorias com quanto cada uma somou. Clique numa para ver os detalhes dela à direita.</p>
+        </div>
+        <div>
+          <h3>2. Origens</h3>
+          <p>Os pagamentos da categoria agrupados pela descrição do extrato. Por exemplo, todas as compras no mesmo mercado aparecem juntas, com o total.</p>
+        </div>
+        <div>
+          <h3>3. Lançamentos</h3>
+          <p>Cada lançamento da categoria. "Identificado por" mostra a palavra do extrato que fez o site escolher aquela categoria.</p>
+        </div>
+        <div>
+          <h3>4. Regras</h3>
+          <p>As mudanças de categoria que você pediu para manter nos próximos extratos. Elas valem para todos os extratos, inclusive os que você ainda vai enviar.</p>
+        </div>
+        <div>
+          <h3>5. Criar</h3>
+          <p>Crie uma categoria sua com um nome e palavras-chave. Os lançamentos cuja descrição tem uma dessas palavras entram nela. A aba "Criadas" lista as suas categorias.</p>
+        </div>
+      </div>
+    </section>
     <div class="cat-layout">
       <nav class="card cat-list" aria-labelledby="catListTitle">
         <h2 id="catListTitle">Categorias</h2>

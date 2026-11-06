@@ -759,15 +759,19 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .eco-barra.brilha{animation:brilhoMeta 1.2s ease-out}
   @keyframes brilhoMeta{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 70%,transparent)}to{box-shadow:0 0 0 12px transparent}}
 }
-/* Economia: "Como funciona" */
-.eco-topo{display:flex;justify-content:flex-end;margin-bottom:8px}
-.eco-ajuda{padding:16px 18px;margin-bottom:8px;font-size:14px;color:var(--ink-2)}
-.eco-ajuda-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.eco-ajuda-head h2:focus{outline:none}
-.eco-ajuda-lead{margin:8px 0 12px;color:var(--ink)}
-.eco-ajuda-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px 24px}
-.eco-ajuda h3{font-size:14.5px;margin:0 0 4px;color:var(--ink)}
-.eco-ajuda p{margin:0 0 6px;line-height:1.5}
-.eco-ajuda ul,.eco-ajuda ol{margin:0 0 6px;padding-left:18px;line-height:1.5}
-.eco-ajuda li{margin-bottom:3px}
-.eco-ajuda-exemplo{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+/* "Como funciona" (todas as páginas) */
+.ajuda-topo{display:flex;justify-content:flex-end;margin-bottom:8px}
+.ajuda-quadro{padding:16px 18px;margin-bottom:8px;font-size:14px;color:var(--ink-2)}
+.ajuda-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ajuda-head h2:focus{outline:none}
+.ajuda-lead{margin:8px 0 12px;color:var(--ink)}
+.ajuda-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px 24px}
+.ajuda-quadro h3{font-size:14.5px;margin:0 0 4px;color:var(--ink)}
+.ajuda-quadro p{margin:0 0 6px;line-height:1.5}
+.ajuda-quadro ul,.ajuda-quadro ol{margin:0 0 6px;padding-left:18px;line-height:1.5}
+.ajuda-quadro li{margin-bottom:3px}
+.ajuda-ex{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.eco-base{margin:0 0 8px;font-size:13px;color:var(--ink-3)}
+.eco-base:empty{display:none}
+/* Lançamentos: o Período dentro do quadro */
+.period.embutido{border:0;background:none;box-shadow:none;padding:0;margin:4px 0 14px}
