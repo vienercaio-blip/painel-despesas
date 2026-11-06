@@ -574,6 +574,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
             <p>Frases automáticas sobre o período: quanto sobrou ou faltou, a maior despesa, o maior pagamento e a comparação com o período anterior. O que merece atenção aparece com o sinal ⚠.</p>
           </div>
           <div>
+            <h3>Comparar dois períodos</h3>
+            <p>Com <b>Comparar…</b>, cada quadro mostra os dois períodos, sempre por mês: os números com o Período 2 e a diferença embaixo, as categorias em barras duplas (dourado e azul), o Fluxo com uma linha de saídas para cada período e o Resumo em frases. Clique numa categoria para ver os lançamentos dela, ainda comparando.</p>
+          </div>
+          <div>
             <h3>Escolher o período</h3>
             <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos (<b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> e cada ano) ficam dentro de <b>Personalizado…</b>. Todos contam a partir do último mês do extrato.</li>
             <li>Na faixa de meses, logo abaixo do quadro, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
@@ -637,18 +641,24 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
             <h3>4. Etiquetas</h3>
             <ul><li><b>estorno</b>: dinheiro de volta de uma despesa; desconta do total da categoria.</li><li>Investimentos e transferências entre as suas contas são <b>movimento interno</b>: não contam como entrada nem saída.</li></ul>
           </div>
+          <div>
+            <h3>Comparar dois períodos</h3>
+            <p>Com <b>Comparar…</b>, a lista mostra os lançamentos dos dois períodos juntos, cada um com uma etiqueta da cor do período. Os botões "Os dois", Período 1 e Período 2 filtram a lista, e o rodapé mostra a soma de cada período e a diferença por mês. "Sair da comparação" volta ao normal.</p>
+          </div>
         </div>
       </section>
     </div>
   <section class="card" aria-labelledby="txTitle">
     <div class="card-head"><h2 id="txTitle">Lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
     <div class="lanc-periodo" id="lancPeriodo"></div>
+    <p class="cmp-topo" id="lCmpTopo" hidden></p>
     <div class="table-tools">
       <div class="seg" role="group" aria-label="Filtrar lançamentos">
         <button type="button" data-f="out" aria-pressed="true">Saídas</button>
         <button type="button" data-f="in" aria-pressed="false">Entradas</button>
         <button type="button" data-f="all" aria-pressed="false">Todos</button>
       </div>
+      <div class="seg" id="txPerCmp" role="group" aria-label="Período dos lançamentos" hidden></div>
       <div class="field" style="max-width:260px"><label for="fCat">Categoria</label><select id="fCat"></select></div>
       <label class="search" style="display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
@@ -658,7 +668,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     </div>
     <div class="table-box scroll-table">
       <table>
-        <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
+        <thead><tr><th scope="col">Data</th><th scope="col" class="col-per" hidden>Período</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>

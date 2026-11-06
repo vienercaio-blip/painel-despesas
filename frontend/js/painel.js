@@ -1959,7 +1959,19 @@ function renderTable(){
   var fc = state.fcat || 'all';
   var opts = '<option value="all">Todas</option><option value="__in">Entradas</option>'+catsCom(fc==='all'||fc==='__in' ? null : fc).map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>';}).join('');
   $('fCat').innerHTML = opts; $('fCat').value = fc;
-  var list = cur().filter(function(t){
+  /* comparando: lançamentos de A ou de B, com o filtro "Os dois · A · B" */
+  var cmp = state.cmp, per = cmp ? (state.txPer || 'ambos') : null, CA = null, CB = null;
+  if (cmp){ CA = dadosPeriodo(cmp.a); CB = dadosPeriodo(cmp.b); }
+  $('lCmpTopo').hidden = !cmp;
+  $('txPerCmp').hidden = !cmp;
+  document.querySelectorAll('#viewLanc .col-per').forEach(function(th){ th.hidden = !cmp; });
+  if (cmp){
+    $('lCmpTopo').innerHTML = htmlTopoComparacao(CA, CB);
+    $('txPerCmp').innerHTML = [['ambos','Os dois'],['a',CA.nome],['b',CB.nome]].map(function(o){ return '<button type="button" data-per="'+o[0]+'" aria-pressed="'+(per===o[0])+'">'+esc(o[1])+'</button>'; }).join('');
+  }
+  var emA = function(t){ return Periodo.contem(t.date, cmp.a); }, emB = function(t){ return Periodo.contem(t.date, cmp.b); };
+  var base = !cmp ? cur() : state.tx.filter(function(t){ return per==='a' ? emA(t) : per==='b' ? emB(t) : (emA(t) || emB(t)); });
+  var list = base.filter(function(t){
     if (fc==='__in' && ehSaida(t)) return false;
     var fcInterna = INTERNOS.indexOf(fc)!==-1;  /* categoria interna: entradas (resgates) e saídas juntas */
     if (fc!=='all' && fc!=='__in' && ((ehEntrada(t) && !fcInterna) || catOf(t)!==fc)) return false;
@@ -1976,7 +1988,7 @@ function renderTable(){
   /* quantos lançamentos por vez; 0 = todos. Sempre começa em 10 */
   var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 10;
   $('txPor').value = String(por);
-  var chave = [fc, state.filter, q, JSON.stringify(state.p), list.length].join('|');
+  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length].join('|');
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
   var nPag = por ? Math.max(1, Math.ceil(list.length/por)) : 1;
   state.txPag = Math.min(state.txPag||0, nPag-1);
@@ -1992,9 +2004,22 @@ function renderTable(){
       ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'<option value="'+NOVA_CAT+'">+ Criar nova categoria…</option></select></span>' :
       '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
     if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
-    return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
-  }).join('') || '<tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>';
+    var perCell = cmp ? '<td>'+(emA(t) ? '<span class="tag-per tag-per-a">'+esc(CA.nome)+'</span>' : '')+(emB(t) ? '<span class="tag-per tag-per-b">'+esc(CB.nome)+'</span>' : '')+'</td>' : '';
+    return '<tr><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
+  }).join('') || '<tr><td colspan="'+(cmp ? 5 : 4)+'">Nenhum lançamento encontrado.</td></tr>';
   var tot = list.reduce(function(s,t){return s+t.value;},0);
+  if (cmp){
+    /* rodapé comparando: soma de cada período (das linhas filtradas) e a diferença por mês */
+    var la = list.filter(emA), lb = list.filter(emB);
+    var sa = la.reduce(function(s2,t){ return s2+t.value; }, 0), sb = lb.reduce(function(s2,t){ return s2+t.value; }, 0);
+    var dm = sa/CA.divisor - sb/CB.divisor;
+    var partes = [];
+    if (per!=='b') partes.push(CA.nome+': '+brl.format(sa)+' ('+la.length+')');
+    if (per!=='a') partes.push(CB.nome+': '+brl.format(sb)+' ('+lb.length+')');
+    if (per==='ambos') partes.push('por mês: '+(dm>=0.005 ? '+' : dm<=-0.005 ? '−' : '')+brl.format(Math.abs(dm)));
+    $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' · ' : '')+partes.join(' · ');
+    return;
+  }
   $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+Periodo.nome(state.p)+'.';
 }
 
@@ -2012,10 +2037,10 @@ drop.addEventListener('drop', function(e){
   drop.classList.add('soltou');   /* o ícone desce e some, como se a área engolisse o arquivo */
   setTimeout(function(){ drop.classList.remove('soltou'); readFiles(files); }, 300);
 });
-document.querySelectorAll('.table-tools .seg button').forEach(function(b){
+document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(b){
   b.addEventListener('click', function(){
     state.filter = b.dataset.f;
-    document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x===b ? 'true':'false'); });
+    document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x===b ? 'true':'false'); });
     renderTable();
   });
 });
@@ -2024,7 +2049,7 @@ $('fCat').addEventListener('change', function(e){
   state.fcat = e.target.value;
   if (state.fcat==='__in'){ state.filter='all'; }
   else if (state.fcat!=='all'){ state.filter='out'; }
-  document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); });
+  document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); });
   renderTable();
 });
 $('cats').addEventListener('click', function(e){
@@ -2571,6 +2596,8 @@ $('dCmpModo').addEventListener('click', function(e){
   var c = e.target.closest('[data-cat]');
   if (c) abrirLancamentos(c.dataset.cat);   /* continua comparando */
 });
+$('lCmpTopo').addEventListener('click', function(e){ if (e.target.closest('[data-sair]')) sairComparacao(); });
+$('txPerCmp').addEventListener('click', function(e){ var b = e.target.closest('[data-per]'); if (!b) return; state.txPer = b.dataset.per; renderTable(); var nb = document.querySelector('#txPerCmp [data-per="'+state.txPer+'"]'); if (nb) nb.focus(); });
 $('dCmpTopoDesp').addEventListener('click', function(e){ if (e.target.closest('[data-sair]')) sairComparacao(); });
 $('dCmpTodas').addEventListener('click', function(){ state.cmpTodas = !state.cmpTodas; renderComparacao(); });
 function cmpAba(aba){
@@ -2605,7 +2632,7 @@ function iniciarComparacao(a, b){
   if (!erro) [a, b].some(function(p, i){ var d = dadosPeriodo(p); if (d.aviso && d.dias<7){ erro = 'O Período '+(i+1)+' tem só '+d.dias+(d.dias===1 ? ' dia' : ' dias')+' de dados no extrato; escolha um período maior.'; } return !!erro; });
   if (erro){ $('pCmpErro').textContent = erro; $('pCmpErro').hidden = false; return; }
   $('pCmp').hidden = true;
-  state.p = JSON.parse(JSON.stringify(a)); state.cmp = {a:a, b:b}; state.cmpNovo = true; state.cmpTodas = false;
+  state.p = JSON.parse(JSON.stringify(a)); state.cmp = {a:a, b:b}; state.cmpNovo = true; state.cmpTodas = false; state.txPer = 'ambos';
   render();
 }
 $('pCmpMeses').addEventListener('click', function(){ cmpAba('meses'); });
