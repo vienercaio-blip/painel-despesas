@@ -271,7 +271,19 @@ function ordenarLancamentos(lista, col, dir){
 }
 /* quantos lançamentos precisam de revisão (o critério vem de fora) */
 function paraRevisar(lista, ehOutro){ return lista.filter(ehOutro).length; }
-return { ordenarLancamentos:ordenarLancamentos, paraRevisar:paraRevisar, comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
+/* Organizar: Para revisar (valor de "outros"), categorias com gastos (maior primeiro)
+   e sem gastos (alfabética); internas e "outros" ficam fora das listas */
+function listaOrganizar(byCat, todas, outros, internos){
+  var fora = function(n){ return n===outros || internos.indexOf(n)!==-1; };
+  var com = Object.keys(byCat).filter(function(n){ return !fora(n) && byCat[n]>0; })
+    .map(function(n){ return {nome:n, v:byCat[n]}; })
+    .sort(function(a, b){ return (b.v-a.v) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  var sem = todas.filter(function(n){ return !fora(n) && !(byCat[n]>0); })
+    .filter(function(n, i, l){ return l.indexOf(n)===i; })
+    .sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
+  return { revisar: byCat[outros]>0 ? byCat[outros] : 0, comGastos:com, semGastos:sem };
+}
+return { listaOrganizar:listaOrganizar, ordenarLancamentos:ordenarLancamentos, paraRevisar:paraRevisar, comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

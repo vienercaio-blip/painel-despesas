@@ -453,3 +453,15 @@ test('paraRevisar: conta só os aceitos', () => {
   assert.equal(Analise.paraRevisar(L, t => t.value < 0 && t.id !== 3), 2);
   assert.equal(Analise.paraRevisar([], () => true), 0);
 });
+
+// Organizar: ordem da lista
+test('listaOrganizar: revisar, com gastos (maior primeiro) e sem gastos (alfabética), sem internas', () => {
+  const r = Analise.listaOrganizar({'Mercado': 500, 'Moradia': 900, 'Outros (revisar)': 120, 'Investimentos': 300, 'Lazer': -10, 'Saúde': 500},
+    ['Moradia', 'Mercado', 'Saúde', 'Lazer', 'Pets', 'Academia', 'Investimentos'], 'Outros (revisar)', ['Investimentos']);
+  assert.equal(r.revisar, 120);
+  assert.deepEqual(r.comGastos.map(c => [c.nome, c.v]), [['Moradia', 900], ['Mercado', 500], ['Saúde', 500]]);
+  assert.deepEqual(r.semGastos, ['Academia', 'Lazer', 'Pets']);
+});
+test('listaOrganizar: sem Outros → revisar 0', () => {
+  assert.equal(Analise.listaOrganizar({}, ['A'], 'Outros (revisar)', []).revisar, 0);
+});
