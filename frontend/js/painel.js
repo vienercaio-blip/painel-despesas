@@ -186,7 +186,7 @@ function load(list, source, name){
   if (typeof esquecerCriacao==='function' && CRIAR_PARA) esquecerCriacao();
   $('dAvisoPasta').hidden = true;
   $('dAvisoLeitura').hidden = true; state.fcat = 'all'; state.filter = 'out'; state.q = '';
-  state.editLanc = false; state.txPor = 10; state.dashCats = null; state.dashDet = false; state.dashTodas = false;
+  state.txPor = 50; state.txOrd = {col:'data', dir:'desc'}; state.dashCats = null; state.dashDet = false; state.dashTodas = false;
   $('q').value = ''; document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });
   refreshTabs();
   state.tx = list.map(function(t,i){
@@ -1838,7 +1838,6 @@ function setView(){
   if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; $('xSaiu').dataset.v = '0'; state.despChegou = true; render(); }   /* chegar: desenha na largura real e com movimento */
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
-  if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
   $('pageTitle').textContent = {dashboard:'Dashboard', economia:'Economia', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
@@ -1900,16 +1899,19 @@ function renderTable(){
     if (state.filter==='in' && ehSaida(t)) return false;
     return !q || norm(t.desc).indexOf(q)!==-1;
   });
-  /* editar a categoria aqui só depois de ligar "Editar categorias" */
-  var ed = !!state.editLanc, eb = $('editLanc');
-  eb.setAttribute('aria-pressed', ed ? 'true' : 'false');
-  eb.textContent = ed ? 'Concluir edição' : 'Editar categorias';
-  eb.classList.toggle('primary', ed);
-  $('txHint').innerHTML = ed ? 'Edição ligada: escolha a nova categoria na coluna <b>Categoria</b>.' : 'Para corrigir uma categoria, clique em <b>Editar categorias</b>.';
-  /* quantos lançamentos por vez; 0 = todos. Sempre começa em 10 */
-  var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 10;
+  /* ordem: data (mais nova primeiro) ou valor (o maior primeiro), clicando no título */
+  var ord = state.txOrd || {col:'data', dir:'desc'};
+  list = Analise.ordenarLancamentos(list, ord.col, ord.dir);
+  document.querySelectorAll('#viewLanc [data-ord]').forEach(function(b){
+    var on = b.dataset.ord===ord.col;
+    b.closest('th').setAttribute('aria-sort', on ? (ord.dir==='desc' ? 'descending' : 'ascending') : 'none');
+    b.classList.toggle('ativo', on); b.classList.toggle('sobe', on && ord.dir==='asc');
+  });
+  renderNumerosLanc(fc);
+  /* quantos lançamentos por vez; 0 = todos. Começa em 50 */
+  var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 50;
   $('txPor').value = String(por);
-  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length].join('|');
+  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length, ord.col, ord.dir].join('|');
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
   var nPag = por ? Math.max(1, Math.ceil(list.length/por)) : 1;
   state.txPag = Math.min(state.txPag||0, nPag-1);
@@ -1919,14 +1921,13 @@ function renderTable(){
   $('rows').innerHTML = shown.map(function(t){
     var c = ehEntrada(t) ? null : catOf(t);
     var ci = ehInterno(t) ? catOf(t) : ENTRADA;
-    var catCell = ehEntrada(t) ? (ed
-      ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+[ENTRADA].concat(INTERNOS).map(function(x){ return '<option'+(x===ci?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select></span>'
-      : ci===ENTRADA ? '<span class="in">Entrada</span>' : '<span class="why">'+esc(ci)+'</span>') :
-      ed ? '<span class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option'+(x===c?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'<option value="'+NOVA_CAT+'">+ Criar nova categoria…</option></select></span>' :
-      '<span class="why'+(c===OTHER?' none':'')+'">'+esc(c)+'</span>';
+    /* a categoria sempre se corrige na linha: o seletor tem cara de etiqueta */
+    var catCell = ehEntrada(t)
+      ? '<select class="cat-sel'+(ci===ENTRADA ? ' entrada' : '')+'" data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+[ENTRADA].concat(INTERNOS).map(function(x){ return '<option'+(x===ci?' selected':'')+'>'+esc(x)+'</option>'; }).join('')+'</select>'
+      : '<select class="cat-sel'+(c===OTHER ? ' rev' : '')+'" data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option value="'+esc(x)+'"'+(x===c?' selected':'')+'>'+esc(x===OTHER ? 'Revisar' : x)+'</option>'; }).join('')+'<option value="'+NOVA_CAT+'">+ Criar nova categoria…</option></select>';
     if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
     var perCell = cmp ? '<td>'+(emA(t) ? '<span class="tag-per tag-per-a">'+esc(CA.nome)+'</span>' : '')+(emB(t) ? '<span class="tag-per tag-per-b">'+esc(CB.nome)+'</span>' : '')+'</td>' : '';
-    return '<tr><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
+    return '<tr data-tx="'+t.id+'"><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+realce(t.desc, state.q)+'</td><td>'+catCell+'</td><td class="r num'+(t.value>0 ? ' pos' : '')+'">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="'+(cmp ? 5 : 4)+'">Nenhum lançamento encontrado.</td></tr>';
   var tot = list.reduce(function(s,t){return s+t.value;},0);
   if (cmp){
@@ -1941,8 +1942,38 @@ function renderTable(){
     $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' · ' : '')+partes.join(' · ');
     return;
   }
-  $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+Periodo.nome(state.p)+'.';
+  /* dinheiro guardado e transferências entre contas aparecem na lista, mas não no Entrou/Saiu do topo: o rodapé avisa */
+  var ints = list.filter(ehInterno), intV = Math.abs(ints.reduce(function(s2,t){ return s2+t.value; }, 0));
+  var aviso = ints.length && intV>=0.005 ? ' (inclui '+brl.format(intV)+' guardados ou transferidos entre suas contas, que não entram no Entrou/Saiu)' : '';
+  $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+aviso+' · '+Periodo.nome(state.p)+'.';
 }
+
+/* Lançamentos: Entrou, Saiu e Para revisar (totais do período; clicar filtra) */
+function ehRevisar(t){ return saiDaConta(t) && catOf(t)===OTHER; }
+function renderNumerosLanc(fc){
+  var tx = cur(), T = sums(tx), rev = Analise.paraRevisar(tx, ehRevisar);
+  var quando = state.p.tipo==='tudo' ? 'em todo o extrato' : 'em '+Periodo.curto(state.p);
+  var on = {in: state.filter==='in' && fc==='all', out: state.filter==='out' && fc==='all', rev: fc===OTHER};
+  var item = function(k, rot, v, sub, cls){ return '<button type="button" class="l-num'+(cls ? ' '+cls : '')+'" data-num="'+k+'" aria-pressed="'+on[k]+'"><span class="l">'+rot+'</span><b class="v num">'+v+'</b><span class="s">'+sub+'</span></button>'; };
+  $('lNums').innerHTML = item('in', 'Entrou', brl.format(T.ins), esc(quando), 'pos')+item('out', 'Saiu', brl.format(T.outs), esc(quando))+
+    item('rev', 'Para revisar', String(rev), rev ? (rev===1 ? 'lançamento sem categoria certa' : 'lançamentos sem categoria certa') : 'Nada para revisar ✓', rev ? 'warn' : 'ok');
+}
+function sincronizarSeg(){ document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); }); }
+$('lNums').addEventListener('click', function(e){
+  var b = e.target.closest('[data-num]'); if (!b) return;
+  var k = b.dataset.num, ligado = b.getAttribute('aria-pressed')==='true';
+  if (k==='rev'){ state.fcat = ligado ? 'all' : OTHER; state.filter = ligado ? 'all' : 'out'; }
+  else { state.fcat = 'all'; state.filter = ligado ? 'all' : k; }
+  sincronizarSeg(); renderTable();
+  var nb = document.querySelector('#lNums [data-num="'+k+'"]'); if (nb) nb.focus();
+});
+document.querySelectorAll('#viewLanc [data-ord]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var o = state.txOrd || {col:'data', dir:'desc'};
+    state.txOrd = o.col===b.dataset.ord ? {col:o.col, dir: o.dir==='desc' ? 'asc' : 'desc'} : {col:b.dataset.ord, dir:'desc'};
+    renderTable();
+  });
+});
 
 /* ---------- events ---------- */
 $('file').addEventListener('change', function(e){ readFiles(e.target.files); e.target.value=''; });
@@ -2110,7 +2141,6 @@ function voltarParaLancamentos(categoria){
   irPara('lancamentos');
 }
 $('ncPara').addEventListener('click', function(e){ if (e.target.closest('[data-ncvoltar]')) voltarParaLancamentos(null); });
-$('editLanc').addEventListener('click', function(){ state.editLanc = !state.editLanc; renderTable(); });
 $('txPor').addEventListener('change', function(){ state.txPor = +this.value; state.txPag = 0; renderTable(); });
 $('txPrev').addEventListener('click', function(){ state.txPag--; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
 $('txNext').addEventListener('click', function(){ state.txPag++; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });

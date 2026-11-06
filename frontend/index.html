@@ -647,18 +647,22 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
             <p>Use <b>Todo o extrato</b> ou <b>Último mês</b>, clique num dos meses da faixa logo abaixo, ou abra <b>Personalizado…</b>: lá ficam <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b>, cada ano e a escolha de um mês até outro ou de dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
           </div>
           <div>
-            <h3>2. Encontrar um lançamento</h3>
-            <ul><li><b>Saídas</b>, <b>Entradas</b> ou <b>Todos</b>: o que aparece na lista.</li><li>A busca procura pela descrição do extrato, e o filtro de categoria mostra só uma categoria.</li>
-            <li><b>Mostrar por vez</b> e os botões Anterior e Próxima passam as páginas. O rodapé mostra quantos lançamentos são e a soma deles.</li></ul>
+            <h3>2. Entrou, Saiu e Para revisar</h3>
+            <p>Os três números do topo são os totais do período (os mesmos do Dashboard). Clique em um deles para ver só aqueles lançamentos; clique de novo para voltar a todos. <b>Para revisar</b> são as saídas que ficaram em "Outros (revisar)".</p>
           </div>
           <div>
-            <h3>3. Corrigir uma categoria</h3>
-            <p>Clique em <b>Editar categorias</b> e escolha a categoria certa na linha do lançamento. O site pergunta se a mudança deve valer nos próximos extratos:</p>
-            <ul><li><b>Sim, manter</b>: cria uma regra para aquela origem, que aparece em Organizar › Regras.</li><li><b>Não, só neste extrato</b>: muda só aqui.</li></ul>
-            <p>Ao terminar, clique em <b>Concluir edição</b>.</p>
+            <h3>3. Encontrar e ordenar</h3>
+            <ul><li>A busca procura pela descrição do extrato (o trecho encontrado fica marcado); o filtro de categoria mostra só uma categoria; <b>Saídas</b>, <b>Entradas</b> ou <b>Todos</b> escolhem o que aparece.</li>
+            <li>Clique em <b>Data</b> ou <b>Valor</b> no título da tabela para ordenar; clique de novo para inverter. Valor ordena pelo tamanho: o maior primeiro.</li>
+            <li>Aparecem 50 por vez; <b>Mostrar por vez</b> e Anterior/Próxima passam as páginas. O rodapé mostra quantos são e a soma.</li></ul>
           </div>
           <div>
-            <h3>4. Etiquetas</h3>
+            <h3>4. Corrigir uma categoria</h3>
+            <p>Clique na categoria da linha e escolha a certa. O site pergunta se a mudança vale também nos próximos extratos:</p>
+            <ul><li><b>Sim</b>: cria uma regra para aquela origem, que aparece em Organizar › Regras.</li><li><b>Não, só neste extrato</b>: muda só aqui.</li></ul>
+          </div>
+          <div>
+            <h3>5. Etiquetas</h3>
             <ul><li><b>estorno</b>: dinheiro de volta de uma despesa; desconta do total da categoria.</li><li>Investimentos e transferências entre as suas contas são <b>movimento interno</b>: não contam como entrada nem saída.</li></ul>
           </div>
           <div>
@@ -669,9 +673,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       </section>
     </div>
   <section class="card" aria-labelledby="txTitle">
-    <div class="card-head"><h2 id="txTitle">Lançamentos</h2><span class="hint" id="txHint">Para corrigir uma categoria, clique em <b>Editar categorias</b>.</span></div>
+    <div class="card-head"><h2 id="txTitle">Lançamentos</h2></div>
     <div class="lanc-periodo" id="lancPeriodo"></div>
     <p class="cmp-topo" id="lCmpTopo" hidden></p>
+    <div class="l-nums" id="lNums" role="group" aria-label="Totais do período: clique para filtrar"></div>
     <div class="table-tools">
       <div class="seg" role="group" aria-label="Filtrar lançamentos">
         <button type="button" data-f="out" aria-pressed="true">Saídas</button>
@@ -684,11 +689,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
         <input id="q" type="search" placeholder="Buscar descrição" aria-label="Buscar descrição" style="border:0;background:transparent;outline:none;min-width:0;flex:1;min-height:40px">
       </label>
-      <button type="button" class="btn" id="editLanc" aria-pressed="false">Editar categorias</button>
     </div>
     <div class="table-box scroll-table">
       <table>
-        <thead><tr><th scope="col">Data</th><th scope="col" class="col-per" hidden>Período</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r">Valor</th></tr></thead>
+        <thead><tr><th scope="col" aria-sort="descending"><button type="button" class="th-ord" data-ord="data">Data <span class="ord-seta" aria-hidden="true">▼</span></button></th><th scope="col" class="col-per" hidden>Período</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col" class="r" aria-sort="none"><button type="button" class="th-ord" data-ord="valor">Valor <span class="ord-seta" aria-hidden="true">▼</span></button></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
