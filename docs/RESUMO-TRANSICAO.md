@@ -3,7 +3,7 @@
 Atualizado em 03/11/2026. **Redesenho em 3 etapas:** 1 identidade visual "sobrou." (ramo `identidade-visual`, especificação `docs/superpowers/specs/2026-11-03-identidade-visual-design.md`), 2 arrumação das telas, 3 celular e PWA. Leia isto primeiro ao abrir um novo chat. A memória do Claude Code deste projeto (`C:\Users\CAIO\.claude\projects\c--Users-CAIO-Desktop-dados-site\memory\`) também tem estas informações.
 
 
-> **ONDE PARAMOS (04/11/2026):** a identidade visual "sobrou." (etapa 1), o Dashboard em grade e o **Início novo** (etapa 2, partes 1 e 2) estão no `main` e no GitHub (`a3197ac`). O Início tem: lista com etiquetas de pasta e faixa de envio, movimentos, resumo do último extrato aberto, lembrete do mês que falta, "Ver um exemplo" (`GET /api/exemplo`), arrastar o extrato para a pasta, busca e as pílulas Ajuda/Formatos; as páginas têm títulos de uma palavra. Especificações: `docs/superpowers/specs/2026-11-04-inicio-design.md` e `2026-11-04-inicio-extras-design.md`. Próximo: Despesas, Lançamentos e Organizar, e depois a etapa 3 (celular e PWA). As pendências pequenas estão na memória do projeto.
+> **ONDE PARAMOS (06/11/2026):** o Início novo está no `main` e no GitHub (`8262f0d`). O **Dashboard em faixas** (etapa 2, parte 3) está no ramo `dashboard-faixas`, esperando o teste do usuário: faixas empilhadas (veredito, números, comparação com o mês anterior, categorias numa barra fatiada, meses, maiores gastos, previsão, dicas em pílulas) e cinco movimentos. Especificação `docs/superpowers/specs/2026-11-06-dashboard-faixas-design.md`. Próximo: a **página Economia** (meta de economia, dicas completas, gastos que se repetem, simulador), com especificação própria; depois Despesas, Lançamentos, Organizar e a etapa 3 (celular e PWA).
 
 ---
 
