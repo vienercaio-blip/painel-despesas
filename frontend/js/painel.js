@@ -1155,7 +1155,7 @@ function renderDashboard(){
   var ver = Analise.veredito(ctx);
   /* o resumo do Início usa exatamente estes números */
   state.resumo = { ver:ver, ins:T.ins, outs:T.outs, nM:nM, periodo:periodName(state.p) };
-  $('dVer').className = 'card verdict '+ver.cor;
+  $('dVer').className = 'card verdict faixa '+ver.cor;
   $('dVerT').textContent = ver.titulo;
   $('dVerTx').textContent = ver.texto;
   $('dVerPesa').textContent = ver.pesa || '';
@@ -1202,8 +1202,11 @@ function renderDashboard(){
   var bar = Analise.barras(ctx, sel);
   var nTodas = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).length;
   var maxV = bar.linhas.reduce(function(m,l){ return Math.max(m, l.mes); }, 0);
+  /* as porcentagens vêm de Analise.fatias: a lista, o PDF e a legenda mostram os mesmos números */
+  var pctCat = {}; Analise.fatias(bar.linhas).forEach(function(f){ pctCat[f.nome] = f.rotulo; });
+  var pctDe = function(l){ return l.negativo ? '—' : pctCat[l.nome] || '0%'; };
   /* o PDF lista todas as categorias; a tela mostra as 5 maiores (ou todas) */
-  state.pdfBarras = bar.linhas.map(function(l){ return {l:l.nome, v:brl.format(l.mes)+(nM>1?'/mês':'')+' · '+pct.format(Math.max(0,l.pct))}; });
+  state.pdfBarras = bar.linhas.map(function(l){ return {l:l.nome, v:brl.format(l.mes)+(nM>1?'/mês':'')+' · '+pctDe(l)}; });
   var vis = Analise.visiveis(bar.linhas, true, 5);
   var maisBarras = '';
   $('dBarras').innerHTML = vis.linhas.length ? vis.linhas.map(function(l){
@@ -1211,21 +1214,21 @@ function renderDashboard(){
       '<span class="bn">'+esc(l.nome)+(l.fixa?'<span class="tag-fixa">fixa</span>':'')+
         (l.seta==='sobe'?'<span class="seta-sobe" title="Subiu no último mês">↑</span>':l.seta==='desce'?'<span class="seta-desce" title="Caiu no último mês">↓</span>':'')+'</span>'+
       '<span class="bt"><i style="width:'+(l.negativo || maxV<=0 ? 0 : Math.max(1, l.mes/maxV*100)).toFixed(1)+'%"></i></span>'+
-      '<span class="bv"><span class="num">'+brl.format(l.mes)+(nM>1?'/mês':'')+'</span><small>'+pct.format(Math.max(0,l.pct))+'</small>'+
+      '<span class="bv"><span class="num">'+brl.format(l.mes)+(nM>1?'/mês':'')+'</span><small'+(l.negativo ? ' title="Os estornos foram maiores que os gastos"' : '')+'>'+pctDe(l)+'</small>'+
         (l.outros?' <a href="#categorias" data-classificar="1">classificar →</a>':'')+'</span></li>';
   }).join('') + maisBarras : '<li class="barras-vazio">Nenhuma saída neste período.</li>';
   /* barra fatiada: as 5 maiores + Outros, na mesma ordem e regra da lista */
   var fat = Analise.fatias(bar.linhas, 5);
   var corFatia = function(f, i){ return f.outros ? '' : 'color-mix(in srgb, var(--s1) '+[100, 78, 58, 40, 26][Math.min(i, 4)]+'%, var(--s2))'; };
   $('dFatias').innerHTML = fat.map(function(f, i){
-    return '<button type="button" class="'+(f.outros ? 'outros' : '')+'" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+' data-flex="'+f.pct+'" style="flex-grow:'+f.pct+(f.outros ? '' : ';background:'+corFatia(f, i))+'" title="'+esc(f.nome)+' · '+f.pct+'%" aria-label="'+esc(f.nome)+', '+f.pct+'% dos gastos"></button>';
+    return '<button type="button" class="'+(f.outros ? 'outros' : '')+'" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+' data-flex="'+f.pct+'" style="flex-grow:'+f.pct+(f.outros ? '' : ';background:'+corFatia(f, i))+'" title="'+esc(f.nome)+' · '+f.rotulo+'" aria-label="'+esc(f.nome)+', '+f.rotulo+' dos gastos"></button>';
   }).join('');
   crescerFatias(fat.map(function(f){ return f.nome+':'+f.pct; }).join('|'));
   $('dLegenda').innerHTML = fat.map(function(f, i){
-    return '<li><button type="button" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+'><i class="'+(f.outros ? 'outros' : '')+'" style="'+(f.outros ? 'background:var(--surface-2);border:1px dashed var(--line)' : 'background:'+corFatia(f, i))+'"></i>'+esc(f.nome)+' <b>'+f.pct+'%</b></button></li>';
+    return '<li><button type="button" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+'><i class="'+(f.outros ? 'outros' : '')+'" style="'+(f.outros ? 'background:var(--surface-2);border:1px dashed var(--line)' : 'background:'+corFatia(f, i))+'"></i>'+esc(f.nome)+' <b>'+f.rotulo+'</b></button></li>';
   }).join('');
   $('dBarras').hidden = !state.dashTodas;
-  $('dTodasBtn').hidden = !fat.some(function(f){ return f.demais; }) && !state.dashTodas;
+  $('dTodasBtn').hidden = bar.linhas.length<=fat.filter(function(f){ return !f.demais; }).length && !state.dashTodas;   /* inclui a categoria só de estornos, que não vira fatia */
   $('dTodasBtn').textContent = state.dashTodas ? 'Ver menos' : 'Ver todas as '+bar.linhas.length+' categorias';
   $('dTodasBtn').setAttribute('aria-expanded', state.dashTodas ? 'true' : 'false');
   var fixAn = bar.linhas.filter(function(l){ return l.fixa; }).reduce(function(s2,l){ return s2+l.mes*nM; }, 0);
@@ -1313,6 +1316,13 @@ function renderDashboard(){
     if (prevM){ cmpA = prevM; cmpB = only; monthTx[pk] = state.tx.filter(function(t){ return t.date.getFullYear()===py && t.date.getMonth()===pm; }); }
   }
   if (cmpA){
+    /* o extrato pode começar ou terminar no meio de um mês: a comparação avisa */
+    var dIni = null, dFim = null;
+    state.tx.forEach(function(t){ if (!dIni || t.date<dIni) dIni = t.date; if (!dFim || t.date>dFim) dFim = t.date; });
+    var ddmm = function(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+    var com = function(o, nome){ var c = {}; for (var kk in o) c[kk] = o[kk]; c.name = nome; return c; };
+    if (dFim && dFim.getFullYear()===cmpB.y && dFim.getMonth()===cmpB.m && dFim.getDate()<new Date(cmpB.y, cmpB.m+1, 0).getDate()) cmpB = com(cmpB, cmpB.name+' (até '+ddmm(dFim)+')');
+    if (dIni && dIni.getFullYear()===cmpA.y && dIni.getMonth()===cmpA.m && dIni.getDate()>1) cmpA = com(cmpA, cmpA.name+' (desde '+ddmm(dIni)+')');
     var A = cmpA, B = cmpB;
     $('dChgA').textContent = A.label; $('dChgB').textContent = B.label;
     $('dChgHint').textContent = 'Comparando '+A.name+' com '+B.name;
@@ -1342,7 +1352,8 @@ function renderDashboard(){
   $('dProjHint').textContent = 'Média '+(pn===1?'do último mês':'dos últimos '+pn+' meses')+' do extrato, independente do período escolhido';
   var projBase = function(key, title){ return esc(moreHTML(title, lastN.map(function(o){ return [o.name, brl.format(o[key])]; }), 'A projeção é a média desses meses.')); };
   /* faixa de previsão: uma linha */
-  $('dPrevTx').textContent = 'Próximo mês: entra ~'+brl0.format(pIns)+', sai ~'+brl0.format(pOut)+', '+(pRes>=0 ? 'sobra' : 'falta')+' ~'+brl0.format(Math.abs(pRes))+'.';
+  var rIns = Math.round(pIns), rOut = Math.round(pOut), rRes = rIns-rOut;   /* a conta da frase fecha com os números mostrados */
+  $('dPrevTx').textContent = 'Próximo mês: entra ~'+brl0.format(rIns)+', sai ~'+brl0.format(rOut)+', '+(rRes>=0 ? 'sobra' : 'falta')+' ~'+brl0.format(Math.abs(rRes))+'.';
 
   /* faixa de comparação: o mesmo par de meses de "Mudanças" */
   if (cmpA && !isWeek){
@@ -1352,8 +1363,8 @@ function renderDashboard(){
   }
   $('dCmp').hidden = !cmpA || isWeek;
 
-  /* faixa dos maiores gastos (lançamentos individuais, sem estornos) */
-  var gastos = Analise.maioresGastos(tx.filter(function(t){ return ehSaida(t) && !t.estorno; })
+  /* faixa dos maiores gastos (lançamentos individuais, sem estornos nem dinheiro guardado/transferido entre contas) */
+  var gastos = Analise.maioresGastos(tx.filter(function(t){ return saiDaConta(t) && !t.estorno; })
     .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, chave:t.origin}; }), 3);
   $('dGastos').innerHTML = gastos.map(function(g){
     return '<li><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd">'+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>';

@@ -236,24 +236,23 @@ function maioresGastos(lista, n){
    sem as categorias negativas (estornos maiores que os gastos) */
 function fatias(linhas, n){
   var pos = linhas.filter(function(l){ return !l.negativo && l.pct>0; });
-  /* com n: as n maiores (pelo valor) e o resto somado numa fatia só, para as
-     porcentagens continuarem sendo do total */
-  if (n && pos.length>n){
-    var ord = pos.slice().sort(function(a, b){ return b.pct-a.pct; });
-    var top = ord.slice(0, n), resto = ord.slice(n);
-    var outrosCat = top.filter(function(l){ return l.outros; });
-    pos = top.filter(function(l){ return !l.outros; }).concat(outrosCat)
-      .concat([{nome:'Outras categorias', pct:resto.reduce(function(s2, l){ return s2+l.pct; }, 0), demais:true}]);
-  }
   var tot = pos.reduce(function(s, l){ return s+l.pct; }, 0);
   if (!tot) return [];
-  var f = pos.map(function(l){ return {nome:l.nome, pct:Math.round(l.pct/tot*100), outros:!!l.outros || !!l.demais, demais:!!l.demais}; });
-  var resto = 100 - f.reduce(function(s, x){ return s+x.pct; }, 0);
-  if (resto){
-    var maior = f.filter(function(x){ return !x.outros; }).sort(function(a, b){ return b.pct-a.pct; })[0] || f[0];
-    maior.pct += resto;
+  /* porcentagens inteiras de TODAS as categorias, uma vez só (maiores restos):
+     a legenda e a lista completa mostram sempre os mesmos números */
+  var f = pos.map(function(l){ var b = l.pct/tot*100; return {nome:l.nome, bruto:b, pct:Math.floor(b), outros:!!l.outros, demais:false}; });
+  var falta = 100 - f.reduce(function(s, x){ return s+x.pct; }, 0);
+  f.slice().sort(function(a, b){ return (b.bruto-b.pct)-(a.bruto-a.pct) || b.bruto-a.bruto; })
+    .slice(0, falta).forEach(function(x){ x.pct++; });
+  /* com n: as n maiores e o resto somado numa fatia só (a soma das porcentagens dele) */
+  if (n && f.length>n){
+    var ord = f.slice().sort(function(a, b){ return b.bruto-a.bruto; });
+    var resto = ord.slice(n);
+    f = ord.slice(0, n).concat([{nome:'Outras categorias', demais:true, outros:true,
+      bruto: resto.reduce(function(s, x){ return s+x.bruto; }, 0), pct: resto.reduce(function(s, x){ return s+x.pct; }, 0)}]);
   }
-  return f.filter(function(x){ return !x.outros; }).concat(f.filter(function(x){ return x.outros; }));
+  f.forEach(function(x){ x.rotulo = x.bruto<1 ? '<1%' : x.pct+'%'; x.outros = x.outros || x.demais; delete x.bruto; });
+  return f.filter(function(x){ return !x.outros; }).concat(f.filter(function(x){ return x.outros && !x.demais; }), f.filter(function(x){ return x.demais; }));
 }
 
 return { comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };

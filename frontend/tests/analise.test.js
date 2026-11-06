@@ -403,3 +403,17 @@ test('fatias com n: as n maiores e o resto somado em "Outras categorias", em % d
   assert.deepEqual(f.map(x => [x.nome, x.pct]), [['A', 27], ['B', 20], ['F', 15], ['C', 14], ['G', 10], ['Outras categorias', 14]]);
   assert.equal(f[5].demais, true);
 });
+
+test('fatias: com n, as porcentagens nomeadas são as mesmas da lista completa', () => {
+  const L = [{nome:'A', pct:.40}, {nome:'B', pct:.30}, {nome:'C', pct:.20}, {nome:'D', pct:.04}, {nome:'E', pct:.03}, {nome:'F', pct:.015}, {nome:'G', pct:.015}];
+  const todas = {}; Analise.fatias(L).forEach(x => { todas[x.nome] = x.pct; });
+  assert.equal(Object.values(todas).reduce((s, v) => s + v, 0), 100);
+  const f = Analise.fatias(L, 5);
+  f.filter(x => !x.demais).forEach(x => assert.equal(x.pct, todas[x.nome], x.nome));
+  assert.equal(f.reduce((s, x) => s + x.pct, 0), 100);
+});
+test('fatias: categoria pequena aparece como "<1%" e nunca "0%"', () => {
+  const f = Analise.fatias([{nome:'A', pct:.993}, {nome:'B', pct:.004}, {nome:'C', pct:.003}]);
+  assert.deepEqual(f.map(x => x.rotulo), ['99%', '<1%', '<1%']);
+  f.forEach(x => assert.ok(x.pct >= 0));
+});
