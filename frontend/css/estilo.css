@@ -422,7 +422,7 @@ html.sem-esteira .months [aria-hidden="true"]{display:none}
 .table-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .seg{display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--surface-2)}
 .seg button{min-height:38px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:var(--ink-2);font-weight:500;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button[aria-pressed="true"],.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .search{min-height:42px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);min-width:0;flex:0 1 260px}
 .table-box{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
@@ -780,3 +780,12 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .p-atalho{min-height:32px}
 .p-atalho[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
 .mchip.no-intervalo{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.p-caixa{margin:10px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);display:flex;flex-direction:column;gap:10px;max-width:640px}
+.p-caixa-t{margin:0;font-size:14px;color:var(--ink)}
+.p-caixa .seg{align-self:flex-start}
+.p-linha{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.p-linha label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-2)}
+.p-linha select,.p-linha input{min-height:36px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.p-botoes{display:flex;gap:14px;align-items:center}
+@media (max-width:560px){.p-linha label{flex:1 1 100%}.p-linha select,.p-linha input{flex:1;min-width:0}}
+.p-caixa .seg button[aria-selected="true"]{background:var(--surface-2);border:1px solid var(--accent)}

@@ -197,6 +197,21 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <button type="button" class="btn btn-sm" id="pdfBtn">Exportar PDF</button>
       <span class="hint p-sum" id="pSum"></span>
     </div>
+    <div class="p-caixa" id="pPers" role="dialog" aria-labelledby="pPersT" hidden>
+      <h3 class="p-caixa-t" id="pPersT">Escolher o período</h3>
+      <div class="seg" role="tablist" aria-label="Como escolher">
+        <button type="button" role="tab" id="pPersMeses" aria-selected="true" aria-controls="pPersPMeses">Meses inteiros</button>
+        <button type="button" role="tab" id="pPersDias" aria-selected="false" aria-controls="pPersPDias">Dias exatos</button>
+      </div>
+      <div class="p-linha" id="pPersPMeses" role="tabpanel">
+        <label>De <select id="pDeM"></select></label><label>até <select id="pAteM"></select></label>
+      </div>
+      <div class="p-linha" id="pPersPDias" role="tabpanel" hidden>
+        <label>De <input id="pDeD" type="date" placeholder="dd/mm/aaaa" autocomplete="off"></label><label>até <input id="pAteD" type="date" placeholder="dd/mm/aaaa" autocomplete="off"></label>
+      </div>
+      <p class="form-err" id="pPersErro" role="alert" hidden></p>
+      <div class="p-botoes"><button type="button" class="btn btn-sm primary" id="pPersAplicar">Aplicar</button><button type="button" class="link-btn" id="pPersCancelar">Cancelar</button></div>
+    </div>
     <div class="months-wrap"><div class="months" id="pMonths" role="group" aria-label="Resultado por mês"></div></div>
   </section>
 

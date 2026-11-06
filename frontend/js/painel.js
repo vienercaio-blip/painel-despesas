@@ -807,7 +807,7 @@ function renderPeriod(tx){
   $('pAtalhos').innerHTML = ats.map(function(a){
     var on = p.tipo==='tudo' ? a.id==='tudo' : !!p.rotulo && p.rotulo===a.rotulo;
     return '<button type="button" class="ptab ini-pilula p-atalho" data-atalho="'+a.id+'" aria-pressed="'+on+'">'+esc(a.rotulo)+'</button>';
-  }).join('');
+  }).join('')+'<button type="button" class="ptab ini-pilula p-atalho" id="pPersBtn" data-acao="pers" aria-haspopup="dialog" aria-controls="pPers" aria-pressed="'+(p.rotulo==='Personalizado')+'">Personalizado…</button>';
   state.atalhos = ats;
   /* semana: só com um mês escolhido */
   var temMes = p.tipo==='mes' || p.tipo==='semana';
@@ -2323,11 +2323,56 @@ $('pW').addEventListener('change', function(e){
   escolherPeriodo(v==='all' ? {tipo:'mes', y:p.y, m:p.m} : {tipo:'semana', w:v, y:p.y, m:p.m});
 });
 $('pAtalhos').addEventListener('click', function(e){
+  if (e.target.closest('[data-acao="pers"]')){ if ($('pPers').hidden) abrirPersonalizado(); else fecharPersonalizado(); return; }
   var b = e.target.closest('[data-atalho]'); if (!b) return;
   var a = (state.atalhos || []).filter(function(x){ return x.id===b.dataset.atalho; })[0];
   if (a) escolherPeriodo(JSON.parse(JSON.stringify(a.p)));
 });
 $('rPeriod').addEventListener('change', function(){ resRange = this.value; renderDashboard(); });
+/* ---------- Período › Personalizado… (meses inteiros ou dias exatos) ---------- */
+function persAba(aba){
+  state.persAba = aba;
+  $('pPersMeses').setAttribute('aria-selected', aba==='meses' ? 'true' : 'false');
+  $('pPersDias').setAttribute('aria-selected', aba==='dias' ? 'true' : 'false');
+  $('pPersPMeses').hidden = aba!=='meses'; $('pPersPDias').hidden = aba!=='dias';
+}
+function abrirPersonalizado(){
+  var meses = mesesDoExtrato(), p = state.p;
+  if (!meses.length) return;
+  var opt = meses.map(function(k){ var a = k.split('-'); return '<option value="'+k+'">'+MESES[+a[1]-1].slice(0,3)+'/'+a[0]+'</option>'; }).join('');
+  $('pDeM').innerHTML = opt; $('pAteM').innerHTML = opt;
+  var deK = meses[Math.max(0, meses.length-3)], ateK = meses[meses.length-1];
+  if (p.tipo==='intervalo'){ deK = p.de.slice(0,7); ateK = p.ate.slice(0,7); }
+  else if (p.tipo==='mes' || p.tipo==='semana'){ deK = ateK = p.y+'-'+String(p.m+1).padStart(2,'0'); }
+  $('pDeM').value = deK; $('pAteM').value = ateK;
+  var datas = state.tx.map(function(t){ return Periodo.iso(t.date); }).sort();
+  ['pDeD','pAteD'].forEach(function(id){ $(id).min = datas[0]; $(id).max = datas[datas.length-1]; });
+  $('pDeD').value = p.tipo==='intervalo' && p.dias ? p.de : ''; $('pAteD').value = p.tipo==='intervalo' && p.dias ? p.ate : '';
+  persAba(p.tipo==='intervalo' && p.dias ? 'dias' : 'meses');
+  $('pPersErro').hidden = true;
+  $('pPers').hidden = false;
+  (state.persAba==='dias' ? $('pDeD') : $('pDeM')).focus();
+}
+function fecharPersonalizado(){ $('pPers').hidden = true; var b = $('pPersBtn'); if (b) b.focus(); }
+$('pPersMeses').addEventListener('click', function(){ persAba('meses'); });
+$('pPersDias').addEventListener('click', function(){ persAba('dias'); });
+$('pPersCancelar').addEventListener('click', fecharPersonalizado);
+$('pPers').addEventListener('keydown', function(e){ if (e.key==='Escape') fecharPersonalizado(); });
+$('pPersAplicar').addEventListener('click', function(){
+  var p, erro = null;
+  if (state.persAba==='dias'){
+    var de = Periodo.lerData($('pDeD').value), ate = Periodo.lerData($('pAteD').value);
+    if (!de || !ate) erro = 'Digite as duas datas no formato dd/mm/aaaa.';
+    else p = Periodo.deDias(de, ate);
+  } else p = Periodo.deMeses($('pDeM').value, $('pAteM').value);
+  if (!erro && p.tipo==='intervalo' && !p.dias && $('pDeM').value>$('pAteM').value) erro = 'Escolha a data final depois da inicial.';
+  if (!erro) erro = Periodo.validar(p, state.tx.filter(function(t){ return Periodo.contem(t.date, p); }).length);
+  if (erro){ $('pPersErro').textContent = erro; $('pPersErro').hidden = false; return; }
+  p.rotulo = 'Personalizado';
+  $('pPers').hidden = true;
+  escolherPeriodo(p);
+  var b = $('pPersBtn'); if (b) b.focus();
+});
 /* ---------- configurações do site ---------- */
 var cfg = {};
 function saveCfg(){ API.salvarPreferencia('config', cfg).catch(falhou); }
