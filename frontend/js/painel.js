@@ -3230,7 +3230,7 @@ function ajudaAbrir(btn, abrir){
 }
 document.addEventListener('click', function(e){
   var b = e.target.closest('.ajuda-btn');
-  if (b){ ajudaAbrir(b, $(b.getAttribute('aria-controls')).hidden); return; }
+  if (b){ if ($(b.getAttribute('aria-controls')).hidden) ajudaAbrir(b, true); return; }   /* fecha só no X */
   var f = e.target.closest('[data-ajuda-fechar]');
   if (f){ var q = f.closest('.ajuda-quadro'); ajudaAbrir(document.querySelector('.ajuda-btn[aria-controls="'+q.id+'"]'), false); }
 });
