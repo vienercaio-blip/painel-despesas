@@ -293,6 +293,69 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   </div>
 
   <div class="view eco" id="viewEconomia" hidden>
+    <div class="eco-topo">
+      <button type="button" class="ptab ini-pilula" id="eAjudaBtn" aria-controls="eAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+    </div>
+    <section class="card eco-ajuda" id="eAjuda" aria-labelledby="eAjudaT" hidden>
+      <div class="eco-ajuda-head"><h2 class="faixa-t" id="eAjudaT" tabindex="-1">Como funciona a página Economia</h2>
+        <button type="button" class="btn btn-sm" id="eAjudaFechar">Fechar</button></div>
+      <p class="eco-ajuda-lead">Esta página responde três perguntas: <b>quanto está sobrando</b>, <b>se você está perto da sua meta</b> e <b>o que cortar primeiro</b>. Tudo sai do extrato que está aberto. Nenhum número é inventado.</p>
+
+      <div class="eco-ajuda-grade">
+        <div>
+          <h3>1. Meta do mês</h3>
+          <p>Digite quanto você quer que sobre por mês. O site compara com o <b>Sobrou por mês</b> do período escolhido, o mesmo número do Dashboard.</p>
+          <ul>
+            <li>A parte <b>dourada</b> da barra é o que já sobrou.</li>
+            <li>A parte <b>clara</b> é o que passaria a sobrar a mais com os itens que você marcou na lista.</li>
+            <li>Se no período faltou dinheiro, a barra fica vazia e o texto mostra quanto faltou.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>2. Objetivo (opcional)</h3>
+          <p>Para juntar um valor até uma data, como uma viagem ou um carro. Você informa o nome, o valor, o prazo e quanto <b>já tem</b>.</p>
+          <ul>
+            <li>O "já tenho" é sempre você quem digita, porque o extrato não mostra o que está guardado em outros lugares.</li>
+            <li><b>Precisa de R$ X/mês</b> é o que falta dividido pelos meses até o prazo, contando o mês atual.</li>
+            <li><b>Chega em N meses</b> usa o que sobra por mês mais o que você marcou na lista.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>3. Quanto já guardou</h3>
+          <p>O dinheiro que foi para investimentos e reservas no período (aplicação, poupança, caixinha). Ele não conta como gasto, porque continua sendo seu.</p>
+        </div>
+        <div>
+          <h3>4. Onde dá para economizar</h3>
+          <p>Uma lista só, da maior economia para a menor, que junta três tipos de sugestão:</p>
+          <ul>
+            <li><b>dica</b>: as sugestões do site, como pedir delivery metade das vezes ou trocar para uma conta sem tarifa.</li>
+            <li><b>repete todo mês</b>: a mesma cobrança, com valor parecido (variação de até 20%), nos últimos 3 meses seguidos do extrato. Nunca entram aluguel, mercado, saúde, contas de casa, impostos, dívidas, escola, seguros, Pix para pessoas nem aplicações.</li>
+            <li><b>acima do normal</b>: categorias que, no último mês, ficaram mais de 20% e pelo menos R$ 50 acima da média dos meses anteriores. Aparece com 3 meses ou mais no período.</li>
+          </ul>
+          <p>Marque a caixinha do que você topa fazer. Nas dicas e nas categorias, aparece um controle para escolher quanto cortar, de 10% a 100%. Clique no nome do item para ver os lançamentos.</p>
+          <p>A economia de uma categoria <b>nunca passa do que você gasta nela</b>. Se duas sugestões forem da mesma categoria, a soma para no limite, e a linha avisa.</p>
+        </div>
+        <div>
+          <h3>5. Quanto consigo guardar por mês</h3>
+          <p>Um valor livre, para quem já sabe quanto consegue separar. Ele só serve para calcular o prazo do objetivo e não mexe na barra da meta.</p>
+        </div>
+        <div>
+          <h3>6. Período e onde fica salvo</h3>
+          <p>A página segue o <b>Período</b> escolhido no topo, como o Dashboard. Com uma semana escolhida, ela pede um mês ou mais.</p>
+          <p>A meta, o objetivo e o que você marcou ficam salvos na sua conta e valem em qualquer computador.</p>
+        </div>
+      </div>
+
+      <div class="eco-ajuda-exemplo">
+        <h3>Exemplo</h3>
+        <ol>
+          <li>Entram R$ 5.000 e saem R$ 4.700 por mês: <b>sobram R$ 300</b>.</li>
+          <li>A meta é sobrar R$ 500. A barra mostra 60% e o texto diz "faltam R$ 200".</li>
+          <li>Você marca "Pedir delivery metade das vezes" (R$ 150) e "Cancelar Netflix" (R$ 56). Passaria a sobrar <b>R$ 506</b>, e a barra se completa: meta batida.</li>
+          <li>Objetivo: R$ 6.000 até dez/2027, já tendo R$ 2.050. Faltam R$ 3.950 em 14 meses, ou seja, <b>R$ 283 por mês</b>. Guardando R$ 506 por mês, chega em <b>8 meses</b>.</li>
+        </ol>
+      </div>
+    </section>
     <p class="card faixa eco-semana" id="eSemana" role="status" hidden>Escolha um mês ou mais para ver onde economizar.</p>
     <div class="eco-corpo" id="eCorpo">
       <section class="card faixa eco-bloco" id="eMeta" aria-labelledby="eMetaT">

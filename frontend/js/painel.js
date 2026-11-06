@@ -2969,6 +2969,15 @@ function abrirObjetivo(){
   $('eObjErro').hidden = true;
   atualizarEconomia(); $('eObjNome').focus();
 }
+/* "Como funciona": abre e fecha a explicação da página */
+function ajudaEconomia(abrir){
+  $('eAjuda').hidden = !abrir;
+  $('eAjudaBtn').setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  if (abrir) $('eAjudaT').focus(); else $('eAjudaBtn').focus();
+}
+$('eAjudaBtn').addEventListener('click', function(){ ajudaEconomia($('eAjuda').hidden); });
+$('eAjudaFechar').addEventListener('click', function(){ ajudaEconomia(false); });
+$('eAjuda').addEventListener('keydown', function(e){ if (e.key==='Escape') ajudaEconomia(false); });
 $('eObjAbrir').addEventListener('click', abrirObjetivo);
 $('eObjEditar').addEventListener('click', abrirObjetivo);
 $('eObjSalvar').addEventListener('click', function(){
