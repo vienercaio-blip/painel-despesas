@@ -67,7 +67,9 @@ function cobreInteiro(p){ var L = extratoLimites(); return !!L.inicio && !Period
 /* chaves 'AAAA-MM' dos meses do extrato, em ordem */
 function mesesDoExtrato(){ var k = {}; state.tx.forEach(function(t){ k[Periodo.chaveDe(t.date)] = 1; }); return Object.keys(k).sort(); }
 /* escolher um período (atalho, mês, semana, Personalizado): sai da comparação */
-function escolherPeriodo(p){ state.p = p; state.cmp = null; render(); }
+/* escolher um período fecha as caixas Personalizado e Comparar */
+function escolherPeriodo(p){ fecharCaixasPeriodo(); state.p = p; state.cmp = null; render(); }
+function fecharCaixasPeriodo(){ ['pPers','pCmp'].forEach(function(id){ var c = document.getElementById(id); if (c) c.hidden = true; }); }
 /* inP e periodName no formato antigo {y,m,w}: só a análise de Vendas usa */
 function periodName(p){
   if (p.w!=='all') return 'semana de '+weekLabel(p.w);
@@ -618,10 +620,10 @@ function renderSaved(){
     var ini = $('inicioDesp');
     ini.classList.toggle('grande', grande); ini.classList.toggle('faixa', !grande);
     $('drop').classList.toggle('drop-big', grande); $('drop').classList.toggle('drop-faixa', !grande);
-    if (grande && !state.eraGrande) $('ajuda').open = true;   /* só ao entrar na primeira visita: depois a pessoa decide */
-    else if (state.eraGrande) $('ajuda').open = false;   /* acabou de sair da primeira visita */
+    /* primeira visita: o balão de Ajuda abre sozinho (fecha no X); ao sair dela, fecha */
+    if (grande && !state.eraGrande){ $('iAjuda').hidden = false; $('iAjudaBtn').setAttribute('aria-expanded', 'true'); }
+    else if (!grande && state.eraGrande){ $('iAjuda').hidden = true; $('iAjudaBtn').setAttribute('aria-expanded', 'false'); }
     state.eraGrande = grande;
-    sincronizarPilulas();
     $('upTitle').textContent = !state.salvosProntos ? 'Início' : grande ? 'Comece pelo seu extrato' : 'Seus extratos';
     /* até a lista chegar do servidor, nada aparece (para não piscar a primeira visita) */
     $('panelSalvos').hidden = !state.salvosProntos || grande;
@@ -1834,7 +1836,7 @@ function setView(){
   var ps = $('periodSec'), ms = $('mesesSec');
   if (v==='lancamentos' && ps.parentNode!==$('lancPeriodo')){ $('lancPeriodo').appendChild(ps); $('lancPeriodo').appendChild(ms); ps.classList.add('embutido'); ms.classList.add('embutido'); }
   else if (v!=='lancamentos' && ps.parentNode===$('lancPeriodo')){ $('introSec').insertAdjacentElement('afterend', ps); ps.insertAdjacentElement('afterend', ms); ps.classList.remove('embutido'); ms.classList.remove('embutido'); }
-  ms.hidden = ps.hidden;
+  ms.hidden = ps.hidden || v==='lancamentos';   /* em Lançamentos o mês se escolhe pelo Período */
   if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
@@ -2271,6 +2273,11 @@ $('pW').addEventListener('change', function(e){
   var v = e.target.value, p = state.p;
   escolherPeriodo(v==='all' ? {tipo:'mes', y:p.y, m:p.m} : {tipo:'semana', w:v, y:p.y, m:p.m});
 });
+document.addEventListener('click', function(e){
+  if ($('pPers').hidden && $('pCmp').hidden) return;
+  if (e.target.closest && (e.target.closest('#periodSec') || e.target.closest('#mesesSec'))) return;
+  fecharCaixasPeriodo();
+});
 $('pAtalhos').addEventListener('click', function(e){
   if (e.target.closest('[data-acao="cmp"]')){ if ($('pCmp').hidden) abrirComparar(); else fecharComparar(); return; }
   if (e.target.closest('[data-acao="pers"]')){ if ($('pPers').hidden) abrirPersonalizado(); else fecharPersonalizado(); return; }
@@ -2287,6 +2294,7 @@ function persAba(aba){
   $('pPersPMeses').hidden = aba!=='meses'; $('pPersPDias').hidden = aba!=='dias';
 }
 function abrirPersonalizado(){
+  $('pCmp').hidden = true;   /* uma caixa por vez */
   var meses = mesesDoExtrato(), p = state.p;
   if (!meses.length) return;
   var opt = meses.map(function(k){ var a = k.split('-'); return '<option value="'+k+'">'+MESES[+a[1]-1].slice(0,3)+'/'+a[0]+'</option>'; }).join('');
@@ -2371,7 +2379,7 @@ function renderDespesasComparacao(){
   $('dCmpTopoDesp').innerHTML = htmlTopoComparacao(A, B);
   $('xVazio').hidden = true; $('xTopo').hidden = false; $('xCats').hidden = false;
   var ma = A.outs/A.divisor, mb = B.outs/B.divisor, d = ma-mb;
-  contarAte($('xSaiu'), ma, function(v){ return 'Saiu '+brl.format(v)+' por mês'; });
+  contarValor($('xSaiu'), ma, function(v){ return 'Saiu '+brl.format(v)+' por mês'; });
   $('xSaiuSub').innerHTML = '<b class="cmp-p1">'+esc(A.nome)+'</b> · '+esc(B.nome)+': '+brl.format(mb)+' · <span class="'+(d>0.5 ? 'neg' : d<-0.5 ? 'pos' : '')+'">'+(d>=0.005 ? '+' : d<=-0.005 ? '−' : '')+brl.format(Math.abs(d))+'</span>';
   var da = Despesas.divisao(A.cat, FIXED, A.outs), db = Despesas.divisao(B.cat, FIXED, B.outs);
   $('xTopo').dataset.total = A.outs.toFixed(2);
@@ -2741,19 +2749,6 @@ function abrirExemplo(){
   }).catch(falhou);
 }
 document.querySelectorAll('[data-exemplo]').forEach(function(b){ b.addEventListener('click', abrirExemplo); });
-/* pílulas Ajuda e Formatos: cada uma abre o seu quadro; abrir um fecha o outro */
-function sincronizarPilulas(){
-  document.querySelectorAll('[data-abre]').forEach(function(b){ b.setAttribute('aria-expanded', $(b.dataset.abre).open ? 'true' : 'false'); });
-}
-document.querySelectorAll('[data-abre]').forEach(function(b){
-  b.addEventListener('click', function(){
-    var d = $(b.dataset.abre), abrir = !d.open;
-    document.querySelectorAll('[data-abre]').forEach(function(o){ $(o.dataset.abre).open = false; });
-    d.open = abrir;
-    sincronizarPilulas();
-  });
-});
-['ajuda','formatos'].forEach(function(id){ $(id).addEventListener('toggle', sincronizarPilulas); });
 $('newPageBtn').addEventListener('click', function(){ $('newPageForm').hidden = false; $('newPageErr').hidden = true; $('newPageName').value = ''; $('newPageName').focus(); });
 $('newPageCancel').addEventListener('click', function(){ $('newPageForm').hidden = true; });
 $('newPageForm').addEventListener('submit', function(e){
@@ -3112,7 +3107,7 @@ function renderDespesas(tx, prev){
   $('xVazio').hidden = outs>0;
   ['xCats','xTopo'].forEach(function(id){ $(id).hidden = !(outs>0); });
   if (!(outs>0)){ $('xCatList').innerHTML = ''; ['xMeses','xMudou','xGastos','xResumo'].forEach(function(id){ $(id).hidden = true; }); return; }
-  contarAte($('xSaiu'), outs/div, function(v){ return 'Saiu '+brl.format(v)+(ehTotal ? ' '+quando : ' por mês'); });
+  contarValor($('xSaiu'), outs/div, function(v){ return 'Saiu '+brl.format(v)+(ehTotal ? ' '+quando : ' por mês'); });
   var sub = ehTotal ? nOut+' lançamentos'
     : brl.format(outs)+(fm.nota ? ' em '+fm.dias+' dias ('+fm.nota+')' : ' em '+nMeses+' meses')+' · '+nOut+' lançamentos';
   if (prev && prev.outs>0){ var d = (outs-prev.outs)/prev.outs; sub += ' · <span class="'+(d>0.005 ? 'neg' : d<-0.005 ? 'pos' : '')+'">'+(d>=0 ? '+' : '−')+pct0.format(Math.abs(d))+'</span> que '+esc(prev.label); }
@@ -3196,7 +3191,7 @@ function detalheCategoria(nome, tx, isWeek){
   return h+'</div>';
 }
 /* o número do topo conta até o valor (sem movimento: direto) */
-function contarAte(el, v, fmt){
+function contarValor(el, v, fmt){
   var chave = fmt(v);
   if (el.dataset.alvo===chave) return;
   el.dataset.alvo = chave;

@@ -20,10 +20,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     <nav class="tabs" aria-label="Seções">
       <a class="tab" href="#inicio" data-view="inicio"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg><span class="tab-txt">Início</span></a>
       <a class="tab dash-tab" href="#dashboard" data-view="dashboard" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V11"/><path d="M12 19V5"/><path d="M19 19v-7"/><path d="M3 19h18"/></svg><span class="tab-txt">Dashboard</span></a>
-      <a class="tab dash-tab" href="#economia" data-view="economia" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11a7 6 0 0 1 12.5-3.5H20v4l-1.6 1A7 6 0 0 1 15 17v2h-3v-1.5h-2V19H7v-2.5A6 6 0 0 1 5 11z"/><path d="M12 7.5h3"/><circle cx="16" cy="10.5" r=".6"/></svg><span class="tab-txt">Economia</span></a>
       <a class="tab dash-tab" href="#despesas" data-view="despesas" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span class="tab-txt">Despesas</span></a>
       <a class="tab dash-tab" href="#lancamentos" data-view="lancamentos" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg><span class="tab-txt">Lançamentos</span></a>
       <a class="tab dash-tab" href="#categorias" data-view="categorias" hidden data-tip="Corrija categorias, crie as suas e veja suas regras"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg><span class="tab-txt">Organizar</span></a>
+      <a class="tab dash-tab" href="#economia" data-view="economia" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11a7 6 0 0 1 12.5-3.5H20v4l-1.6 1A7 6 0 0 1 15 17v2h-3v-1.5h-2V19H7v-2.5A6 6 0 0 1 5 11z"/><path d="M12 7.5h3"/><circle cx="16" cy="10.5" r=".6"/></svg><span class="tab-txt">Economia</span></a>
     </nav>
     <div class="menu-pe">
       <span class="user-area">Olá, <b id="userName"></b></span>
@@ -60,6 +60,34 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <span><span aria-hidden="true">📅 </span><span id="iniLembreteT"></span> Envie para manter a conta em dia.</span>
       <button type="button" class="btn ghost btn-sm" data-lemb-nao>Agora não</button>
     </div>
+    <div class="ajuda-topo">
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="iAjudaBtn" aria-controls="iAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
+      <section class="card ajuda-quadro" role="dialog" id="iAjuda" aria-labelledby="iAjudaT" hidden>
+        <div class="ajuda-head"><h2 class="faixa-t" id="iAjudaT" tabindex="-1">Como enviar o extrato</h2>
+          <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
+        <div class="ajuda-grade">
+          <div>
+            <h3>Passo a passo</h3>
+            <ol class="steps">
+          <li>Abra o app ou o site do banco e entre no <b>extrato</b>.</li>
+          <li>Escolha o período (um mês ou vários).</li>
+          <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
+          <li>Envie o arquivo aqui.</li>
+        </ol>
+            <p class="ajuda-exemplo">Quer ver antes como fica? <button type="button" class="link-btn" data-exemplo>Ver um exemplo do painel</button></p>
+          </div>
+          <div>
+            <h3>Formatos aceitos</h3>
+            <ul class="fmts">
+          <li><span class="fmt ok">PDF</span><span>Conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago. Nos outros bancos, em teste.</span></li>
+          <li><span class="fmt ok">OFX</span><span>O mais confiável. Alguns bancos chamam de "Money".</span></li>
+          <li><span class="fmt ok">CSV</span><span>Com colunas de data, descrição e valor.</span></li>
+          <li><span class="fmt ok">Excel</span><span>Arquivos .xlsx, .xls ou .ods, com o cabeçalho na primeira linha.</span></li>
+        </ul>
+          </div>
+        </div>
+      </section>
+    </div>
     <div class="ini" id="inicioDesp">
       <div class="drop ini-bloco drop-faixa" id="drop">
         <svg class="drop-ico" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>
@@ -81,29 +109,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
       </div>
       <div class="ini-linha ini-bloco">
-        <button type="button" class="ptab ini-pilula" id="ajudaBtn" data-abre="ajuda" aria-controls="ajuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
-        <button type="button" class="ptab ini-pilula" id="fmtBtn" data-abre="formatos" aria-controls="formatos" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h4"></path></svg>Formatos</button>
         <label class="check" for="soVer"><input type="checkbox" id="soVer"> Só ver agora, sem salvar</label>
       </div>
-      <details class="card ajuda ini-bloco" id="ajuda">
-        <summary><h2>Ajuda</h2></summary>
-        <ol class="steps">
-          <li>Abra o app ou o site do banco e entre no <b>extrato</b>.</li>
-          <li>Escolha o período (um mês ou vários).</li>
-          <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
-          <li>Envie o arquivo aqui.</li>
-        </ol>
-        <p class="ajuda-exemplo">Quer ver antes como fica? <button type="button" class="link-btn" data-exemplo>Ver um exemplo do painel</button></p>
-      </details>
-      <details class="card ajuda ini-bloco" id="formatos">
-        <summary><h2>Formatos</h2></summary>
-        <ul class="fmts">
-          <li><span class="fmt ok">PDF</span><span>Conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago. Nos outros bancos, em teste.</span></li>
-          <li><span class="fmt ok">OFX</span><span>O mais confiável. Alguns bancos chamam de "Money".</span></li>
-          <li><span class="fmt ok">CSV</span><span>Com colunas de data, descrição e valor.</span></li>
-          <li><span class="fmt ok">Excel</span><span>Arquivos .xlsx, .xls ou .ods, com o cabeçalho na primeira linha.</span></li>
-        </ul>
-      </details>
       <div id="msg" class="msg" role="status" hidden></div>
       <p class="privacy ini-bloco">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
@@ -234,7 +241,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewDash" hidden>
     <div class="ajuda-topo">
-      <button type="button" class="ptab ini-pilula ajuda-btn" id="dAjudaBtn" aria-controls="dAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="dAjudaBtn" aria-controls="dAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
       <section class="card ajuda-quadro" role="dialog" id="dAjuda" aria-labelledby="dAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="dAjudaT" tabindex="-1">Como funciona o Dashboard</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
@@ -391,7 +398,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view eco" id="viewEconomia" hidden>
     <div class="ajuda-topo">
-      <button type="button" class="ptab ini-pilula ajuda-btn" id="eAjudaBtn" aria-controls="eAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="eAjudaBtn" aria-controls="eAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
       <section class="card ajuda-quadro" role="dialog" id="eAjuda" aria-labelledby="eAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="eAjudaT" tabindex="-1">Como funciona a página Economia</h2>
           <button type="button" class="ajuda-x" id="eAjudaFechar" data-ajuda-fechar aria-label="Fechar">×</button></div>
@@ -550,7 +557,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewDespesas">
     <div class="ajuda-topo">
-      <button type="button" class="ptab ini-pilula ajuda-btn" id="pAjudaBtn" aria-controls="pAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="pAjudaBtn" aria-controls="pAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
       <section class="card ajuda-quadro" role="dialog" id="pAjuda" aria-labelledby="pAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="pAjudaT" tabindex="-1">Como funciona a página Despesas</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
@@ -629,7 +636,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewLanc" hidden>
     <div class="ajuda-topo">
-      <button type="button" class="ptab ini-pilula ajuda-btn" id="lAjudaBtn" aria-controls="lAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="lAjudaBtn" aria-controls="lAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
       <section class="card ajuda-quadro" role="dialog" id="lAjuda" aria-labelledby="lAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="lAjudaT" tabindex="-1">Como funciona a página Lançamentos</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
@@ -700,7 +707,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
   <div class="view" id="viewCategorias" hidden>
     <div class="ajuda-topo">
-      <button type="button" class="ptab ini-pilula ajuda-btn" id="oAjudaBtn" aria-controls="oAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Como funciona</button>
+      <button type="button" class="ptab ini-pilula ajuda-btn" id="oAjudaBtn" aria-controls="oAjuda" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5h.01"></path></svg>Ajuda</button>
       <section class="card ajuda-quadro" role="dialog" id="oAjuda" aria-labelledby="oAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="oAjudaT" tabindex="-1">Como funciona a página Organizar</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
