@@ -259,7 +259,19 @@ function fatias(linhas, n){
   return f.filter(function(x){ return !x.outros; }).concat(f.filter(function(x){ return x.outros && !x.demais; }), f.filter(function(x){ return x.demais; }));
 }
 
-return { comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
+/* Lançamentos: ordena por data ou pelo tamanho do valor (|valor|); empate pela data
+   mais nova; devolve uma lista nova */
+function ordenarLancamentos(lista, col, dir){
+  var sinal = dir==='asc' ? 1 : -1;
+  return lista.map(function(t, i){ return {t:t, i:i}; }).sort(function(a, b){
+    var d = col==='valor' ? (Math.abs(a.t.value)-Math.abs(b.t.value))*sinal : (a.t.date-b.t.date)*sinal;
+    if (d) return d;
+    return (b.t.date-a.t.date) || (a.i-b.i);
+  }).map(function(x){ return x.t; });
+}
+/* quantos lançamentos precisam de revisão (o critério vem de fora) */
+function paraRevisar(lista, ehOutro){ return lista.filter(ehOutro).length; }
+return { ordenarLancamentos:ordenarLancamentos, paraRevisar:paraRevisar, comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

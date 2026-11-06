@@ -429,3 +429,27 @@ test('intervalo curto de dias: mostra o total "em N dias", sem "por mês"', () =
   assert.equal(Analise.numeros(c)[0].sub, 'em 16 dias');
   assert.match(Analise.veredito(c).texto, /nestes 16 dias/);
 });
+
+// Lançamentos: ordenar e contar "para revisar"
+const L = [
+  {id: 1, date: new Date(2026, 9, 5), value: -29.36},
+  {id: 2, date: new Date(2026, 9, 7), value: 250},
+  {id: 3, date: new Date(2026, 9, 1), value: -1650},
+  {id: 4, date: new Date(2026, 9, 9), value: -29.36}
+];
+test('ordenarLancamentos: data desc e asc', () => {
+  assert.deepEqual(Analise.ordenarLancamentos(L, 'data', 'desc').map(t => t.id), [4, 2, 1, 3]);
+  assert.deepEqual(Analise.ordenarLancamentos(L, 'data', 'asc').map(t => t.id), [3, 1, 2, 4]);
+});
+test('ordenarLancamentos: valor pelo tamanho; empate pela data mais nova', () => {
+  assert.deepEqual(Analise.ordenarLancamentos(L, 'valor', 'desc').map(t => t.id), [3, 2, 4, 1]);
+  assert.deepEqual(Analise.ordenarLancamentos(L, 'valor', 'asc').map(t => t.id), [4, 1, 2, 3]);
+});
+test('ordenarLancamentos: não altera a lista original', () => {
+  const antes = L.map(t => t.id); Analise.ordenarLancamentos(L, 'valor', 'desc');
+  assert.deepEqual(L.map(t => t.id), antes);
+});
+test('paraRevisar: conta só os aceitos', () => {
+  assert.equal(Analise.paraRevisar(L, t => t.value < 0 && t.id !== 3), 2);
+  assert.equal(Analise.paraRevisar([], () => true), 0);
+});
