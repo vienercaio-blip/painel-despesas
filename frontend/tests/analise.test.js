@@ -417,3 +417,10 @@ test('fatias: categoria pequena aparece como "<1%" e nunca "0%"', () => {
   assert.deepEqual(f.map(x => x.rotulo), ['99%', '<1%', '<1%']);
   f.forEach(x => assert.ok(x.pct >= 0));
 });
+
+test('dias exatos: "por mês" vira média de 30 dias nos números e no veredito', () => {
+  const c = ctx({ins: 6000, outs: 3000, nM: 169 / 30, notaMes: 'média de 30 dias', dias: 169, escopo: 'meses'});
+  const n = Analise.numeros(c);
+  assert.match(n[0].sub, /^em 169 dias · R\$\s[\d.,]+ por mês \(média de 30 dias\)$/);
+  assert.match(Analise.veredito(c).texto, /por mês \(média de 30 dias\)/);
+});

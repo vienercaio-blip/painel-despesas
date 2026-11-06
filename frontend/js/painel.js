@@ -55,14 +55,12 @@ function inP(t, p){
   if (p.m!=='all' && t.date.getMonth()!==+p.m) return false;
   return true;
 }
-function cur(){ return state.tx.filter(function(t){ return inP(t, state.p); }); }
-function prevP(){
-  var p = state.p;
-  if (p.w!=='all'){ var d = keyDate(p.w); d.setDate(d.getDate()-7); var k = weekKey(d); return {p:{y:'all',m:'all',w:k}, label:'semana anterior'}; }
-  if (p.m!=='all'){ var y=+p.y, m=+p.m-1; if (m<0){m=11;y--;} return {p:{y:String(y),m:String(m),w:'all'}, label:'mês anterior'}; }
-  if (p.y!=='all') return {p:{y:String(+p.y-1),m:'all',w:'all'}, label:'ano anterior'};
-  return null;
-}
+function cur(){ return state.tx.filter(function(t){ return Periodo.contem(t.date, state.p); }); }
+/* chaves 'AAAA-MM' dos meses do extrato, em ordem */
+function mesesDoExtrato(){ var k = {}; state.tx.forEach(function(t){ k[Periodo.chaveDe(t.date)] = 1; }); return Object.keys(k).sort(); }
+/* escolher um período (atalho, mês, semana, Personalizado): sai da comparação */
+function escolherPeriodo(p){ state.p = p; state.cmp = null; render(); }
+/* inP e periodName no formato antigo {y,m,w}: só a análise de Vendas usa */
 function periodName(p){
   if (p.w!=='all') return 'semana de '+weekLabel(p.w);
   if (p.m!=='all') return MESES[+p.m]+' de '+p.y;
@@ -176,7 +174,7 @@ function load(list, source, name){
   state.tx = list.map(function(t,i){
     return {id:i, dbId:t.dbId||null, date:t.date, desc:t.desc, value:t.value, estorno:!!t.estorno, auto:t.auto||null, kw:t.kw||null, origin:t.origin};
   });
-  state.overrides = {}; state.source = source; state.fileName = name||''; state.cat = null; state.p = {y:'all', m:'all', w:'all'};
+  state.overrides = {}; state.source = source; state.fileName = name||''; state.cat = null; state.p = {tipo:'tudo'}; state.cmp = null;
   refreshFixed();
   render();
 }
@@ -732,7 +730,7 @@ function render(){
   persistOverrides();
   var all = state.tx;
   var tx = cur();
-  if (!tx.length){ state.p = {y:'all', m:'all', w:'all'}; tx = all; }
+  if (!tx.length){ state.p = {tipo:'tudo'}; state.cmp = null; tx = all; }
   var ins = 0, outs = 0, byCat = {}, biggest = null;
   tx.forEach(function(t){
     if (ehInterno(t)) return;
@@ -743,8 +741,8 @@ function render(){
   var res = ins - outs;
   var first = all[0].date, last = all[all.length-1].date;
 
-  var pp = prevP(), prev = null;
-  if (pp){ var pl = all.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ prev = sums(pl); prev.label = pp.label; } }
+  var pAnt = Periodo.anterior(state.p), prev = null;
+  if (pAnt){ var pl = all.filter(function(t){ return Periodo.contem(t.date, pAnt); }); if (pl.length){ prev = sums(pl); prev.label = Periodo.nomeAnterior(state.p); } }
 
   $('srcBadge').textContent = state.source==='sample' ? 'Exemplo · dados fictícios' : 'Seu extrato';
   $('srcBadge').className = 'badge' + (state.source==='sample' ? '' : ' real');
@@ -786,9 +784,8 @@ function render(){
   if (!state.cat || !byCat[state.cat]) state.cat = top ? top.name : null;
 
   var p = state.p, mode;
-  if (p.w!=='all') mode = 'day';
-  else if (p.m!=='all') mode = 'week';
-  else if (p.y!=='all') mode = 'month';
+  if (p.tipo==='semana') mode = 'day';
+  else if (p.tipo==='mes') mode = 'week';
   else {
     var span = (tx[tx.length-1].date - tx[0].date)/864e5;
     mode = span > 730 ? 'year' : span > 40 ? 'month' : 'week';
@@ -804,38 +801,45 @@ function render(){
 }
 
 function renderPeriod(tx){
-  var all = state.tx, p = state.p;
-  var years = []; all.forEach(function(t){ var y = String(t.date.getFullYear()); if (years.indexOf(y)===-1) years.push(y); });
-  years.sort();
-  $('pY').innerHTML = '<option value="all">Todos</option>'+years.map(function(y){return '<option value="'+y+'"'+(y===p.y?' selected':'')+'>'+y+'</option>';}).join('');
-
-  var months = [];
-  if (p.y!=='all') all.forEach(function(t){ if (t.date.getFullYear()===+p.y){ var m = String(t.date.getMonth()); if (months.indexOf(m)===-1) months.push(m); } });
-  months.sort(function(a,b){return a-b;});
-  $('pM').innerHTML = '<option value="all">'+(p.y==='all'?'Escolha o ano':'Todos')+'</option>'+months.map(function(m){return '<option value="'+m+'"'+(m===p.m?' selected':'')+'>'+MESES[+m].charAt(0).toUpperCase()+MESES[+m].slice(1)+'</option>';}).join('');
-  $('pM').disabled = p.y==='all';
-
-  var weeks = [];
-  if (p.m!=='all') all.forEach(function(t){ if (t.date.getFullYear()===+p.y && t.date.getMonth()===+p.m){ var k = weekKey(t.date); if (weeks.indexOf(k)===-1) weeks.push(k); } });
-  weeks.sort();
-  $('pW').innerHTML = '<option value="all">'+(p.m==='all'?'Escolha o mês':'Todas')+'</option>'+weeks.map(function(k){return '<option value="'+k+'"'+(k===p.w?' selected':'')+'>'+weekLabel(k)+'</option>';}).join('');
-  $('pW').disabled = p.m==='all';
-  $('pClear').hidden = p.y==='all';
-
-  $('pSum').textContent = 'Mostrando '+periodName(p)+' · '+tx.length+' lançamentos';
+  var all = state.tx, p = state.p, meses = mesesDoExtrato();
+  /* atalhos (contam a partir do último mês do extrato) */
+  var ats = Periodo.atalhos(meses);
+  $('pAtalhos').innerHTML = ats.map(function(a){
+    var on = p.tipo==='tudo' ? a.id==='tudo' : !!p.rotulo && p.rotulo===a.rotulo;
+    return '<button type="button" class="ptab ini-pilula p-atalho" data-atalho="'+a.id+'" aria-pressed="'+on+'">'+esc(a.rotulo)+'</button>';
+  }).join('');
+  state.atalhos = ats;
+  /* semana: só com um mês escolhido */
+  var temMes = p.tipo==='mes' || p.tipo==='semana';
+  $('pW').closest('.field').hidden = !temMes;
+  if (temMes){
+    var weeks = [];
+    all.forEach(function(t){ if (t.date.getFullYear()===p.y && t.date.getMonth()===p.m){ var k = weekKey(t.date); if (weeks.indexOf(k)===-1) weeks.push(k); } });
+    weeks.sort();
+    $('pW').innerHTML = '<option value="all">Todas</option>'+weeks.map(function(k){return '<option value="'+k+'"'+(p.tipo==='semana' && k===p.w?' selected':'')+'>'+weekLabel(k)+'</option>';}).join('');
+  }
+  /* resumo */
+  var nome = Periodo.nome(p), extra = '';
+  if (p.tipo==='intervalo'){
+    var fm = Periodo.fatorMes(p, 0);
+    if (fm.dias) extra = ' · '+fm.dias+' dias';
+    else { var nm = meses.filter(function(k){ return k>=p.de.slice(0,7) && k<=p.ate.slice(0,7); }).length; extra = ' · '+nm+(nm===1 ? ' mês' : ' meses'); }
+    if (!/^ano de /.test(nome)) nome = 'de '+nome;
+  }
+  $('pSum').textContent = 'Mostrando '+nome+extra+' · '+tx.length+' lançamentos';
 
   var mm = {}, order = [];
   all.forEach(function(t){
-    if (p.y!=='all' && t.date.getFullYear()!==+p.y) return;
     var k = t.date.getFullYear()+'-'+String(t.date.getMonth()).padStart(2,'0');
-    if (!mm[k]){ mm[k] = {y:String(t.date.getFullYear()), m:String(t.date.getMonth()), res:0}; order.push(k); }
+    if (!mm[k]){ mm[k] = {y:t.date.getFullYear(), m:t.date.getMonth(), res:0}; order.push(k); }
     mm[k].res += t.value;
   });
   order.sort();
   var mh = order.map(function(k){
-    var o = mm[k], on = p.m===o.m && p.y===o.y && p.w==='all';
-    var lab = MESES[+o.m].slice(0,3)+'/'+o.y.slice(2);
-    return '<button type="button" class="mchip" data-y="'+o.y+'" data-m="'+o.m+'" aria-pressed="'+on+'" aria-label="'+MESES[+o.m]+' de '+o.y+', resultado '+brl.format(o.res)+'">'+
+    var o = mm[k], on = p.tipo==='mes' && p.y===o.y && p.m===o.m;
+    var dentro = p.tipo==='intervalo' && Periodo.contem(new Date(o.y, o.m, 15), p);
+    var lab = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2);
+    return '<button type="button" class="mchip'+(dentro ? ' no-intervalo' : '')+'" data-y="'+o.y+'" data-m="'+o.m+'" aria-pressed="'+on+'" aria-label="'+MESES[o.m]+' de '+o.y+', resultado '+brl.format(o.res)+'">'+
       '<span class="ml">'+lab+'</span><span class="mv '+(o.res>=0?'pos':'neg')+'">'+(o.res>=0?'+':'')+brl0.format(o.res)+'</span></button>';
   }).join('');
   /* esteira: repete a lista para o loop ser contínuo */
@@ -1089,9 +1093,9 @@ function renderDashboard(){
   var sel = state.dashCats;
   function noFiltro(t){ return !sel || sel.indexOf(catOf(t))!==-1; }
   var tx = cur(); if (!tx.length) tx = state.tx; if (!tx.length) return;
-  var isWeek = state.p.w!=='all';
+  var isWeek = state.p.tipo==='semana';
   var first = tx[0].date, last = tx[tx.length-1].date;
-  $('dSpan').textContent = (periodName(state.p)==='todo o período' ? 'Todo o extrato' : 'Período: '+periodName(state.p))+', de '+fmtDate(first)+' a '+fmtDate(last);
+  $('dSpan').textContent = (state.p.tipo==='tudo' ? 'Todo o extrato' : 'Período: '+Periodo.nome(state.p))+', de '+fmtDate(first)+' a '+fmtDate(last);
 
   /* por mês */
   function groupMonths(list){
@@ -1107,7 +1111,8 @@ function renderDashboard(){
     return mk.map(function(k){ var o = M[k], aj = Analise.ajustarEstornos(o); o.ins = aj.ins; o.outs = aj.outs; o.res = o.ins-o.outs; o.label = MESES[o.m].slice(0,3)+'/'+String(o.y).slice(2); o.name = MESES[o.m]+' de '+o.y; return o; });
   }
   var months = groupMonths(tx), allMonths = groupMonths(state.tx);
-  var nM = isWeek ? 1 : months.length;  /* semana: valores da semana inteira, mesmo cruzando dois meses */
+  var fmes = Periodo.fatorMes(state.p, months.length);
+  var nM = isWeek ? 1 : fmes.divisor;  /* semana: valores da semana inteira; dias exatos: média de 30 dias */
   var T = sums(tx), res = T.ins - T.outs;
 
   /* fixos e variáveis */
@@ -1144,7 +1149,7 @@ function renderDashboard(){
   var avgRes = months.reduce(function(s,o){return s+o.res;},0)/nM;
 
   /* contexto para as contas do dashboard (js/analise.js) */
-  var ctx = { escopo: isWeek ? 'semana' : state.p.m!=='all' ? 'mes' : 'meses', nM:nM,
+  var ctx = { escopo: isWeek ? 'semana' : state.p.tipo==='mes' ? 'mes' : 'meses', nM:nM, notaMes:fmes.nota, dias:fmes.dias,
     ins:T.ins, outs:T.outs, byCat:byCat, fixas:FIXED, outros:OTHER,
     meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }),
     nomes: {delivery:catByCode('delivery'), tarifas:catByCode('tarifas'), assinaturas:catByCode('assinaturas'),
@@ -1154,13 +1159,13 @@ function renderDashboard(){
   /* Parte 1: veredito e os três números */
   var ver = Analise.veredito(ctx);
   /* o resumo do Início usa exatamente estes números */
-  state.resumo = { ver:ver, ins:T.ins, outs:T.outs, nM:nM, periodo:periodName(state.p) };
+  state.resumo = { ver:ver, ins:T.ins, outs:T.outs, nM:nM, periodo:Periodo.nome(state.p) };
   $('dVer').className = 'card verdict faixa '+ver.cor;
   $('dVerT').textContent = ver.titulo;
   $('dVerTx').textContent = ver.texto;
   $('dVerPesa').textContent = ver.pesa || '';
-  var pp = prevP(), ant = null;
-  if (pp && (isWeek || state.p.m!=='all')){  /* compara só mês com mês ou semana com semana */ var pl = state.tx.filter(function(t){ return inP(t, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
+  var pAntD = Periodo.anterior(state.p), pp = pAntD ? {p:pAntD, label:Periodo.nomeAnterior(state.p)} : null, ant = null;
+  if (pp && (isWeek || state.p.tipo==='mes')){  /* compara só mês com mês ou semana com semana */ var pl = state.tx.filter(function(t){ return Periodo.contem(t.date, pp.p); }); if (pl.length){ ant = sums(pl); ant.label = pp.label; } }
   var nums = Analise.numeros(ctx);
   if (ant){  /* comparação com o mês (ou a semana) anterior */
     nums[0].sub += deltaTxt(T.ins, ant.ins, ant.label);
@@ -1677,7 +1682,7 @@ function exportPdf(){
   var doc = makePdf();
   doc.line('sobrou. · Relatório de despesas', 18, true, 4);
   doc.line('Extrato: '+pdfText(file), 10);
-  doc.line('Período: '+periodName(state.p)+(txt($('dSpan')) ? ' · '+txt($('dSpan')) : ''), 10);
+  doc.line('Período: '+Periodo.nome(state.p)+(txt($('dSpan')) ? ' · '+txt($('dSpan')) : ''), 10);
   doc.line('Gerado em '+fmtDate(now)+' às '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'), 9, false, 6);
   doc.rule();
   doc.para(txt($('dVerT'))+' '+txt($('dVerTx')), 12, true, 80);
@@ -1969,7 +1974,7 @@ function renderTable(){
     return '<tr><td class="num">'+fmtDate(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+catCell+'</td><td class="r num">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="4">Nenhum lançamento encontrado.</td></tr>';
   var tot = list.reduce(function(s,t){return s+t.value;},0);
-  $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+periodName(state.p)+'.';
+  $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+' · '+Periodo.nome(state.p)+'.';
 }
 
 /* ---------- events ---------- */
@@ -2313,10 +2318,15 @@ $('rulesList').addEventListener('click', function(e){
       }).catch(falhou);
     } });
 });
-$('pY').addEventListener('change', function(e){ state.p = {y:e.target.value, m:'all', w:'all'}; render(); });
-$('pM').addEventListener('change', function(e){ state.p = {y:state.p.y, m:e.target.value, w:'all'}; render(); });
-$('pW').addEventListener('change', function(e){ state.p.w = e.target.value; render(); });
-$('pClear').addEventListener('click', function(){ state.p = {y:'all', m:'all', w:'all'}; render(); });
+$('pW').addEventListener('change', function(e){
+  var v = e.target.value, p = state.p;
+  escolherPeriodo(v==='all' ? {tipo:'mes', y:p.y, m:p.m} : {tipo:'semana', w:v, y:p.y, m:p.m});
+});
+$('pAtalhos').addEventListener('click', function(e){
+  var b = e.target.closest('[data-atalho]'); if (!b) return;
+  var a = (state.atalhos || []).filter(function(x){ return x.id===b.dataset.atalho; })[0];
+  if (a) escolherPeriodo(JSON.parse(JSON.stringify(a.p)));
+});
 $('rPeriod').addEventListener('change', function(){ resRange = this.value; renderDashboard(); });
 /* ---------- configurações do site ---------- */
 var cfg = {};
@@ -2352,8 +2362,7 @@ $('cfgClear').addEventListener('click', function(){
 $('pMonths').addEventListener('click', function(e){
   var b = e.target.closest('.mchip'); if (!b) return;
   var on = b.getAttribute('aria-pressed')==='true';
-  state.p = on ? {y:b.dataset.y, m:'all', w:'all'} : {y:b.dataset.y, m:b.dataset.m, w:'all'};
-  render();
+  escolherPeriodo(on ? {tipo:'tudo'} : {tipo:'mes', y:+b.dataset.y, m:+b.dataset.m});
 });
 $('pagesBar').addEventListener('click', function(e){
   var b = e.target.closest('[data-page]'); if (!b) return;

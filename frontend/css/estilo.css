@@ -775,3 +775,8 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .eco-base:empty{display:none}
 /* Lançamentos: o Período dentro do quadro */
 .period.embutido{border:0;background:none;box-shadow:none;padding:0;margin:4px 0 14px}
+/* Período: atalhos e meses do intervalo */
+.p-atalhos{display:flex;flex-wrap:wrap;gap:6px}
+.p-atalho{min-height:32px}
+.p-atalho[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.mchip.no-intervalo{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}

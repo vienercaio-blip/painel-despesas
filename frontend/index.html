@@ -192,10 +192,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
   <section class="card period" id="periodSec" aria-labelledby="pTitle">
     <div class="period-row">
       <h2 id="pTitle">Período</h2>
-      <div class="field"><label for="pY">Ano</label><select id="pY"></select></div>
-      <div class="field"><label for="pM">Mês</label><select id="pM"></select></div>
-      <div class="field"><label for="pW">Semana</label><select id="pW"></select></div>
-      <button type="button" class="btn btn-sm" id="pClear">Ver todo o período</button>
+      <div class="p-atalhos" id="pAtalhos" role="group" aria-label="Atalhos de período"></div>
+      <div class="field" hidden><label for="pW">Semana</label><select id="pW"></select></div>
       <button type="button" class="btn btn-sm" id="pdfBtn">Exportar PDF</button>
       <span class="hint p-sum" id="pSum"></span>
     </div>
@@ -777,6 +775,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 <script src="/js/pastas.js"></script>
 <script src="/js/tema.js"></script>
 <script src="/js/economia.js"></script>
+<script src="/js/periodo.js"></script>
 <script src="/js/painel.js"></script>
 </body>
 </html>
