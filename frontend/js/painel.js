@@ -1962,14 +1962,13 @@ function renderTable(){
       /* alguém está escolhendo outra categoria ou respondendo a pergunta: espera */
       var ativo = document.activeElement;
       if (!$('askBg').hidden || (ativo && ativo.matches && ativo.matches('#rows select') && ativo.dataset.id!==String(mantem))){ state.lancMantemTimer = setTimeout(tira, 600); return; }
-      var tr = $('rows').querySelector('tr[data-tx="'+mantem+'"]');
-      if (tr) tr.classList.add('l-saindo');
-      state.lancMantemTimer2 = setTimeout(function(){
-        if (state.lancMantido!==mantem) return;
-        var foco = document.activeElement && document.activeElement.matches && document.activeElement.matches('#rows select') ? document.activeElement.dataset.id : null;
-        state.lancMantido = null; state.lancBusca = true; state.lancTimerRender = true; renderTable();
-        if (foco){ var nb = $('rows').querySelector('select[data-id="'+foco+'"]') || $('rows').querySelector('select[data-id]'); if (nb) nb.focus({preventScroll:true}); }
-      }, tr ? 300 : 0);
+      var tr = $('rows').querySelector('tr[data-tx="'+mantem+'"]'), tm = state.tx[mantem];
+      var vooL = prepararVoo(tr, tm ? tm.desc : '');
+      var foco = document.activeElement && document.activeElement.matches && document.activeElement.matches('#rows select') ? document.activeElement.dataset.id : null;
+      state.lancMantido = null; state.lancBusca = true; state.lancTimerRender = true; renderTable();
+      if (foco){ var nb = $('rows').querySelector('select[data-id="'+foco+'"]') || $('rows').querySelector('select[data-id]'); if (nb) nb.focus({preventScroll:true}); }
+      var alvoL = $('lNums').querySelector('[aria-pressed="true"]') || $('lNums').querySelector('[data-num="rev"]');
+      voar(vooL, alvoL, alvoL && alvoL.querySelector('.v'));
     };
     state.lancMantemTimer = setTimeout(tira, 1300);
   }
@@ -2151,6 +2150,38 @@ $('fCat').addEventListener('change', function(e){
   renderTable();
 });
 function renderOrganizar(){ renderCategorias(); renderRules(); renderCustom(); }
+/* "mover", em todo o site: um fantasma da linha voa até o destino, que pisca; o número dele salta.
+   prepararVoo guarda onde a linha estava (antes de redesenhar); voar anima depois. */
+function prepararVoo(el, texto){
+  if (!el || !el.getBoundingClientRect) return null;
+  var r = el.getBoundingClientRect();
+  if (!r.width) return null;
+  return {r:r, texto: String(texto || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 48)};
+}
+function piscarAlvo(el, num){
+  if (REDUZIR.matches) return;
+  [[el, 'voo-alvo', 1300], [num, 'voo-num', 600]].forEach(function(x){
+    if (!x[0]) return;
+    x[0].classList.remove(x[1]); void x[0].offsetWidth; x[0].classList.add(x[1]);
+    setTimeout(function(){ x[0].classList.remove(x[1]); }, x[2]);
+  });
+}
+function voar(v, destino, num){
+  if (REDUZIR.matches || !v){ piscarAlvo(destino, num); return; }
+  var w = Math.min(Math.max(v.r.width, 90), 320);
+  var g = document.createElement('div'); g.className = 'voo'; g.setAttribute('aria-hidden', 'true'); g.textContent = v.texto;
+  g.style.left = v.r.left+'px'; g.style.top = v.r.top+'px'; g.style.width = w+'px';
+  document.body.appendChild(g);
+  var d = destino && destino.getBoundingClientRect ? destino.getBoundingClientRect() : null;
+  var vis = d && d.width>0 && d.bottom>0 && d.top<window.innerHeight && d.right>0 && d.left<window.innerWidth;
+  var dx = vis ? (d.left+d.width/2) - (v.r.left+w/2) : 0, dy = vis ? (d.top+d.height/2) - (v.r.top+g.offsetHeight/2) : -90;
+  void g.offsetWidth;
+  g.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale(.35)'; g.style.opacity = '0';
+  setTimeout(function(){ g.remove(); piscarAlvo(destino, num); }, 620);
+}
+function destinoCategoria(nome){ return $('catList').querySelector('[data-cat="'+CSS.escape(nome)+'"]'); }
+function numRevisar(){ var r = $('catList').querySelector('.cat-item.rev'); return r ? (r.querySelector('.num') || r.querySelector('.m')) : null; }
+function abaPasta(id){ return $('pagesBar').querySelector('[data-page="'+(id===null || id===undefined ? 'none' : id)+'"]'); }
 /* lista de Organizar: o marcador dourado desliza até a escolhida; a categoria nova brilha */
 function animarListaOrg(view){
   var lista = $('catList'), a = lista.querySelector('[aria-current="true"]');
@@ -2327,21 +2358,23 @@ $('origins').addEventListener('change', function(e){
   var s = e.target.closest('select'); if (!s) return;
   var key = s.dataset.origin, from = state.cat, to = s.value;
   var sample = state.tx.filter(function(t){return t.origin===key;})[0], label = sample ? sample.desc : key;
+  var vooO = prepararVoo(s.closest('li'), label);
+  var pousa = function(){ voar(vooO, destinoCategoria(to), from===OTHER ? numRevisar() : null); };
   var podeO = Analise.regraProximos({ entrada:false, para:to, regraAtual: state.rules[key] ? state.rules[key].cat : null, internos:INTERNOS,
     outroSentido: state.tx.some(function(t){ return t.origin===key && ehEntrada(t); }) });
   if (!podeO){
     state.tx.forEach(function(t){ if (ehSaida(t) && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
-    ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato: essa origem também tem entradas, que não foram mudadas.'); render();
+    ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato: essa origem também tem entradas, que não foram mudadas.'); render(); pousa();
     return;
   }
   askX({ kind:'reclass', title:'Manter esta mudança nos próximos extratos?',
     text:'Você moveu todos os pagamentos de "'+label+'" para '+to+'. Se manter, os próximos extratos também vão classificar essa origem como '+to+'.',
     yes:'Sim, manter nos próximos extratos', no:'Não, só neste extrato', cancel:'Cancelar mudança', skipHelp:RECLASS_HELP, back:s,
-    onYes:function(){ setRule(key, label, to).then(render, function(e){ falhou(e); render(); }); },
+    onYes:function(){ setRule(key, label, to).then(function(){ render(); pousa(); }, function(e){ falhou(e); render(); }); },
     onNo:function(){ this.onAlt(); },
     onAlt:function(){  /* aqui "só neste extrato" já é todos dessa origem */
       state.tx.forEach(function(t){ if (ehSaida(t) && t.origin===key && catOf(t)===from) state.overrides[t.id] = to; });
-      ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato.'); render();
+      ruleMsg('Pagamentos de "'+label+'" mudaram para '+to+' só neste extrato.'); render(); pousa();
     },
     onCancel:render });
 });
@@ -2920,10 +2953,11 @@ $('pagesBar').addEventListener('drop', function(e){
   var naPasta = x.page && getPages().some(function(p){ return p.id===x.page; }) ? x.page : null;
   if (naPasta===para) return;
   var nomeDest = para ? 'a pasta "'+pageName(para)+'"' : '"Sem pasta"';
+  var vooD = prepararVoo(document.querySelector('#savedList .sv[data-sv="'+id+'"]'), x.name);
   API.alterarExtrato(id, {pagina_id: para})
     .then(function(){ return recarregarSalvos(); })
     .then(atualizarPastaAberta)
-    .then(function(){ toast('Extrato movido para '+nomeDest+'.'); })
+    .then(function(){ var ab = abaPasta(para); voar(vooD, ab, ab && ab.querySelector('.cnt')); toast('Extrato movido para '+nomeDest+'.'); })
     .catch(falhou);
 });
 /* ---------- lembrete do mês que falta ----------
@@ -3063,9 +3097,10 @@ $('savedList').addEventListener('submit', function(e){
     var para = to ? (desp ? 'a pasta ' : 'a página ')+dest : dest;
     askX({ kind:'mover-extrato', title:'Mover o extrato?', text:'"'+(mx.name||'Extrato')+'" vai para '+para+'.', yes:'Mover extrato', cancel:'Voltar',
       onYes:function(){
+        var vooX = prepararVoo(document.querySelector('#savedList .sv[data-sv="'+id+'"]'), mx.name);
         API.alterarExtrato(id, {pagina_id: to}).then(function(){
           state.movingSaved = null;
-          return recarregarSalvos().then(atualizarPastaAberta).then(function(){ toast('Extrato movido para '+para+'.'); });
+          return recarregarSalvos().then(atualizarPastaAberta).then(function(){ var ab = abaPasta(to); voar(vooX, ab, ab && ab.querySelector('.cnt')); toast('Extrato movido para '+para+'.'); });
         }).catch(falhou);
       } });
     return;

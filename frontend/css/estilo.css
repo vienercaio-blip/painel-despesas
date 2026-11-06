@@ -1076,3 +1076,11 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @keyframes o-pop{from{opacity:0;transform:scale(.5)}}
   @keyframes o-confete{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(320deg)}}
 }
+/* ---------- "mover" em todo o site: o fantasma que voa até o destino ---------- */
+.voo{position:fixed;z-index:200;pointer-events:none;padding:7px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--accent);color:var(--ink);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 24px rgba(0,0,0,.35);transform-origin:center;transition:transform .6s cubic-bezier(.5,0,.7,.4),opacity .6s ease}
+@media (prefers-reduced-motion: no-preference){
+  .voo-alvo{animation:voo-alvo 1.2s ease}
+  .voo-num{display:inline-block;animation:voo-num .55s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes voo-alvo{25%{background-color:color-mix(in srgb,var(--good) 28%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 45%,transparent)}}
+  @keyframes voo-num{from{transform:scale(1.6)}}
+}
