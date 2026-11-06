@@ -306,6 +306,7 @@ function semMovimento(){ return REDUZIR.matches; }
 var entradaTimer = null;
 function animarEntrada(){
   if (semMovimento()) return;
+  animarResumo();
   var v = $('viewEnviar');
   v.classList.remove('entra'); void v.offsetWidth; v.classList.add('entra');
   clearTimeout(entradaTimer);
@@ -329,6 +330,7 @@ function trocarPasta(novo){
   var aplicar = function(){
     keepScroll(function(){ state.page = novo; state.editingPage = null; renderSaved(); });
     lista.classList.remove('trocando');
+    if (!semMovimento()){ lista.classList.remove('i-lado'); void lista.offsetWidth; lista.classList.add('i-lado'); setTimeout(function(){ lista.classList.remove('i-lado'); }, 500); }
     /* as etiquetas são redesenhadas: o foco volta para a escolhida */
     if (comFoco){ var b = $('pagesBar').querySelector('[data-page="'+(novo===null ? 'all' : novo)+'"]'); if (b) b.focus({preventScroll:true}); }
   };
@@ -693,7 +695,7 @@ function renderSaved(){
       '</div>' : '';
     var nameBlock = state.editingSaved===x.id
       ? '<form class="inline-form ren-x" data-id="'+esc(x.id)+'" novalidate><label for="renX">Nome do extrato</label><div class="inline-row"><input id="renX" maxlength="80" autocomplete="off" value="'+esc(x.name||'')+'"><button type="submit" class="btn primary">Salvar nome</button><button type="button" class="btn ghost" data-xcancel="1">Cancelar</button></div><p class="form-err" id="renXErr" role="alert" hidden></p></form>'
-      : '<strong>'+esc(x.name||'Extrato')+'</strong>'+(x.aviso ? ' <span class="why estorno" data-tip="'+esc(x.aviso)+'">⚠ Confira</span>' : '');
+      : '<strong>'+realce(x.name||'Extrato', state.busca)+'</strong>'+(x.aviso ? ' <span class="why estorno" data-tip="'+esc(x.aviso)+'">⚠ Confira</span>' : '');
     var naPasta = pn && !cur ? (desp ? ' · <span class="pasta-nome">Pasta '+esc(pn)+'</span>' : ' · página '+esc(pn)) : '';
     var arrasta = desp && state.editingSaved!==x.id && state.movingSaved!==x.id;
     return '<li class="sv'+(desp && x.id===state.novoId ? ' sv-novo' : '')+'" data-sv="'+esc(x.id)+'"'+(arrasta ? ' draggable="true"' : '')+'><div class="svi">'+
@@ -1860,7 +1862,7 @@ function setMode(m){
   $('modoTop').hidden = !MODE || !VENDAS_ATIVO;
   $('modeArea').hidden = !MODE;
   $('upTitle').textContent = isV ? 'Vendas' : 'Início';
-  $('upDesc').textContent = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Descubra quanto sobra no fim do mês.' : 'O que você quer analisar?');
+  $('upDesc').innerHTML = isV ? 'Envie a planilha de vendas. O painel mostra faturamento, produtos, horários e formas de pagamento.' : (isD ? 'Descubra quanto <span class="i-sobra">sobra</span> no fim do mês.' : 'O que você quer analisar?');
   $('modoName').textContent = isV ? 'Vendas' : 'Despesas';
   mostrarInicio();
   renderSaved();
@@ -2655,7 +2657,27 @@ $('pastaSug').addEventListener('click', function(e){
 });
 $('soVer').addEventListener('change', function(){ $('privNota').hidden = !$('soVer').checked; });
 /* ---------- busca e arrastar o extrato para uma pasta ---------- */
-$('svBusca').addEventListener('input', function(){ state.busca = this.value; renderSaved(); });
+var buscaTimer = null;
+$('svBusca').addEventListener('input', function(){
+  var v = this.value;
+  clearTimeout(buscaTimer);
+  if (semMovimento()){ state.busca = v; renderSaved(); return; }
+  var itens = Array.prototype.slice.call($('savedList').querySelectorAll('.sv')).map(function(li){ var n = li.querySelector('strong'); return {name: n ? n.textContent : '', li:li}; });
+  var ficam = Pastas.buscar(itens, v), sai = 0;
+  itens.forEach(function(x){ if (ficam.indexOf(x)===-1){ x.li.classList.add('sv-saindo'); sai++; } });
+  buscaTimer = setTimeout(function(){ state.busca = v; renderSaved(); }, sai ? 300 : 0);
+});
+/* nome do extrato com o trecho buscado marcado (sem diferença de acentos e maiúsculas, como a busca) */
+function realce(nome, busca){
+  var t = String(busca||'').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  if (!t) return esc(nome);
+  var chars = Array.from(String(nome)), norm = '', mapa = [];
+  chars.forEach(function(c, i){ var n = c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); for (var k=0; k<n.length; k++){ norm += n[k]; mapa.push(i); } });
+  var at = norm.indexOf(t);
+  if (at<0) return esc(nome);
+  var a = mapa[at], b = mapa[at+t.length-1]+1;
+  return esc(chars.slice(0, a).join(''))+'<mark>'+esc(chars.slice(a, b).join(''))+'</mark>'+esc(chars.slice(b).join(''));
+}
 $('savedList').addEventListener('dragstart', function(e){
   var li = e.target.closest && e.target.closest('.sv[draggable="true"]'); if (!li) return;
   state.arrastando = li.dataset.sv;
@@ -2743,12 +2765,32 @@ function desenharResumo(){
   $('iniResumoTx').textContent = r.ver.texto;
   var res = r.ins-r.outs;
   $('iniResumoN').innerHTML = [['Entrou', r.ins], ['Saiu', r.outs], [res>=0 ? 'Sobrou' : 'Faltou', Math.abs(res)]].map(function(c){
-    return '<span>'+c[0]+(r.nM>1 ? ' por mês' : '')+'<b class="num">'+porMes(c[1])+'</b></span>';
+    return '<span>'+c[0]+(r.nM>1 ? ' por mês' : '')+'<b class="num" data-v="'+(c[1]/(r.nM||1))+'">'+porMes(c[1])+'</b></span>';
   }).join('');
+  var chaveR = state.fileName+'|'+r.periodo+'|'+r.ins+'|'+r.outs;
+  if (chaveR!==state.resumoChave){ state.resumoChave = chaveR; if (!$('viewEnviar').hidden) animarResumo(); }
   $('iniResumoPesa').textContent = r.ver.pesa || '';
   $('iniResumoPesa').hidden = !r.ver.pesa;
 }
 $('iniResumoVer').addEventListener('click', function(){ irPara('dashboard'); });
+/* a faixa colorida cresce, o veredito acende, os números contam e um reflexo passa no botão */
+var resumoTimer = null;
+function animarResumo(){
+  var card = $('iniResumo');
+  if (semMovimento() || card.hidden) return;
+  card.classList.remove('anima'); void card.offsetWidth; card.classList.add('anima');
+  clearTimeout(resumoTimer); resumoTimer = setTimeout(function(){ card.classList.remove('anima'); }, 1600);
+  card.querySelectorAll('#iniResumoN b[data-v]').forEach(function(b){
+    var v = parseFloat(b.dataset.v) || 0, fim = b.textContent, ini = performance.now(), dur = 800;
+    b.dataset.contando = fim;
+    (function passo(agora){
+      if (b.dataset.contando!==fim || !b.isConnected) return;
+      var k = Math.max(0, Math.min(1, (agora-ini)/dur)), e = 1-Math.pow(1-k, 3);   /* o 1º quadro pode vir antes de "ini" */
+      b.textContent = k<1 ? brl.format(v*e) : fim;
+      if (k<1) requestAnimationFrame(passo);
+    })(ini);
+  });
+}
 /* extrato de exemplo: abre o painel com dados inventados, sem salvar nada */
 function abrirExemplo(){
   escolheuAbrir();
@@ -3217,7 +3259,7 @@ function contarValor(el, v, fmt){
   var ini = performance.now(), dur = 700;
   (function passo(agora){
     if (el.dataset.alvo!==chave) return;
-    var k = Math.min(1, (agora-ini)/dur), e = 1-Math.pow(1-k, 3);
+    var k = Math.max(0, Math.min(1, (agora-ini)/dur)), e = 1-Math.pow(1-k, 3);   /* o 1º quadro pode vir antes de "ini" */
     el.textContent = k<1 ? fmt(de+(v-de)*e) : chave;
     if (k<1) requestAnimationFrame(passo);
   })(ini);
