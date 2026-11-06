@@ -1,0 +1,91 @@
+// Testes das contas da página Economia. Para rodar: node --test frontend/tests
+const test = require('node:test');
+const assert = require('node:assert');
+const Economia = require('../js/economia.js');
+
+const d = (a, m, dia) => new Date(a, m - 1, dia);
+const OP = {essenciais: ['Moradia e aluguel'], minMeses: 3, tolerancia: 0.2};
+
+test('repetidos: 3 meses parecidos entram, com média e descrição mais recente', () => {
+  const L = [{data: d(2026, 8, 5), desc: 'NETFLIX A', valor: 55.9, origem: 'netflix', cat: 'Assinaturas'},
+    {data: d(2026, 9, 5), desc: 'NETFLIX B', valor: 55.9, origem: 'netflix', cat: 'Assinaturas'},
+    {data: d(2026, 10, 5), desc: 'NETFLIX C', valor: 59.9, origem: 'netflix', cat: 'Assinaturas'}];
+  const r = Economia.repetidos(L, OP);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].id, 'rep:netflix');
+  assert.equal(r[0].desc, 'NETFLIX C');
+  assert.equal(r[0].cat, 'Assinaturas');
+  assert.equal(r[0].meses, 3);
+  assert.ok(Math.abs(r[0].mensal - 57.2333) < 0.01);
+});
+test('repetidos: 2 meses, variação acima de 20% e categoria essencial ficam de fora', () => {
+  const L = [];
+  [8, 9].forEach(m => L.push({data: d(2026, m, 3), desc: 'A', valor: 50, origem: 'a', cat: 'Lazer'}));
+  [[8, 100], [9, 100], [10, 200]].forEach(([m, v]) => L.push({data: d(2026, m, 3), desc: 'B', valor: v, origem: 'b', cat: 'Lazer'}));
+  [8, 9, 10].forEach(m => L.push({data: d(2026, m, 1), desc: 'ALUGUEL', valor: 1500, origem: 'c', cat: 'Moradia e aluguel'}));
+  assert.deepEqual(Economia.repetidos(L, OP), []);
+});
+test('repetidos: dois lançamentos no mesmo mês somam no total daquele mês', () => {
+  const L = [{data: d(2026, 8, 3), desc: 'ACADEMIA', valor: 60, origem: 'ac', cat: 'Academia'}, {data: d(2026, 8, 20), desc: 'ACADEMIA', valor: 60, origem: 'ac', cat: 'Academia'},
+    {data: d(2026, 9, 3), desc: 'ACADEMIA', valor: 120, origem: 'ac', cat: 'Academia'}, {data: d(2026, 10, 3), desc: 'ACADEMIA', valor: 120, origem: 'ac', cat: 'Academia'}];
+  const r = Economia.repetidos(L, OP);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].mensal, 120);
+});
+test('acimaDoNormal: regra de 20% e R$ 50; menos de 3 meses e Outros de fora', () => {
+  const M = [{name: 'ago', cat: {Mercado: 400, Lazer: 100, Outros: 10}}, {name: 'set', cat: {Mercado: 400, Lazer: 100, Outros: 10}},
+    {name: 'out', cat: {Mercado: 500, Lazer: 140, Outros: 200}}];
+  const r = Economia.acimaDoNormal(M, 'Outros');
+  assert.deepEqual(r.map(x => [x.id, x.cat, x.agora, x.media, x.dif]), [['cat:Mercado', 'Mercado', 500, 400, 100]]);
+  assert.deepEqual(Economia.acimaDoNormal(M.slice(1), 'Outros'), []);
+  const M2 = [{name: 'a', cat: {Mercado: 400}}, {name: 'b', cat: {Mercado: 400}}, {name: 'c', cat: {Mercado: 480}}];
+  assert.deepEqual(Economia.acimaDoNormal(M2, 'Outros'), []);   // exatamente 20%: não entra
+});
+test('itens: junta as fontes, descarta a dica "normal", ordena e põe as sem valor no fim', () => {
+  const r = Economia.itens({
+    dicas: [{id: 'delivery', titulo: 'Pedir delivery metade das vezes', motivo: 'm1', economia: 210, cat: 'Delivery'},
+      {id: 'dividas', titulo: 'Quitar dívidas', motivo: 'm2', economia: null, cat: 'Dívidas'},
+      {id: 'normal', titulo: 'Trazer Saúde de volta', motivo: 'm3', economia: 105, cat: 'Saúde'}],
+    repetidos: [{id: 'rep:netflix', origem: 'netflix', desc: 'NETFLIX', cat: 'Assinaturas', mensal: 56, meses: 3}],
+    acima: [{id: 'cat:Saúde', cat: 'Saúde', agora: 305, media: 200, dif: 105}],
+    gastoCat: {Delivery: 420, Assinaturas: 56, 'Saúde': 305, 'Dívidas': 800}
+  });
+  assert.deepEqual(r.map(x => x.id), ['dica:delivery', 'cat:Saúde', 'rep:netflix', 'dica:dividas']);
+  assert.deepEqual(r.map(x => x.tipo), ['categoria', 'categoria', 'cancelar', 'info']);
+  assert.deepEqual(r.map(x => x.etiqueta), ['dica', 'acima do normal', 'repete todo mês', 'dica']);
+  assert.equal(r[0].base, 420);
+  assert.equal(r[1].base, 105);
+  assert.equal(r[1].titulo, 'Trazer Saúde de volta ao normal');
+  assert.equal(r[2].titulo, 'Cancelar NETFLIX');
+  assert.equal(r[2].motivo, 'Aparece em 3 meses do extrato.');
+  assert.equal(r[3].economia, null);
+});
+test('pctInicial: arredonda para 10% e fica entre 10% e 100%', () => {
+  assert.equal(Economia.pctInicial({economia: 50, base: 200}), 0.3);
+  assert.equal(Economia.pctInicial({economia: 1, base: 200}), 0.1);
+  assert.equal(Economia.pctInicial({economia: 300, base: 200}), 1);
+});
+test('simular: soma, corte em %, limite por categoria e ids desconhecidos', () => {
+  const I = [{id: 'dica:assinaturas', tipo: 'categoria', cat: 'Assinaturas', base: 150}, {id: 'rep:netflix', tipo: 'cancelar', cat: 'Assinaturas', base: 56},
+    {id: 'dica:tarifas', tipo: 'categoria', cat: 'Tarifas', base: 30}, {id: 'dica:dividas', tipo: 'info', cat: 'Dívidas', base: null}];
+  const r = Economia.simular(I, {'dica:assinaturas': 1, 'rep:netflix': true, 'dica:tarifas': 0.5, 'x:sumiu': true, 'dica:dividas': true}, {Assinaturas: 180, Tarifas: 30});
+  assert.equal(r.porItem['dica:assinaturas'], 150);
+  assert.equal(r.porItem['rep:netflix'], 30);
+  assert.deepEqual(r.cortados, ['rep:netflix']);
+  assert.equal(r.porItem['dica:tarifas'], 15);
+  assert.equal(r.porItem['dica:dividas'], undefined);
+  assert.equal(r.total, 195);
+  assert.deepEqual(Economia.simular(I, {}, {}), {total: 0, porItem: {}, cortados: []});
+});
+test('objetivo: por mês arredondado para cima e os estados', () => {
+  const hoje = d(2026, 11, 6), O = {valor: 6000, prazo: '2027-12', tenho: 2050};
+  let r = Economia.objetivo(O, 400, null, hoje);   // nov/26 a dez/27 = 14 meses
+  assert.deepEqual([r.falta, r.porMes, r.meses, r.mesesFixo, r.estado], [3950, 283, 10, null, 'ok']);
+  assert.equal(Economia.objetivo(O, 100, null, hoje).estado, 'nao-chega');
+  r = Economia.objetivo(O, 0, null, hoje);
+  assert.deepEqual([r.meses, r.estado], [null, 'sem-ritmo']);
+  assert.equal(Economia.objetivo({valor: 6000, prazo: '2027-12', tenho: 6000}, 400, null, hoje).estado, 'alcancado');
+  assert.equal(Economia.objetivo({valor: 6000, prazo: '2026-10', tenho: 0}, 400, null, hoje).estado, 'prazo-passou');
+  assert.equal(Economia.objetivo({valor: 600, prazo: '2026-11', tenho: 0}, 600, null, hoje).porMes, 600);   // prazo no mês atual = 1 mês
+  assert.equal(Economia.objetivo(O, 400, 500, hoje).mesesFixo, 8);
+});
