@@ -62,8 +62,9 @@ dois).
 ## Animações (todas, nenhuma com "reduzir movimento")
 
 1. **Números contam**: ao abrir a página contam de zero; ao trocar o período, do valor antigo ao novo.
-2. **Linhas em cascata**: ao abrir a página, trocar período, filtro, aba ou ordem… exceto ordem
-   (ver 3) — as linhas visíveis aparecem uma após a outra (atraso de ~25 ms cada, no máximo ~0,5 s).
+2. **Linhas em cascata**: ao abrir a página e ao trocar período, filtro, aba, categoria filtrada
+   ou "Mostrar por vez", as linhas visíveis aparecem uma após a outra (atraso de ~25 ms cada, no
+   máximo ~0,5 s). Ordenar não usa a cascata (ver 3).
 3. **Ordenar desliza**: ao clicar em Data/Valor, as linhas que estavam visíveis deslizam até o
    novo lugar (técnica FLIP: posição antiga → nova); as que entram aparecem; a setinha gira.
 4. **Correção confirmada**: depois de corrigir, a etiqueta da linha acende em verde com ✓ por
