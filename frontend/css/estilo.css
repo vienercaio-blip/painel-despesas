@@ -851,3 +851,12 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ajuda-x:hover{color:var(--ink);border-color:var(--ink-3)}
 .ajuda-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ajuda-quadro .ajuda-grade{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+/* Despesas comparando */
+#viewDespesas .cmp-topo{margin:0}
+.cat-cmp .catbtn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.cat-cmp .cmp-barra{grid-column:1/-1}
+.cat-cmp .cmp-txt{margin-left:6px}
+#flow .fluxo-a{stroke:var(--accent)}
+#flow .fluxo-b{stroke:var(--s2)}
+#kResPill .pos{color:var(--good)}#kResPill .neg{color:var(--bad)}
+#kInSub .pos,#kOutSub .pos{color:var(--good)}#kInSub .neg,#kOutSub .neg{color:var(--bad)}

@@ -582,6 +582,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
       </section>
     </div>
+  <p class="card faixa cmp-topo" id="dCmpTopoDesp" hidden></p>
   <section class="kpis" aria-label="Resumo do período">
     <div class="kpi"><span class="label">Entradas</span><span class="value num" id="kIn">—</span><span class="sub" id="kInSub"></span></div>
     <div class="kpi"><span class="label">Saídas</span><span class="value num" id="kOut">—</span><span class="sub" id="kOutSub"></span></div>
@@ -596,7 +597,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     </div>
     <div class="card flow-card">
       <div class="card-head"><h2 id="flowTitle">Fluxo</h2></div>
-      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Entradas</span><span><i class="sw" style="background:var(--s2)"></i>Saídas</span></div>
+      <div class="legend" id="flowLegend"><span><i class="sw" style="background:var(--s1)"></i>Entradas</span><span><i class="sw" style="background:var(--s2)"></i>Saídas</span></div>
       <div class="chart-box" id="flow"></div>
     </div>
   </section>

@@ -800,6 +800,7 @@ function render(){
   }
   renderFlow(tx, mode);
   renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev);
+  renderDespesasComparacao();
   renderTable();
   renderCategorias();
   renderRules();
@@ -822,7 +823,7 @@ function renderPeriod(tx){
   $('pPersRapidos').innerHTML = ats.filter(function(a){ return !naLinha(a); }).map(botao).join('');
   $('pPersRapidos').hidden = !$('pPersRapidos').innerHTML;
   $('pAtalhos').innerHTML = ats.filter(naLinha).map(botao).join('')+'<button type="button" class="ptab ini-pilula p-atalho" id="pPersBtn" data-acao="pers" aria-haspopup="dialog" aria-controls="pPers" aria-pressed="'+(!state.cmp && (p.rotulo==='Personalizado' || dentroAtivo))+'">Personalizado…</button>'+
-    (meses.length>=2 ? '<button type="button" class="ptab ini-pilula p-atalho" id="pCmpBtn" data-acao="cmp" aria-haspopup="dialog" aria-controls="pCmp" aria-pressed="'+!!state.cmp+'"'+($('viewDash').hidden ? ' hidden' : '')+'>Comparar…</button>' : '');
+    (meses.length>=2 ? '<button type="button" class="ptab ini-pilula p-atalho" id="pCmpBtn" data-acao="cmp" aria-haspopup="dialog" aria-controls="pCmp" aria-pressed="'+!!state.cmp+'">Comparar…</button>' : '');
   state.atalhos = ats;
   /* semana: só com um mês escolhido */
   var temMes = !state.cmp && (p.tipo==='mes' || p.tipo==='semana');
@@ -1852,8 +1853,7 @@ function setView(){
   $('introSec').hidden = v==='inicio' || isV;
   $('pageTitle').textContent = {dashboard:'Dashboard', economia:'Economia', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
-  if ($('pCmpBtn')) $('pCmpBtn').hidden = v!=='dashboard';
-  if (v!=='dashboard') $('pCmp').hidden = true;
+  if ($('periodSec').hidden) $('pCmp').hidden = true;
   /* em Lançamentos o Período fica dentro do quadro dos lançamentos; nas outras, no lugar de sempre */
   var ps = $('periodSec'), ms = $('mesesSec');
   if (v==='lancamentos' && ps.parentNode!==$('lancPeriodo')){ $('lancPeriodo').appendChild(ps); $('lancPeriodo').appendChild(ms); ps.classList.add('embutido'); ms.classList.add('embutido'); }
@@ -2029,6 +2029,7 @@ $('fCat').addEventListener('change', function(e){
 });
 $('cats').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
+  if (state.cmp){ abrirLancamentos(b.dataset.cat); return; }   /* comparando: vai aos lançamentos, ainda comparando */
   state.cat = b.dataset.cat; renderCategorias(); tip.hidden = true;
   irPara('categorias');
 });
@@ -2424,6 +2425,94 @@ function dadosPeriodo(p){
   }
   return { nome:nome, ins:T.ins, outs:T.outs, divisor:divisor, cat:cat, n:tx.length, aviso:aviso, estimado:estimado, dias: cov ? cov.dias : 0 };
 }
+/* avisos da comparação: mês incompleto e períodos que se sobrepõem */
+function avisosComparacao(A, B){
+  var av = [A, B].filter(function(d){ return d.aviso; }).map(function(d){ return d.aviso+(d.estimado ? ' (o valor por mês é uma estimativa a partir desses dias).' : '.'); });
+  if (Periodo.sobrepoe(state.cmp.a, state.cmp.b)) av.push('Os períodos se sobrepõem.');
+  return av;
+}
+/* a faixa "Comparando A × B · Sair" (Dashboard, Despesas e Lançamentos) */
+function htmlTopoComparacao(A, B){
+  var av = avisosComparacao(A, B);
+  return 'Comparando <b class="cmp-p1">'+esc(A.nome)+'</b> × <b class="cmp-p2">'+esc(B.nome)+'</b> · <button type="button" class="link-btn" data-sair>Sair da comparação</button>'+
+    (av.length ? '<span class="cmp-aviso">'+av.map(esc).join(' ')+'</span>' : '');
+}
+function maiorCat(cat){ var m = null; Object.keys(cat).forEach(function(c){ if (c!==OTHER && cat[c]>0 && (!m || cat[c]>cat[m])) m = c; }); return m; }
+/* ---------- Despesas comparando: cada quadro com os dois períodos ---------- */
+function renderDespesasComparacao(){
+  var on = !!state.cmp;
+  $('dCmpTopoDesp').hidden = !on;
+  var rot = {kIn:['Entradas','Entradas por mês'], kOut:['Saídas','Saídas por mês'], kRes:['Resultado do período','Resultado por mês']};
+  Object.keys(rot).forEach(function(id){ var l = $(id).parentNode.querySelector('.label'); if (l) l.textContent = rot[id][on ? 1 : 0]; });
+  if (!state.flowLegend) state.flowLegend = $('flowLegend').innerHTML;
+  if (!on){ $('flowLegend').innerHTML = state.flowLegend; return; }
+  var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b), r = Periodo.comparar(A, B);
+  $('dCmpTopoDesp').innerHTML = htmlTopoComparacao(A, B);
+  var difTxt = function(d, bom){ return '<span class="'+(bom===true ? 'pos' : bom===false ? 'neg' : '')+'">'+(d>=0.005 ? '+' : d<=-0.005 ? '−' : '')+brl.format(Math.abs(d))+'</span>'; };
+  var linha = function(id, a, b, d, bom){ $(id).textContent = brl.format(a); $(id+'Sub').innerHTML = esc(B.nome)+': '+brl.format(b)+' · '+difTxt(d, bom); };
+  linha('kIn', r.linhas[0].a, r.linhas[0].b, r.linhas[0].dif, r.linhas[0].bom);
+  linha('kOut', r.linhas[1].a, r.linhas[1].b, r.linhas[1].dif, r.linhas[1].bom);
+  var resA = A.ins/A.divisor - A.outs/A.divisor, resB = B.ins/B.divisor - B.outs/B.divisor;
+  $('kRes').textContent = brl.format(resA);
+  $('kResPill').className = 'pill '+(resA>=0 ? 'pos' : 'neg');
+  $('kResPill').innerHTML = esc(B.nome)+': '+brl.format(resB)+' · '+difTxt(resA-resB, Math.abs(resA-resB)<0.5 ? null : resA>resB);
+  var mA = maiorCat(A.cat), mB = maiorCat(B.cat);
+  $('kTop').textContent = mA || '—';
+  $('kTopSub').textContent = esc(B.nome)+': '+(mB && mB===mA ? 'a mesma' : (mB || '—'));
+  /* categorias: barras duplas por mês, na ordem do Período 1 */
+  var cats = r.categorias.slice().sort(function(x, y){ return (y.a-x.a) || (y.b-x.b); });
+  var max = cats.reduce(function(m, c){ return Math.max(m, c.a, c.b); }, 0) || 1;
+  $('catHint').textContent = 'Por mês, '+A.nome+' × '+B.nome+' · clique para ver os lançamentos';
+  $('cats').innerHTML = cats.map(function(c){
+    return '<li class="cat cat-cmp"><button type="button" class="catbtn" data-cat="'+esc(c.nome)+'" aria-label="Ver os lançamentos de '+esc(c.nome)+'">'+
+      '<span class="name">'+esc(c.nome)+'</span><span class="amt num"><span class="cmp-p1">'+brl0.format(c.a)+'</span> · <span class="cmp-p2">'+brl0.format(c.b)+'</span> <b class="cmp-txt '+(c.dif>0 ? 'neg' : 'pos')+'">'+esc(c.txt)+'</b></span>'+
+      '<span class="cmp-barra" aria-hidden="true"><i class="cmp-a" style="width:'+(c.a/max*100).toFixed(2)+'%"></i><i class="cmp-b" style="width:'+(c.b/max*100).toFixed(2)+'%"></i></span></button></li>';
+  }).join('') || '<li class="cmp-vazio">Nenhuma saída nos dois períodos.</li>';
+  renderFluxoComparacao(A, B);
+  /* Resumo em frases */
+  var frases = Periodo.resumoComparacao(r, A, B, mA, mB).map(function(t){ return {w:false, t:t}; })
+    .concat(avisosComparacao(A, B).map(function(t){ return {w:true, t:t}; }));
+  $('insights').innerHTML = frases.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
+}
+/* Fluxo comparando: duas linhas de saídas alinhadas por posição (1º, 2º, 3º…) */
+function renderFluxoComparacao(A, B){
+  var pa = state.cmp.a, pb = state.cmp.b;
+  var un = Periodo.posicoes(pa, 'mes').length>=2 && Periodo.posicoes(pb, 'mes').length>=2 ? 'mes'
+    : (pa.tipo==='semana' || pb.tipo==='semana') ? 'dia' : 'semana';
+  var serie = function(p){
+    var pos = Periodo.posicoes(p, un), soma = {};
+    state.tx.forEach(function(t){
+      if (!saiDaConta(t) || !Periodo.contem(t.date, p)) return;
+      var k = un==='mes' ? Periodo.chaveDe(t.date) : un==='semana' ? weekKey(t.date) : Periodo.iso(t.date);
+      soma[k] = (soma[k]||0) - t.value;
+    });
+    return pos.map(function(x){ return {rotulo:x.rotulo, v:soma[x.chave]||0}; });
+  };
+  var sa = serie(pa), sb = serie(pb), n = Math.max(sa.length, sb.length, 1);
+  var W=640,H=260,mL=82,mR=12,mT=12,mB=30, iw=W-mL-mR, ih=H-mT-mB;
+  var max = Math.max.apply(null, sa.concat(sb).map(function(x){ return x.v; }).concat([1]));
+  var raw = max/4, mag = Math.pow(10,Math.floor(Math.log10(raw))), nn = raw/mag;
+  var step = (nn<=1?1:nn<=2?2:nn<=2.5?2.5:nn<=5?5:10)*mag, top = Math.ceil(max/step)*step;
+  var x = function(i){ return n===1 ? mL+iw/2 : mL + iw*i/(n-1); }, y = function(v){ return mT + ih - v/top*ih; };
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Saídas de '+esc(A.nome)+' e de '+esc(B.nome)+', lado a lado">';
+  for (var v=0; v<=top+1e-6; v+=step){
+    var yy = y(v).toFixed(1);
+    s += '<line class="'+(v===0?'base':'gl')+'" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+yy+'" y2="'+yy+'"></line>';
+    s += '<text x="'+(mL-8)+'" y="'+yy+'" dy="0.32em" text-anchor="end">'+(v>=1000? 'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil' : 'R$ '+v)+'</text>';
+  }
+  var linha = function(se, cls){ return '<polyline class="'+cls+'" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+se.map(function(p, i){ return x(i).toFixed(1)+','+y(p.v).toFixed(1); }).join(' ')+'"></polyline>'; };
+  s += linha(sb, 'fluxo-b') + linha(sa, 'fluxo-a');
+  var passo = n>18 ? 3 : n>9 ? 2 : 1, uni = un==='mes' ? 'mês' : un==='semana' ? 'semana' : 'dia';
+  for (var i=0; i<n; i++){
+    if (i % passo===0) s += '<text x="'+x(i).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+(i+1)+'º</text>';
+    var tip = '<b>'+(i+1)+'º '+uni+'</b><br>'+(sa[i] ? esc(sa[i].rotulo)+': '+brl.format(sa[i].v) : esc(A.nome)+': —')+'<br>'+(sb[i] ? esc(sb[i].rotulo)+': '+brl.format(sb[i].v) : esc(B.nome)+': —');
+    var w = iw/n;
+    s += '<rect class="hit" x="'+Math.max(mL, x(i)-w/2).toFixed(1)+'" y="'+mT+'" width="'+w.toFixed(1)+'" height="'+ih+'" data-tip="'+esc(tip)+'"></rect>';
+  }
+  $('flow').innerHTML = s+'</svg>';
+  $('flowTitle').textContent = 'Fluxo · saídas';
+  $('flowLegend').innerHTML = '<span><i class="sw" style="background:var(--accent)"></i>'+esc(A.nome)+'</span><span><i class="sw" style="background:var(--s2)"></i>'+esc(B.nome)+'</span>';
+}
 function renderComparacao(){
   var on = !!state.cmp;
   $('dCmpModo').hidden = !on;
@@ -2431,10 +2520,7 @@ function renderComparacao(){
   $('pdfBtn').hidden = on;
   if (!on) return;
   var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b), r = Periodo.comparar(A, B);
-  var avisos = [A, B].filter(function(d){ return d.aviso; }).map(function(d){ return d.aviso+(d.estimado ? ' (o valor por mês é uma estimativa a partir desses dias).' : '.'); });
-  if (Periodo.sobrepoe(state.cmp.a, state.cmp.b)) avisos.push('Os períodos se sobrepõem.');
-  $('dCmpTopo').innerHTML = 'Comparando <b class="cmp-p1">'+esc(A.nome)+'</b> × <b class="cmp-p2">'+esc(B.nome)+'</b> · <button type="button" class="link-btn" data-sair>Sair da comparação</button>'+
-    (avisos.length ? '<span class="cmp-aviso">'+avisos.map(esc).join(' ')+'</span>' : '');
+  $('dCmpTopo').innerHTML = htmlTopoComparacao(A, B);
   $('dCmpVer').className = 'card verdict faixa '+r.veredito.cor;
   $('dCmpVer').textContent = r.veredito.texto;
   $('dCmpA').textContent = A.nome; $('dCmpB').textContent = B.nome;
@@ -2483,8 +2569,9 @@ function sairComparacao(){ if (!state.cmp) return; state.cmp = null; render(); }
 $('dCmpModo').addEventListener('click', function(e){
   if (e.target.closest('[data-sair]')){ sairComparacao(); return; }
   var c = e.target.closest('[data-cat]');
-  if (c){ var cat = c.dataset.cat; sairComparacao(); abrirLancamentos(cat); }
+  if (c) abrirLancamentos(c.dataset.cat);   /* continua comparando */
 });
+$('dCmpTopoDesp').addEventListener('click', function(e){ if (e.target.closest('[data-sair]')) sairComparacao(); });
 $('dCmpTodas').addEventListener('click', function(){ state.cmpTodas = !state.cmpTodas; renderComparacao(); });
 function cmpAba(aba){
   state.cmpAba = aba;
@@ -2843,7 +2930,6 @@ function chegou(){
   state.vistaAntes = noInicio ? 'inicio' : 'outra';
   /* o Dashboard é desenhado com a largura real dos cartões: redesenha já visível */
   var noDash = state.loaded && MODE==='despesas' && !$('viewDash').hidden;
-  if (state.cmp && !noDash){ state.cmp = null; render(); }   /* a comparação existe só no Dashboard: fica o Período 1 */
   if (noDash && state.vistaDash!=='dashboard'){ state.numsAntes = null; state.fatiasAntes = null; }   /* na chegada, conta e enche do zero */
   if (noDash) renderDashboard();
   if (noDash && state.vistaDash!=='dashboard') animarDashboard();
