@@ -206,7 +206,42 @@ function atalho(tipo, c){
   return maiores.slice(0, tipo==='top3' ? 3 : 5);
 }
 
-return { visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
+/* ---------- Dashboard em faixas ---------- */
+/* compara o último mês (B) com o anterior (A): frase sobre o que saiu e as
+   categorias que mais subiram e caíram, pela variação em reais */
+function comparacao(A, B, brl, pct){
+  var dif = B.outs - A.outs;
+  var frase = Math.abs(dif) < 0.5 ? 'Em '+B.name+' saiu o mesmo que em '+A.name+'.'
+    : 'Em '+B.name+' saiu '+brl(Math.abs(dif))+(dif>0 ? ' a mais' : ' a menos')+' que em '+A.name+'.';
+  var nomes = {};
+  Object.keys(A.cat).concat(Object.keys(B.cat)).forEach(function(n){ nomes[n] = 1; });
+  var vars = Object.keys(nomes).map(function(n){ var a = A.cat[n]||0, b = B.cat[n]||0; return {nome:n, a:a, d:b-a}; })
+    .filter(function(v){ return Math.abs(v.d) >= 0.01; })
+    .sort(function(x, y){ return Math.abs(y.d)-Math.abs(x.d) || (x.nome < y.nome ? -1 : 1); });
+  var txt = function(v){ return v.a<=0 ? 'nova' : (v.d>0 ? '+' : '−')+pct(Math.abs(v.d)/v.a); };
+  var alta = vars.filter(function(v){ return v.d>0; })[0], queda = vars.filter(function(v){ return v.d<0; })[0];
+  return { frase:frase, alta: alta ? {nome:alta.nome, txt:txt(alta)} : null, queda: queda ? {nome:queda.nome, txt:txt(queda)} : null };
+}
+/* as n maiores saídas (valor positivo), desempatando pela data mais recente */
+function maioresGastos(lista, n){
+  return lista.slice().sort(function(a, b){ return b.valor-a.valor || b.data-a.data; }).slice(0, n);
+}
+/* pedaços da barra de categorias: porcentagens inteiras que somam 100,
+   sem as categorias negativas (estornos maiores que os gastos) */
+function fatias(linhas){
+  var pos = linhas.filter(function(l){ return !l.negativo && l.pct>0; });
+  var tot = pos.reduce(function(s, l){ return s+l.pct; }, 0);
+  if (!tot) return [];
+  var f = pos.map(function(l){ return {nome:l.nome, pct:Math.round(l.pct/tot*100), outros:!!l.outros}; });
+  var resto = 100 - f.reduce(function(s, x){ return s+x.pct; }, 0);
+  if (resto){
+    var maior = f.filter(function(x){ return !x.outros; }).sort(function(a, b){ return b.pct-a.pct; })[0] || f[0];
+    maior.pct += resto;
+  }
+  return f.filter(function(x){ return !x.outros; }).concat(f.filter(function(x){ return x.outros; }));
+}
+
+return { comparacao:comparacao, maioresGastos:maioresGastos, fatias:fatias, visiveis:visiveis, serieMeses:serieMeses, veredito:veredito, ajustarEstornos:ajustarEstornos, numeros:numeros, linhaInterno:linhaInterno, regraProximos:regraProximos, acoes:acoes, barras:barras, atalho:atalho };
 })();
 if (typeof window!=='undefined') window.Analise = Analise;
 if (typeof module!=='undefined') module.exports = Analise;

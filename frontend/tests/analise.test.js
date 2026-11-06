@@ -353,3 +353,37 @@ test('serieMeses: valores em ordem, mês sem valor vale 0, um mês só não tem 
   assert.deepEqual(Analise.serieMeses(meses, 'res'), [6, 20, -4]);
   assert.deepEqual(Analise.serieMeses([{ins:1}], 'ins'), []);
 });
+
+// ---------- Dashboard em faixas ----------
+const brlT = n => 'R$ ' + n.toFixed(2), pctT = n => Math.round(n * 100) + '%';
+const SET = {name:'setembro de 2026', outs:1000, cat:{Mercado:400, Moradia:600}};
+test('comparação: saiu mais, maior alta pela variação em reais', () => {
+  const r = Analise.comparacao(SET, {name:'outubro de 2026', outs:1120, cat:{Mercado:472, Moradia:600, Delivery:48}}, brlT, pctT);
+  assert.equal(r.frase, 'Em outubro de 2026 saiu R$ 120.00 a mais que em setembro de 2026.');
+  assert.deepEqual(r.alta, {nome:'Mercado', txt:'+18%'});
+  assert.equal(r.queda, null);
+});
+test('comparação: saiu menos, com a maior queda', () => {
+  const r = Analise.comparacao(SET, {name:'outubro de 2026', outs:900, cat:{Mercado:300, Moradia:600}}, brlT, pctT);
+  assert.equal(r.frase, 'Em outubro de 2026 saiu R$ 100.00 a menos que em setembro de 2026.');
+  assert.equal(r.alta, null);
+  assert.deepEqual(r.queda, {nome:'Mercado', txt:'−25%'});
+});
+test('comparação: o mesmo e categoria nova', () => {
+  const r = Analise.comparacao(SET, {name:'outubro de 2026', outs:1000.3, cat:{Mercado:300, Moradia:500, Pets:200.3}}, brlT, pctT);
+  assert.equal(r.frase, 'Em outubro de 2026 saiu o mesmo que em setembro de 2026.');
+  assert.deepEqual(r.alta, {nome:'Pets', txt:'nova'});
+  assert.deepEqual(r.queda, {nome:'Mercado', txt:'−25%'});
+});
+test('maiores gastos: ordem, empate pela data mais recente e lista curta', () => {
+  const d = (dia) => new Date(2026, 9, dia);
+  const L = [{data:d(1), desc:'a', valor:50}, {data:d(5), desc:'b', valor:200}, {data:d(9), desc:'c', valor:50}, {data:d(3), desc:'e', valor:120}];
+  assert.deepEqual(Analise.maioresGastos(L, 3).map(x => x.desc), ['b', 'e', 'c']);
+  assert.equal(Analise.maioresGastos(L.slice(0, 2), 3).length, 2);
+});
+test('fatias: somam 100, negativos de fora, Outros por último', () => {
+  const f = Analise.fatias([{nome:'A', pct:.333}, {nome:'B', pct:.333}, {nome:'Outros', pct:.334, outros:true}, {nome:'N', pct:-.1, negativo:true}]);
+  assert.equal(f.reduce((s, x) => s + x.pct, 0), 100);
+  assert.deepEqual(f.map(x => x.nome), ['A', 'B', 'Outros']);
+  assert.equal(f[2].outros, true);
+});
