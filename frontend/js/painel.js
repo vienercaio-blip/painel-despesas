@@ -2365,6 +2365,51 @@ function htmlTopoComparacao(A, B){
     (av.length ? '<span class="cmp-aviso">'+av.map(esc).join(' ')+'</span>' : '');
 }
 function maiorCat(cat){ var m = null; Object.keys(cat).forEach(function(c){ if (c!==OTHER && cat[c]>0 && (!m || cat[c]>cat[m])) m = c; }); return m; }
+/* ---------- Despesas comparando: cada faixa com os dois períodos, sempre por mês ---------- */
+function renderDespesasComparacao(){
+  var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b), r = Periodo.comparar(A, B);
+  $('dCmpTopoDesp').innerHTML = htmlTopoComparacao(A, B);
+  $('xVazio').hidden = true; $('xTopo').hidden = false; $('xCats').hidden = false;
+  var ma = A.outs/A.divisor, mb = B.outs/B.divisor, d = ma-mb;
+  contarAte($('xSaiu'), ma, function(v){ return 'Saiu '+brl.format(v)+' por mês'; });
+  $('xSaiuSub').innerHTML = '<b class="cmp-p1">'+esc(A.nome)+'</b> · '+esc(B.nome)+': '+brl.format(mb)+' · <span class="'+(d>0.5 ? 'neg' : d<-0.5 ? 'pos' : '')+'">'+(d>=0.005 ? '+' : d<=-0.005 ? '−' : '')+brl.format(Math.abs(d))+'</span>';
+  var da = Despesas.divisao(A.cat, FIXED, A.outs), db = Despesas.divisao(B.cat, FIXED, B.outs);
+  $('xTopo').dataset.total = A.outs.toFixed(2);
+  $('xDiv').innerHTML = '<i class="x-fix" style="width:'+da.pFixas+'%"></i><i class="x-dia" style="width:'+da.pDia+'%"></i>';
+  $('xDivLeg').innerHTML = '<span data-fixas="'+da.fixas.toFixed(2)+'" data-pct="'+da.pFixas+'"><i class="sw x-fix"></i>Contas fixas '+brl.format(da.fixas/A.divisor)+'/mês ('+da.pFixas+'%) · '+esc(B.nome)+': '+db.pFixas+'%</span>'+
+    '<span data-dia="'+da.dia.toFixed(2)+'" data-pct="'+da.pDia+'"><i class="sw x-dia"></i>Dia a dia '+brl.format(da.dia/A.divisor)+'/mês ('+da.pDia+'%) · '+esc(B.nome)+': '+db.pDia+'%</span>';
+  /* categorias: barras duplas por mês, na ordem do Período 1; clicar leva aos lançamentos */
+  var cats = r.categorias.slice().sort(function(x, y){ return (y.a-x.a) || (y.b-x.b); });
+  var max = cats.reduce(function(m, c){ return Math.max(m, c.a, c.b); }, 0) || 1;
+  $('xCatsH').textContent = 'Por mês, '+A.nome+' × '+B.nome+' · clique para ver os lançamentos';
+  $('xCatList').innerHTML = cats.map(function(c){
+    return '<li class="x-cat-li cat-cmp"><button type="button" class="x-cat" data-cat="'+esc(c.nome)+'" aria-label="Ver os lançamentos de '+esc(c.nome)+'">'+
+      '<span class="name">'+esc(c.nome)+'</span><span class="amt num"><span class="cmp-p1">'+brl0.format(c.a)+'</span> · <span class="cmp-p2">'+brl0.format(c.b)+'</span> <b class="cmp-txt '+(c.dif>0 ? 'neg' : 'pos')+'">'+esc(c.txt)+'</b></span>'+
+      '<span class="cmp-barra" aria-hidden="true"><i class="cmp-a" style="width:'+(c.a/max*100).toFixed(2)+'%"></i><i class="cmp-b" style="width:'+(c.b/max*100).toFixed(2)+'%"></i></span></button></li>';
+  }).join('') || '<li class="cmp-vazio">Nenhuma saída nos dois períodos.</li>';
+  $('xCatTodas').hidden = true;
+  renderFluxoComparacao(A, B);
+  /* o que mudou: Período 2 (antes) → Período 1, por mês */
+  var pm = function(D){ var o = {}; Object.keys(D.cat).forEach(function(k){ o[k] = D.cat[k]/D.divisor; }); return o; };
+  var mu = Despesas.mudancas(pm(B), pm(A), 2);
+  $('xMudou').hidden = !(mu.subiram.length + mu.cairam.length);
+  $('xMudouH').textContent = A.nome+' contra '+B.nome+', por mês';
+  var pil = function(x, cls){ return '<button type="button" class="x-pil '+cls+'" data-cat="'+esc(x.nome)+'">'+esc(x.nome)+' <b>'+(x.d>0 ? '+' : '−')+brl0.format(Math.abs(x.d))+'/mês ('+esc(x.txt)+')</b></button>'; };
+  $('xMudouL').innerHTML = mu.subiram.map(function(x){ return pil(x, 'sobe'); }).join('')+mu.cairam.map(function(x){ return pil(x, 'cai'); }).join('');
+  /* maiores gastos: os 3 maiores de cada período, com a etiqueta */
+  var top3 = function(per, cls, nome){
+    return Analise.maioresGastos(state.tx.filter(function(t){ return saiDaConta(t) && !t.estorno && Periodo.contem(t.date, per); })
+      .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, chave:t.origin}; }), 3)
+      .map(function(g){ return '<li><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd"><span class="tag-per '+cls+'">'+esc(nome)+'</span> '+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>'; }).join('');
+  };
+  var gl = top3(state.cmp.a, 'tag-per-a', A.nome)+top3(state.cmp.b, 'tag-per-b', B.nome);
+  $('xGastos').hidden = !gl; $('xGastosL').innerHTML = gl;
+  /* resumo da comparação */
+  var frases = Periodo.resumoComparacao(r, A, B, maiorCat(A.cat), maiorCat(B.cat)).map(function(t){ return {w:false, t:t}; })
+    .concat(avisosComparacao(A, B).map(function(t){ return {w:true, t:t}; }));
+  $('xResumo').hidden = !frases.length;
+  $('xResumoL').innerHTML = frases.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
+}
 /* Fluxo comparando: duas linhas de saídas alinhadas por posição (1º, 2º, 3º…) */
 function renderFluxoComparacao(A, B){
   var pa = state.cmp.a, pb = state.cmp.b;
@@ -2387,7 +2432,7 @@ function renderFluxoComparacao(A, B){
     });
   };
   var sa = serie(pa), sb = serie(pb), n = Math.max(sa.length, sb.length, 1);
-  var W=640,H=260,mL=82,mR=12,mT=12,mB=30, iw=W-mL-mR, ih=H-mT-mB;
+  var W=Math.max(320, larguraDe('xCats')-34),H=240,mL=72,mR=12,mT=12,mB=30, iw=W-mL-mR, ih=H-mT-mB;
   var max = Math.max.apply(null, sa.concat(sb).map(function(x){ return x.v||0; }).concat([1]));
   var raw = max/4, mag = Math.pow(10,Math.floor(Math.log10(raw))), nn = raw/mag;
   var step = (nn<=1?1:nn<=2?2:nn<=2.5?2.5:nn<=5?5:10)*mag, top = Math.ceil(max/step)*step;
@@ -2413,9 +2458,10 @@ function renderFluxoComparacao(A, B){
     var w = iw/n;
     s += '<rect class="hit" x="'+Math.max(mL, x(i)-w/2).toFixed(1)+'" y="'+mT+'" width="'+w.toFixed(1)+'" height="'+ih+'" data-tip="'+esc(tip)+'"></rect>';
   }
-  $('flow').innerHTML = s+'</svg>';
-  $('flowTitle').textContent = 'Fluxo · saídas';
-  $('flowLegend').innerHTML = '<span><i class="sw" style="background:var(--accent)"></i>'+esc(A.nome)+'</span><span><i class="sw" style="background:var(--s2)"></i>'+esc(B.nome)+'</span>';
+  $('xMesesG').innerHTML = s+'</svg>';
+  $('xMesesT').textContent = {mes:'Gastos mês a mês', semana:'Gastos semana a semana', dia:'Gastos dia a dia'}[un];
+  $('xMesesH').innerHTML = '<span class="x-leg-cmp"><i class="sw" style="background:var(--accent)"></i>'+esc(A.nome)+'</span> <span class="x-leg-cmp"><i class="sw" style="background:var(--s2)"></i>'+esc(B.nome)+'</span> · por posição (1º, 2º…)';
+  $('xMeses').hidden = false;
 }
 function renderComparacao(){
   var on = !!state.cmp;
@@ -3057,6 +3103,8 @@ function svgBarras(un, unid, opt){
 function renderDespesas(tx, prev){
   var p = state.p, isWeek = p.tipo==='semana';
   $('viewDespesas').classList.toggle('x-calmo', !!state.despCalmo);   /* redesenho sem mudar de período: nada cresce de novo */
+  $('dCmpTopoDesp').hidden = !state.cmp;
+  if (state.cmp){ renderDespesasComparacao(); return; }
   var months = {}; tx.forEach(function(t){ months[Periodo.chaveDe(t.date)] = 1; });
   var nMeses = Object.keys(months).length, fm = Periodo.fatorMes(p, nMeses), div = isWeek ? 1 : fm.divisor;
   var T = sums(tx), outs = T.outs, byCat = {}, nOut = 0;

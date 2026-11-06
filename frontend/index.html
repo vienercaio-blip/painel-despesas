@@ -554,34 +554,42 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <section class="card ajuda-quadro" role="dialog" id="pAjuda" aria-labelledby="pAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="pAjudaT" tabindex="-1">Como funciona a página Despesas</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
-        <p class="ajuda-lead">Os números do período, a lista de categorias, o fluxo do dinheiro e um resumo em frases. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
+        <p class="ajuda-lead">Esta página mostra só os gastos: para onde foi o dinheiro. Entradas e quanto sobrou ficam no Dashboard. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
         <div class="ajuda-grade">
           <div>
-            <h3>1. Os quatro números</h3>
-            <ul><li><b>Entradas</b> e <b>Saídas</b>: o total do período.</li><li><b>Resultado do período</b>: entradas menos saídas.</li><li><b>Maior despesa</b>: a categoria que mais levou dinheiro, com a parte que ela representa das saídas.</li></ul>
-            <p>Dinheiro guardado e transferências entre as suas contas não contam como entrada nem saída.</p>
+            <h3>1. Quanto saiu</h3>
+            <p>O total que saiu, por mês (num mês ou numa semana, o total do período), e a diferença para o período anterior.</p>
+            <p>A barra divide as saídas em <b>Contas fixas</b> (as categorias marcadas como fixas em Organizar, como aluguel e escola) e <b>Dia a dia</b> (todo o resto).</p>
+            <p>Dinheiro guardado e transferências entre as suas contas não contam como saída.</p>
           </div>
           <div>
             <h3>2. Categorias</h3>
-            <p>Quanto saiu em cada categoria, da maior para a menor, com a porcentagem de cada uma. Clique numa categoria para ver o detalhe dela.</p>
+            <p>Da maior para a menor. Clique numa categoria para abrir:</p>
+            <ul><li><b>Mês a mês</b>: o mês mais caro em dourado, com o valor em cima; a linha tracejada é a média dos meses completos.</li>
+            <li><b>Onde foi o dinheiro</b>: os três destinos que mais levaram dinheiro nela.</li>
+            <li><b>Ver os lançamentos</b>: abre a lista já filtrada.</li></ul>
           </div>
           <div>
-            <h3>3. Fluxo</h3>
-            <p>O gráfico mostra as entradas e as saídas lado a lado ao longo do tempo. Elas são agrupadas por dia (com uma semana escolhida), por semana (com um mês), por mês (com um ano) ou por ano (em extratos muito longos).</p>
+            <h3>3. Gastos mês a mês</h3>
+            <p>Só as saídas, por mês (por semana com um mês escolhido, por dia com uma semana). Meses que o extrato corta no meio ficam mais claros e não entram na média.</p>
           </div>
           <div>
-            <h3>4. Resumo</h3>
-            <p>Frases automáticas sobre o período: quanto sobrou ou faltou, a maior despesa, o maior pagamento e a comparação com o período anterior. O que merece atenção aparece com o sinal ⚠.</p>
+            <h3>4. O que mudou</h3>
+            <p>As categorias que mais subiram e as que mais caíram entre o último mês do período e o anterior (o mesmo par do Dashboard). Clique numa para ver os lançamentos.</p>
+          </div>
+          <div>
+            <h3>5. Maiores gastos e Resumo</h3>
+            <p><b>Maiores gastos</b>: os cinco maiores pagamentos, um por destino. <b>Resumo</b>: frases sobre os gastos; o que merece atenção aparece com o sinal ⚠.</p>
           </div>
           <div>
             <h3>Comparar dois períodos</h3>
-            <p>Com <b>Comparar…</b>, cada quadro mostra os dois períodos, sempre por mês: os números com o Período 2 e a diferença embaixo, as categorias em barras duplas (dourado e azul), o Fluxo com uma linha de saídas para cada período e o Resumo em frases. Clique numa categoria para ver os lançamentos dela, ainda comparando.</p>
+            <p>Com <b>Comparar…</b>, tudo fica por mês e com os dois períodos: o que saiu em cada um e a diferença, as categorias em barras duplas (dourado e azul; clique para ver os lançamentos), duas linhas nos gastos, o que mudou entre eles, os três maiores gastos de cada um e um resumo em frases.</p>
           </div>
           <div>
             <h3>Escolher o período</h3>
-            <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos (<b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> e cada ano) ficam dentro de <b>Personalizado…</b>. Todos contam a partir do último mês do extrato.</li>
-            <li>Na faixa de meses, logo abaixo do quadro, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
-            <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
+            <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos ficam dentro de <b>Personalizado…</b>.</li>
+            <li>Na faixa de meses, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
+            <li>Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>.</li></ul>
           </div>
         </div>
       </section>
