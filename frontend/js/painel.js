@@ -1189,20 +1189,18 @@ function renderDashboard(){
 
   /* Parte 2: o que fazer agora */
   var ac = Analise.acoes(ctx);
-  $('dAcoes').innerHTML = ac.lista.length ? ac.lista.map(function(a){
-    var origens = a.cat ? topOrigins(tx.filter(function(t){ return ehSaida(t) && catOf(t)===a.cat; }), 3, nM) : [];
-    var mais = moreHTML(a.cat ? 'De onde vem: '+a.cat : a.titulo, origens.map(function(o){ return [o.l, brl.format(o.v)+(nM>1?'/mês':'')]; }), '');
-    return '<div class="acao acao-pilula hoverable" tabindex="0" data-tip="'+esc('<b>'+esc(a.titulo)+'</b><br>'+esc(a.motivo))+'" data-more="'+esc(mais)+'">'+
-      '<span>'+esc(a.titulo)+'</span>'+
-      (a.economia ? '<span class="eco">~'+brl0.format(a.economia)+'/mês</span>' : '')+
-      (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
-  }).join('') : '<p class="acoes-vazio'+(isWeek?' neutro':'')+'">'+esc(ac.vazio)+'</p>';
+  /* o PDF lista as dicas; a tela leva à página Economia */
+  state.pdfAcoes = ac.lista.map(function(a){ return [a.titulo, a.motivo, a.economia ? '~'+brl0.format(a.economia)+'/mês' : '']; });
+  state.pdfSemAcao = ac.vazio || '';
 
   /* a página Economia usa exatamente estes números do período */
   var gastoCat = {}; Object.keys(byCat).forEach(function(c){ if (byCat[c]>0) gastoCat[c] = byCat[c]/nM; });
   state.eco = { semana:isWeek, nM:nM, sobraMes:(T.ins-T.outs)/nM, gastoCat:gastoCat, ctx:ctx,
     guardado:aplicado-resgatado, meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }) };
   if (!$('viewEconomia').hidden) renderEconomia();
+  /* faixa Dicas: atalho com o total que dá para economizar (com o limite por categoria) */
+  var rz = resumoEconomia();
+  $('dEcoAtalho').textContent = rz.n ? 'Dá para economizar ~'+brl0.format(rz.total)+'/mês em '+rz.n+(rz.n===1 ? ' item' : ' itens')+' →' : 'Veja onde dá para economizar →';
 
   /* Parte 3: para onde vai o dinheiro */
   var bar = Analise.barras(ctx, sel);
@@ -1659,8 +1657,8 @@ function exportPdf(){
   var txt = function(el){ return el ? el.textContent.replace(/\s+/g,' ').trim() : ''; };
   var file = state.fileName || 'Extrato';
   var nums = all('#dNums .kpi').map(function(k){ return {l: txt(k.querySelector('.label')), v: txt(k.querySelector('.value'))}; });
-  var acoes = all('#dAcoes .acao').map(function(a){ return [txt(a.querySelector('h3')), txt(a.querySelector('p')), txt(a.querySelector('.eco'))]; });
-  var semAcao = txt(document.querySelector('#dAcoes .acoes-vazio'));
+  var acoes = state.pdfAcoes || [];
+  var semAcao = state.pdfSemAcao || '';
   var barras = state.pdfBarras || [];
   var ins = all('#dIns li').map(txt);
   var months = all('#pMonths .mchip:not([aria-hidden])').map(function(c){ return {l: txt(c.querySelector('.ml')), v: txt(c.querySelector('.mv'))}; });
@@ -2753,22 +2751,6 @@ $('dFiltroLista').addEventListener('change', function(e){
 });
 $('dDet').addEventListener('toggle', function(){ state.dashDet = $('dDet').open; if (state.dashDet) renderDashboard(); });
 /* no celular não existe "passar o mouse": tocar (ou Enter) num cartão de ação mostra as origens na hora */
-function mostrarOrigens(el, x, y){
-  clearTimeout(tipTimer); tipEl = el; tipX = x; tipY = y;
-  tip.className = 'tip expanded';
-  tip.innerHTML = el.getAttribute('data-tip') + '<div class="tip-more">' + el.getAttribute('data-more') + '</div>';
-  tip.hidden = false; placeTip();
-}
-$('dAcoes').addEventListener('click', function(e){
-  if (e.target.closest('a')) return;
-  var a = e.target.closest('.acao'); if (!a) return;
-  var r = a.getBoundingClientRect();
-  mostrarOrigens(a, e.clientX || r.left, e.clientY || r.bottom);
-});
-$('dAcoes').addEventListener('keydown', function(e){
-  var a = e.target.closest('.acao');
-  if (a && e.target===a && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); var r = a.getBoundingClientRect(); mostrarOrigens(a, r.left, r.bottom); }
-});
 /* "Ver lançamentos" da linha do dinheiro guardado: abre Lançamentos nessa categoria */
 $('dInterno').addEventListener('click', function(e){
   var a = e.target.closest('[data-interno]'); if (!a) return;

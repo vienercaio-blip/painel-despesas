@@ -459,14 +459,6 @@ td .in{color:var(--good);font-weight:500}
 .kpis3{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:560px){.kpis3{grid-template-columns:1fr}}
 .kpi .value.neg{color:var(--bad)}
-.acoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.acao{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
-.acao h3{margin:0;font-size:16px}
-.acao p{margin:0;font-size:14px;color:var(--ink-2)}
-.acao .eco{color:var(--good);font-weight:600}
-.acao a{font-size:14px}
-.acoes-vazio{margin:0;color:var(--good);font-weight:500}
-.acoes-vazio.neutro{color:var(--ink-2);font-weight:400}
 /* dashboard: para onde vai o dinheiro */
 #dOnde .card-head{align-items:center}
 .filtro-wrap{position:relative}
@@ -501,8 +493,6 @@ td .in{color:var(--good);font-weight:500}
 .det > summary::before{content:'▸';transition:transform .15s}
 .det[open] > summary::before{transform:rotate(90deg)}
 .det-corpo{display:flex;flex-direction:column;gap:20px;margin-top:16px}
-.acao{cursor:pointer}
-.acao:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* celular: o painel do filtro abre logo abaixo do botão, na largura do card */
 @media (max-width:560px){.filtro-painel{position:static;width:auto;max-height:none;margin-top:8px}.filtro-wrap{position:static;width:100%}}
 /* caixinha de senha do PDF, na lista de arquivos enviados */
@@ -550,11 +540,6 @@ input,select,textarea{border-radius:10px}
 .why.estorno{background:var(--note-bg);color:var(--note-ink)}
 
 /* ---------- Dashboard em grade ---------- */
-#dAcoes .acao{padding:12px 14px;gap:4px}
-#dAcoes .acao h3{font-size:15px}
-#dAcoes .acao p{display:none}
-#dAcoes .acao p.eco{display:block;font-size:13px}
-.acoes-vazio{grid-column:1/-1}
 .kpi .spark{display:block;width:100%;height:28px;margin-top:6px;overflow:visible}
 .kpi .spark .hit{fill:transparent}
 .barras-mais{list-style:none;padding-top:4px}
@@ -680,10 +665,6 @@ input,select,textarea{border-radius:10px}
 .gastos .gdt{color:var(--ink-3);font-variant-numeric:tabular-nums}
 .gastos .gd{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gastos .gv{font-weight:600;font-variant-numeric:tabular-nums}
-.acoes-pilulas{display:flex;flex-wrap:wrap;gap:8px}
-.acao.acao-pilula{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);cursor:pointer;font-size:14px}
-.acao.acao-pilula:hover{border-color:var(--accent)}
-.acao-pilula .eco{color:var(--good);font-weight:600}
 @media (max-width:560px){.faixa-head .filtro-wrap,.faixa-head .chart-tools{margin-left:0}.gastos button{grid-template-columns:minmax(0,1fr) auto}.gastos .gdt{grid-column:1/-1;font-size:12px}}
 /* compacto: os números sem caixas internas e o cabeçalho das páginas mais baixo */
 .faixa-nums .kpis3{gap:8px 24px}
@@ -764,3 +745,7 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .eco-obj-form input,.eco-obj-form label:first-child input{width:100%}
   .eco-obj-form label{flex:1 1 140px}
 }
+
+.eco-atalho{font-weight:600;color:var(--accent);text-decoration:none}
+.eco-atalho:hover{text-decoration:underline;text-underline-offset:3px}
+.eco-atalho:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
