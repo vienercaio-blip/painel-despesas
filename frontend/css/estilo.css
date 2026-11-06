@@ -921,3 +921,4 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #xMesesG .hit{fill:transparent}
 .x-leg-cmp{margin-right:10px;white-space:nowrap}.x-leg-cmp .sw{margin-right:5px;vertical-align:-1px}
 .cat-cmp .x-cat .name::before{content:none}
+.x-calmo #xMesesG .x-barra,.x-calmo li:not(.x-nova) .x-aberta,.x-calmo li:not(.x-nova) .x-b .x-barra{animation:none}

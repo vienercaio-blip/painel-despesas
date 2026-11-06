@@ -1822,7 +1822,7 @@ function setView(){
   $('viewEconomia').hidden = !(v==='economia' && isD);
   var chegouDesp = v==='despesas' && $('viewDespesas').hidden;
   $('viewDespesas').hidden = v!=='despesas';
-  if (chegouDesp && state.loaded) despesasCalmo();   /* os gráficos são desenhados na largura real da página */
+  if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; render(); }   /* chegar: desenha na largura real e com movimento */
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
@@ -3072,11 +3072,7 @@ function unidadesSaida(p, un, filtro){
     return {chave:x.chave, rotulo:x.rotulo, valor:soma[x.chave]||0, parcial: cde!==de || cate!==ate, nota:nota};
   });
   if (un!=='ano') return r;
-  var anos = {}, ordem = [];
-  r.forEach(function(u){ var a = u.chave.slice(0,4);
-    if (!anos[a]){ anos[a] = {chave:a, rotulo:a, valor:0, parcial:false, semDados:true, nota:''}; ordem.push(a); }
-    anos[a].valor += u.valor; if (u.parcial) anos[a].parcial = true; if (!u.semDados) anos[a].semDados = false; });
-  return ordem.map(function(a){ var o = anos[a]; if (o.parcial) o.nota = ' (parcial)'; return o; });
+  return Despesas.anos(r, [lp.de, L.inicio].sort()[1], [lp.ate, L.fim].sort()[0]);
 }
 /* gráfico de barras de uma série (Despesas.serie): o maior em dourado com o valor em cima, média tracejada */
 function svgBarras(un, unid, opt){
@@ -3097,8 +3093,8 @@ function svgBarras(un, unid, opt){
       (b.maior ? '<text class="x-maior-v" x="'+(x+bw/2).toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="'+(i===0 ? 'start' : i===bs.length-1 ? 'end' : 'middle')+'">'+brl0.format(b.valor)+'</text>' : '')+
       (i%passo===0 ? '<text class="x-rot" x="'+(mL+gw*i+gw/2).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(b.rotulo)+'</text>' : '')+'</g>';
   });
-  if (bs.length>1) s += '<line class="x-media" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(S.media).toFixed(1)+'" y2="'+y(S.media).toFixed(1)+'"></line>';
-  return {svg: s+'</svg>', media:S.media, n:bs.length};
+  if (bs.length>1 && !S.soParciais) s += '<line class="x-media" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(S.media).toFixed(1)+'" y2="'+y(S.media).toFixed(1)+'"></line>';
+  return {svg: s+'</svg>', media:S.media, n:bs.length, soParciais:S.soParciais};
 }
 function renderDespesas(tx, prev){
   var p = state.p, isWeek = p.tipo==='semana';
@@ -3129,7 +3125,7 @@ function renderDespesas(tx, prev){
   /* categorias */
   var cats = Object.keys(byCat).filter(function(k){ return byCat[k]>0; }).map(function(k){ return {nome:k, v:byCat[k]}; })
     .sort(function(a, b){ if (a.nome===OTHER) return 1; if (b.nome===OTHER) return -1; return b.v-a.v; });
-  if (state.despAberta && !byCat[state.despAberta]) state.despAberta = null;
+  if (state.despAberta && !(byCat[state.despAberta] > 0)) state.despAberta = null;
   var todas = !!state.despTodas || cats.length<=CAT_VISIVEIS + 1;
   var vis = todas ? cats : cats.slice(0, CAT_VISIVEIS);
   if (state.despAberta && vis.every(function(c){ return c.nome!==state.despAberta; })){ vis = cats; todas = true; }
@@ -3137,20 +3133,25 @@ function renderDespesas(tx, prev){
   $('xCatsH').textContent = ehTotal ? 'Total: '+brl.format(outs)+' · clique para abrir' : 'Por mês · clique para abrir';
   $('xCatList').innerHTML = vis.map(function(c){
     var on = c.nome===state.despAberta;
-    return '<li class="x-cat-li'+(c.nome===OTHER ? ' other' : '')+(on ? ' aberta' : '')+'"><button type="button" class="x-cat" data-cat="'+esc(c.nome)+'" aria-expanded="'+on+'">'+
+    return '<li class="x-cat-li'+(c.nome===OTHER ? ' other' : '')+(on ? ' aberta' : '')+(on && state.despNova===c.nome ? ' x-nova' : '')+'"><button type="button" class="x-cat" data-cat="'+esc(c.nome)+'" aria-expanded="'+on+'">'+
       '<span class="name">'+esc(c.nome)+'</span><span class="amt num">'+vm(c.v)+' · '+pct.format(c.v/outs)+'</span>'+
       '<span class="track"><span class="bar" style="width:'+(c.v/maxC*100).toFixed(1)+'%"></span></span></button>'+
       (on ? detalheCategoria(c.nome, tx, isWeek) : '')+'</li>';
   }).join('');
   var bt = $('xCatTodas');
   bt.hidden = cats.length<=CAT_VISIVEIS + 1;
-  bt.textContent = state.despTodas ? 'Mostrar menos' : 'Ver todas as '+cats.length+' categorias';
+  bt.textContent = todas ? 'Mostrar menos' : 'Ver todas as '+cats.length+' categorias';
+  bt.setAttribute('aria-expanded', String(todas));
+  state.despTop = cats.slice(0, CAT_VISIVEIS).map(function(c){ return c.nome; });
+  state.despLarg = $('xCats').clientWidth;
   /* gastos mês a mês */
   var un = unidadeDe(p), nomeUn = {dia:'dia', semana:'semana', mes:'mês', ano:'ano'}[un];
   var gm = svgBarras(un, unidadesSaida(p, un), {cls:'x-gm', aria:'Saídas por '+nomeUn, W:Math.max(300, larguraDe('xCats')-34), H:190, rotulos:Math.max(4, Math.floor((larguraDe('xCats')-34)/56))});
   $('xMeses').hidden = !(gm && gm.n>1);
   if (gm){ $('xMesesG').innerHTML = gm.svg; $('xMesesT').textContent = {dia:'Gastos dia a dia', semana:'Gastos semana a semana', mes:'Gastos mês a mês', ano:'Gastos ano a ano'}[un];
-    $('xMesesH').innerHTML = '<span class="x-media-leg">- - -</span> média '+brl0.format(gm.media)+' por '+nomeUn+(un==='dia' ? '' : ' (só '+(un==='semana' ? 'semanas' : un==='ano' ? 'anos' : 'meses')+' completos)'); }
+    var compl = {semana:'semanas completas', mes:'meses completos', ano:'anos completos'}[un];
+    $('xMesesH').innerHTML = gm.soParciais ? 'Sem média: '+{semana:'nenhuma semana está completa', mes:'nenhum mês está completo', ano:'nenhum ano está completo', dia:'nenhum dia completo'}[un]+' no extrato'
+      : '<span class="x-media-leg">- - -</span> média '+brl0.format(gm.media)+' por '+nomeUn+(un==='dia' ? '' : ' (só '+compl+')'); }
   /* o que mudou: o mesmo par de meses do Dashboard */
   var par = parMeses(tx);
   var mu = par ? Despesas.mudancas(par.A.cat, par.B.cat, 2) : null;
@@ -3185,7 +3186,7 @@ function detalheCategoria(nome, tx, isWeek){
     var un = unidadeDe(state.p);
     var larg = $('xCatList').clientWidth ? $('xCatList').clientWidth-30 : 600;
     var g = svgBarras(un, unidadesSaida(state.p, un, function(t){ return catOf(t)===nome; }), {cls:'x-mes', aria:nome+' por '+(un==='semana' ? 'semana' : un==='ano' ? 'ano' : 'mês'), W:Math.max(280, larg), H:150, rotulos:Math.max(4, Math.floor(larg/52))});
-    if (g && g.n>1) h += '<p class="x-mini-t">'+(un==='semana' ? 'Semana a semana' : un==='ano' ? 'Ano a ano' : 'Mês a mês')+' <span class="x-media-leg">- - - média '+brl0.format(g.media)+'</span></p>'+g.svg;
+    if (g && g.n>1) h += '<p class="x-mini-t">'+(un==='semana' ? 'Semana a semana' : un==='ano' ? 'Ano a ano' : 'Mês a mês')+(g.soParciais ? '' : ' <span class="x-media-leg">- - - média '+brl0.format(g.media)+'</span>')+'</p>'+g.svg;
   }
   var o = Despesas.origens(lista.map(function(t){ return {chave:t.origin, rotulo:t.desc, valor:-t.value}; }), 3);
   h += '<p class="x-mini-t">Onde foi o dinheiro</p><ul class="x-orig">'+o.top.map(function(x){
@@ -3215,18 +3216,26 @@ $('xCatList').addEventListener('click', function(e){
   if (state.cmp){ abrirLancamentos(b.dataset.cat); return; }   /* comparando: vai aos lançamentos, ainda comparando */
   var nome = b.dataset.cat;
   state.despAberta = state.despAberta===nome ? null : nome;
+  state.despNova = state.despAberta;   /* só a categoria recém-aberta desliza */
   despesasCalmo();
+  state.despNova = null;
   var nb = document.querySelector('#xCatList .x-cat[data-cat="'+CSS.escape(nome)+'"]'); if (nb) nb.focus();
 });
 $('xMudouL').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (b) abrirLancamentos(b.dataset.cat); });
 $('xGastosL').addEventListener('click', function(e){ var b = e.target.closest('[data-gasto]'); if (!b) return; state.q = b.dataset.gasto; $('q').value = state.q; abrirLancamentos('all'); });
-$('xCatTodas').addEventListener('click', function(){ state.despTodas = !state.despTodas; despesasCalmo(); });
+$('xCatTodas').addEventListener('click', function(){
+  var expandida = this.getAttribute('aria-expanded')==='true';
+  state.despTodas = !expandida;
+  /* encolher fecha a categoria aberta que ficaria escondida */
+  if (expandida && state.despAberta && (state.despTop||[]).indexOf(state.despAberta)===-1) state.despAberta = null;
+  despesasCalmo();
+});
 function despesasCalmo(){ state.despCalmo = true; try { render(); } finally { state.despCalmo = false; } }
 /* os gráficos de Despesas são desenhados na largura real: redesenha ao chegar na página e ao redimensionar */
 var despTimer = null;
 window.addEventListener('resize', function(){
   clearTimeout(despTimer);
-  despTimer = setTimeout(function(){ if (state.loaded && !$('viewDespesas').hidden) despesasCalmo(); }, 150);
+  despTimer = setTimeout(function(){ if (state.loaded && !$('viewDespesas').hidden && $('xCats').clientWidth!==state.despLarg) despesasCalmo(); }, 150);
 });
 
 function abrirLancamentos(cat){

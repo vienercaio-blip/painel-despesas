@@ -33,12 +33,23 @@ function origens(lista, n){
 function serie(unid){
   var maior = -1;
   unid.forEach(function(u, i){ if (maior<0 || u.valor>unid[maior].valor) maior = i; });
-  var base = unid.filter(function(u){ return !u.parcial; });
+  var base = unid.filter(function(u){ return !u.parcial; }), soParciais = !base.length && unid.length>0;
   if (!base.length) base = unid;
   var media = base.length ? base.reduce(function(s, u){ return s+u.valor; }, 0)/base.length : 0;
-  return { barras: unid.map(function(u, i){ var b = {}; for (var k in u) b[k] = u[k]; b.maior = i===maior; return b; }), media:media };
+  return { barras: unid.map(function(u, i){ var b = {}; for (var k in u) b[k] = u[k]; b.maior = i===maior; return b; }), media:media, soParciais:soParciais };
 }
 
+/* meses → anos; um ano é parcial se algum mês dele é parcial ou se os limites (de..ate, ISO)
+   não cobrem de 1º de janeiro a 31 de dezembro */
+function anos(meses, de, ate){
+  var por = {}, ordem = [];
+  meses.forEach(function(u){ var a = u.chave.slice(0,4);
+    if (!por[a]){ por[a] = {chave:a, rotulo:a, valor:0, parcial:false, semDados:true}; ordem.push(a); }
+    por[a].valor += u.valor; if (u.parcial) por[a].parcial = true; if (!u.semDados) por[a].semDados = false; });
+  return ordem.map(function(a){ var o = por[a];
+    if (de > a+'-01-01' || ate < a+'-12-31') o.parcial = true;
+    o.nota = o.parcial ? ' (parcial)' : ''; return o; });
+}
 /* o que mudou de A (antes) para B (depois): as n maiores subidas e quedas em reais */
 function mudancas(A, B, n){
   var nomes = {};
@@ -66,7 +77,7 @@ function frases(c){
   return L;
 }
 
-return { divisao:divisao, origens:origens, serie:serie, mudancas:mudancas, frases:frases };
+return { divisao:divisao, origens:origens, serie:serie, anos:anos, mudancas:mudancas, frases:frases };
 })();
 if (typeof window!=='undefined') window.Despesas = Despesas;
 if (typeof module!=='undefined') module.exports = Despesas;

@@ -63,3 +63,15 @@ test('frases: 3 maiores só com 4+ categorias; taxa baixa sem aviso; 1 despesa n
   assert.equal(f[1].w, false);
   assert.equal(f.length, 2);
 });
+
+test('serie: todas parciais → soParciais (a média não é "só das completas")', () => {
+  assert.equal(D.serie([{valor: 10, parcial: true}, {valor: 30, parcial: true}]).soParciais, true);
+  assert.equal(D.serie([{valor: 10, parcial: false}, {valor: 30, parcial: true}]).soParciais, false);
+});
+test('anos: ano que não cobre jan–dez dentro dos limites é parcial', () => {
+  const meses = [];
+  for (let a = 2023; a <= 2025; a++) for (let m = 1; m <= 12; m++) { const k = a + '-' + String(m).padStart(2, '0'); if (k >= '2023-03' && k <= '2025-10') meses.push({chave: k, rotulo: k, valor: 100, parcial: false}); }
+  const r = D.anos(meses, '2023-03-01', '2025-10-31');
+  assert.deepEqual(r.map(a => [a.chave, a.valor, a.parcial]), [['2023', 1000, true], ['2024', 1200, false], ['2025', 1000, true]]);
+  assert.equal(r[0].nota, ' (parcial)'); assert.equal(r[1].nota, '');
+});
