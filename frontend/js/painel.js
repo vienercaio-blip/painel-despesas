@@ -876,9 +876,18 @@ function renderCategorias(){
   $('catList').innerHTML = item(OTHER, 'Para revisar', nRev ? '<span class="num">'+nRev+'</span> '+(nRev===1 ? 'lançamento' : 'lançamentos') : '✓ Tudo revisado', 'rev'+(nRev ? '' : ' zerado'))+
     L.comGastos.map(function(c){ var n = nC[c.nome]||0; return item(c.nome, esc(c.nome)+tagFixa(c.nome), '<span class="num">'+brl0.format(c.v)+'</span><br>'+n+(n===1?' lançamento':' lançamentos')); }).join('')+
     L.semGastos.map(function(n){ return item(n, esc(n)+tagFixa(n), 'sem gastos', 'sem'); }).join('');
+  animarListaOrg(view);
   $('oNova').setAttribute('aria-pressed', String(view==='nova'));
   $('oRegras').setAttribute('aria-pressed', String(view==='regras'));
-  /* detalhe */
+  /* detalhe: entra deslizando quando a escolha muda */
+  var escolhaAgora = view+'|'+(view==='cat' || view==='rev' ? state.cat : '');
+  var entra = state.orgEscolha!==undefined && escolhaAgora!==state.orgEscolha && !REDUZIR.matches;
+  state.orgEscolha = escolhaAgora; state.orgEntra = entra;
+  var det = document.querySelector('#viewCategorias .cat-detail');
+  det.classList.remove('o-entra'); if (entra){ void det.offsetWidth; det.classList.add('o-entra'); }
+  /* 8: Para revisar acabou de zerar */
+  var festa = state.orgRevAntes>0 && nRev===0 && !REDUZIR.matches;
+  state.orgRevAntes = nRev;
   $('subLanc').hidden = true;
   $('oCatAcoes').hidden = view!=='cat';
   $('subOrigem').hidden = !(view==='cat' || view==='rev');
@@ -892,7 +901,7 @@ function renderCategorias(){
   $('orTitle').textContent = view==='rev' ? 'Origens sem categoria' : 'Origens';
   if (!list.length){
     $('cdName').innerHTML = view==='rev' ? 'Para revisar' : esc(name)+tagFixa(name);
-    $('cdFacts').innerHTML = view==='rev' ? '<span class="o-tudo">✓ Tudo revisado! Nenhum lançamento sem categoria.</span>' : '<span>'+span+'</span><span>Nenhum lançamento nesta categoria neste extrato.</span>';
+    $('cdFacts').innerHTML = view==='rev' ? '<span class="o-tudo'+(festa ? ' o-festa' : '')+'">✓ Tudo revisado! Nenhum lançamento sem categoria.'+(festa ? confetes() : '')+'</span>' : '<span>'+span+'</span><span>Nenhum lançamento nesta categoria neste extrato.</span>';
     $('origins').innerHTML = ''; $('cdRows').innerHTML = '';
     return;
   }
@@ -908,17 +917,17 @@ function renderCategorias(){
   $('cdName').innerHTML = view==='rev' ? 'Para revisar' : esc(name)+tagFixa(name);
   $('cdFacts').innerHTML =
     '<span style="flex-basis:100%">'+span+'</span>'+
-    '<span>Total <b>'+brl.format(total)+'</b></span>'+
+    '<span>Total <b class="o-total">'+brl.format(total)+'</b></span>'+
     '<span><b>'+pct.format(outs?total/outs:0)+'</b> das saídas</span>'+
     '<span><b>'+list.length+'</b> '+(list.length===1?'lançamento':'lançamentos')+'</span>'+
     '<span><b>'+origins.length+'</b> '+(origins.length===1?'origem':'origens diferentes')+'</span>'+
     '<span>Média <b>'+brl.format(total/list.length)+'</b></span>';
 
   var opts = function(sel){ return catsCom(sel).map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join(''); };
-  $('origins').innerHTML = origins.map(function(o){
+  $('origins').innerHTML = origins.map(function(o, iO){
     return '<li class="origin"><div class="who"><strong>'+esc(o.label)+'</strong>'+
       '<span class="meta"><span class="num">'+brl.format(o.v)+'</span> · '+o.n+(o.n===1?' pagamento':' pagamentos')+' · último em '+fmtDate(o.last)+' · '+pct.format(o.v/total)+' da categoria</span>'+
-      '<span class="track"><span class="bar" style="width:'+Math.max(0, maxO>0 ? o.v/maxO*100 : 0).toFixed(1)+'%"></span></span></div>'+
+      '<span class="track"><span class="bar" style="--d:'+Math.min(iO, 12)+';width:'+Math.max(0, maxO>0 ? o.v/maxO*100 : 0).toFixed(1)+'%"></span></span></div>'+
       '<label>Mover todos para <select data-origin="'+esc(o.key)+'" aria-label="Mover todos os pagamentos de '+esc(o.label)+'">'+opts(name)+'</select></label></li>';
   }).join('');
 
@@ -931,6 +940,9 @@ function renderCategorias(){
       '<td class="rule-cell"><select data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+opts(catOf(t))+'</select></td>'+
       '<td class="r num">'+brl.format(t.value)+'</td></tr>';
   }).join('');
+  var tot = $('cdFacts').querySelector('.o-total');
+  if (tot && entra) contarDe(tot, 0, total, function(v){ return brl.format(v); });
+  if (state.orgSalvo){ state.orgSalvo = false; if (!REDUZIR.matches){ var cn = $('cdName'); cn.classList.remove('o-salvo'); void cn.offsetWidth; cn.classList.add('o-salvo'); } }
 }
 
 /* ---------- dashboard ---------- */
@@ -2139,6 +2151,29 @@ $('fCat').addEventListener('change', function(e){
   renderTable();
 });
 function renderOrganizar(){ renderCategorias(); renderRules(); renderCustom(); }
+/* lista de Organizar: o marcador dourado desliza até a escolhida; a categoria nova brilha */
+function animarListaOrg(view){
+  var lista = $('catList'), a = lista.querySelector('[aria-current="true"]');
+  var m = document.createElement('span'); m.id = 'oMarca'; m.setAttribute('aria-hidden', 'true');
+  lista.insertBefore(m, lista.firstChild);
+  if (!a){ m.hidden = true; state.orgMarca = null; }
+  else {
+    var ant = state.orgMarca, alvo = {top:a.offsetTop, h:a.offsetHeight};
+    if (ant && !REDUZIR.matches){ m.style.top = ant.top+'px'; m.style.height = ant.h+'px'; void m.offsetWidth; m.classList.add('anda'); }
+    m.style.top = alvo.top+'px'; m.style.height = alvo.h+'px';
+    state.orgMarca = alvo;
+  }
+  if (state.catNova){ var nv = lista.querySelector('[data-cat="'+CSS.escape(state.catNova)+'"]'); if (nv && !REDUZIR.matches) nv.classList.add('o-nova'); state.catNova = null; }
+}
+function confetes(){
+  var cores = ['var(--accent)','var(--good)','var(--s2)','var(--warn)','var(--bad)','var(--accent)','var(--good)','var(--s2)'];
+  return cores.map(function(c, i){ var ang = i/cores.length*Math.PI*2; return '<i class="o-confete" aria-hidden="true" style="background:'+c+';--x:'+Math.round(Math.cos(ang)*80)+'px;--y:'+Math.round(Math.sin(ang)*50-20)+'px"></i>'; }).join('');
+}
+/* algo sai da lista: desliza para o lado antes de redesenhar */
+function sairDepois(el, fn){
+  if (!el || REDUZIR.matches){ fn(); return; }
+  el.classList.remove('o-nova'); el.classList.add('o-saindo'); setTimeout(fn, 400);
+}
 $('catList').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
   keepScroll(function(){ state.cat = b.dataset.cat; state.catView = b.dataset.cat===OTHER ? 'rev' : 'cat'; state.editingCat = null; renderOrganizar(); });
@@ -2384,7 +2419,7 @@ function doEdit(d, id, orig, name, type, kwTxt){
     refreshFixed();
     return reclassify();
   }).then(function(){
-    state.editingCat = null;
+    state.editingCat = null; state.orgSalvo = true;
     ruleMsg('Categoria "'+name+'" atualizada'+(name!==orig ? ' (antes "'+orig+'"). Regras e correções foram levadas para o novo nome.' : '.'));
     render();
   }).catch(falhou);
@@ -2428,7 +2463,7 @@ $('customList').addEventListener('click', function(e){
         return reclassify();
       }).then(function(){
         ruleMsg('Categoria "'+name+'" excluída. Os lançamentos dela voltaram para a classificação automática.');
-        render();
+        sairDepois($('catList').querySelector('[data-cat="'+CSS.escape(name)+'"]'), render);
       }).catch(falhou);
     } });
 });
@@ -2445,7 +2480,7 @@ $('rulesList').addEventListener('click', function(e){
       API.excluirRegra(origem).then(function(){
         delete state.rules[origem];
         ruleMsg('Regra excluída. Os lançamentos voltaram para a classificação automática.');
-        render();
+        sairDepois(d.closest('li'), render);
       }).catch(falhou);
     } });
 });
