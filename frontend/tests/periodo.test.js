@@ -141,3 +141,26 @@ test('lerData: só anos entre 1900 e 2100', () => {
   assert.equal(P.lerData('01/01/2101'), null);
   assert.equal(P.lerData('01/01/1999'), '1999-01-01');
 });
+
+// ---- comparar em Despesas e Lançamentos ----
+test('posicoes: meses, semanas e dias de um período', () => {
+  const m = P.posicoes(P.deMeses('2025-11', '2026-02'), 'mes');
+  assert.deepEqual(m.map(x => x.chave), ['2025-11', '2025-12', '2026-01', '2026-02']);
+  assert.deepEqual(m.map(x => x.rotulo), ['nov/25', 'dez/25', 'jan/26', 'fev/26']);
+  const s = P.posicoes({tipo: 'mes', y: 2026, m: 9}, 'semana');
+  assert.equal(s[0].chave, '2026-09-28');
+  assert.equal(s[s.length - 1].chave, '2026-10-26');
+  assert.equal(P.posicoes(P.deDias('2026-03-01', '2026-03-03'), 'dia').length, 3);
+});
+test('resumoComparacao: frases da comparação', () => {
+  const A = {nome: 'jan–jun/26', ins: 6000, outs: 4800, divisor: 6, cat: {Mercado: 1200, Delivery: 600, Moradia: 3000}};
+  const B = {nome: 'jul–dez/25', ins: 6000, outs: 5400, divisor: 6, cat: {Mercado: 1800, Delivery: 360, Moradia: 3240}};
+  const r = P.comparar(A, B);
+  const f = P.resumoComparacao(r, A, B, 'Moradia', 'Moradia').map(x => x.replace(/\s/g, ' '));
+  assert.equal(f[0], r.veredito.texto.replace(/\s/g, ' '));
+  assert.ok(f.includes('Saiu R$ 100 a menos por mês que em jul–dez/25.'));
+  assert.ok(f.includes('O que mais subiu: Delivery (+R$ 40/mês).'));
+  assert.ok(f.includes('O que mais caiu: Mercado (−R$ 100/mês).'));
+  assert.ok(f.includes('A maior despesa continua sendo Moradia.'));
+  assert.ok(P.resumoComparacao(r, A, B, 'Moradia', 'Mercado').map(x => x.replace(/\s/g, ' ')).includes('A maior despesa passou de Mercado para Moradia.'));
+});

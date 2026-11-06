@@ -144,6 +144,30 @@ function cobertura(p, inicio, fim){
 }
 function sobrepoe(a, b){ var x = limites(a), y = limites(b); return !x || !y || (x.de<=y.ate && y.de<=x.ate); }
 
+/* as unidades (mês, semana ou dia) que o período cobre, em ordem, para alinhar dois períodos */
+function posicoes(p, unidade){
+  var l = limites(p); if (!l) return [];
+  var r = [], k;
+  if (unidade==='mes'){
+    for (k = l.de.slice(0,7); k<=l.ate.slice(0,7); k = somaMeses(k, 1)){ var c = deChave(k); r.push({chave:k, rotulo:abrev(c.y, c.m, true)}); }
+  } else if (unidade==='semana'){
+    for (k = semanaDe(dataDe(l.de)); k<=l.ate; k = somaDias(k, 7)) r.push({chave:k, rotulo:ddmm(k)});
+  } else {
+    for (k = l.de; k<=l.ate; k = somaDias(k, 1)) r.push({chave:k, rotulo:ddmm(k)});
+  }
+  return r;
+}
+/* frases do Resumo de Despesas comparando (sem os avisos) */
+function resumoComparacao(r, A, B, maiorA, maiorB){
+  var f = [r.veredito.texto], saiu = r.linhas[1];
+  if (Math.abs(saiu.dif)>=0.5) f.push('Saiu '+brl0.format(Math.abs(saiu.dif))+(saiu.dif>0 ? ' a mais' : ' a menos')+' por mês que em '+B.nome+'.');
+  else f.push('Saiu quase o mesmo por mês que em '+B.nome+'.');
+  if (r.mudou.altas.length) f.push('O que mais subiu: '+r.mudou.altas[0].nome+' (+'+brl0.format(r.mudou.altas[0].dif)+'/mês).');
+  if (r.mudou.quedas.length) f.push('O que mais caiu: '+r.mudou.quedas[0].nome+' (−'+brl0.format(Math.abs(r.mudou.quedas[0].dif))+'/mês).');
+  if (maiorA && maiorB) f.push(maiorA===maiorB ? 'A maior despesa continua sendo '+maiorA+'.' : 'A maior despesa passou de '+maiorB+' para '+maiorA+'.');
+  return f;
+}
+
 /* comparação de dois períodos, sempre por mês */
 function comparar(A, B){
   var a = {ins:A.ins/A.divisor, outs:A.outs/A.divisor}, b = {ins:B.ins/B.divisor, outs:B.outs/B.divisor};
@@ -170,7 +194,7 @@ function comparar(A, B){
 }
 
 return { contem:contem, anterior:anterior, nomeAnterior:nomeAnterior, nome:nome, curto:curto, deMeses:deMeses, deDias:deDias,
-  atalhos:atalhos, atalhosComparar:atalhosComparar, limites:limites, cobertura:cobertura, sobrepoe:sobrepoe, ddmmaaaa:ddmmaaaa, lerData:lerData, validar:validar, fatorMes:fatorMes, comparar:comparar,
+  atalhos:atalhos, atalhosComparar:atalhosComparar, limites:limites, cobertura:cobertura, posicoes:posicoes, resumoComparacao:resumoComparacao, sobrepoe:sobrepoe, ddmmaaaa:ddmmaaaa, lerData:lerData, validar:validar, fatorMes:fatorMes, comparar:comparar,
   chaveDe:function(d){ return chave(d.getFullYear(), d.getMonth()); }, iso:iso };
 })();
 if (typeof window!=='undefined') window.Periodo = Periodo;
