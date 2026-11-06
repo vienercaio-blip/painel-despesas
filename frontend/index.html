@@ -715,27 +715,22 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <section class="card ajuda-quadro" role="dialog" id="oAjuda" aria-labelledby="oAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="oAjudaT" tabindex="-1">Como funciona a página Organizar</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
-        <p class="ajuda-lead">Aqui você ensina o site a classificar os seus gastos. O que você muda aqui pode valer também para os próximos extratos.</p>
+        <p class="ajuda-lead">Aqui você arruma as categorias de todo o extrato: o que ficou sem categoria, para onde vai cada origem, as suas categorias e as regras.</p>
         <div class="ajuda-grade">
           <div>
-            <h3>1. Categorias</h3>
-            <p>À esquerda, a lista de categorias com quanto cada uma somou. Clique numa para ver os detalhes dela à direita.</p>
+            <h3>1. Para revisar</h3>
+            <p>Fica no topo da lista. Mostra as saídas que o site não soube classificar, agrupadas por origem (a descrição do extrato). Use <b>Mover todos para</b> para mandar uma origem inteira para a categoria certa; o site pergunta se vale também nos próximos extratos.</p>
           </div>
           <div>
-            <h3>2. Origens</h3>
-            <p>Os pagamentos da categoria agrupados pela descrição do extrato. Por exemplo, todas as compras no mesmo mercado aparecem juntas, com o total.</p>
+            <h3>2. Uma categoria</h3>
+            <ul><li>Clique numa categoria da lista para ver o total, as origens e as regras dela.</li>
+            <li><b>Editar</b>: nome, tipo (fixa ou variável) e palavras-chave. Fixas entram em "Contas fixas" no Dashboard e em Despesas.</li>
+            <li><b>Excluir</b> só aparece nas categorias criadas por você; as do site têm <b>Restaurar padrão</b> depois de editadas.</li>
+            <li>As categorias sem gastos neste extrato ficam no fim da lista.</li></ul>
           </div>
           <div>
-            <h3>3. Lançamentos</h3>
-            <p>Cada lançamento da categoria. "Identificado por" mostra a palavra do extrato que fez o site escolher aquela categoria.</p>
-          </div>
-          <div>
-            <h3>4. Regras</h3>
-            <p>As mudanças de categoria que você pediu para manter nos próximos extratos. Elas valem para todos os extratos, inclusive os que você ainda vai enviar.</p>
-          </div>
-          <div>
-            <h3>5. Criar</h3>
-            <p>Crie uma categoria sua com um nome e palavras-chave. Os lançamentos cuja descrição tem uma dessas palavras entram nela. A aba "Criadas" lista as suas categorias.</p>
+            <h3>3. Nova categoria e regras</h3>
+            <p><b>+ Nova categoria</b> cria uma categoria sua, que vale em todos os extratos. <b>Todas as regras</b> lista as regras "vale para os próximos extratos" (inclusive as de entradas e de dinheiro guardado), com o botão de excluir.</p>
           </div>
         </div>
       </section>
@@ -744,6 +739,10 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <nav class="card cat-list" aria-labelledby="catListTitle">
         <h2 id="catListTitle">Categorias</h2>
         <div id="catList" class="scrolly cat-scroll"></div>
+        <div class="o-acoes">
+          <button type="button" class="btn btn-sm" id="oNova" data-oview="nova" aria-pressed="false">+ Nova categoria</button>
+          <button type="button" class="link-btn" id="oRegras" data-oview="regras" aria-pressed="false">Todas as regras <span class="cnt" id="cntRegras"></span></button>
+        </div>
       </nav>
       <div class="cat-detail">
         <section class="card">
@@ -751,14 +750,9 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
             <h2 id="cdName">—</h2>
             <div class="facts" id="cdFacts"></div>
           </div>
+          <div class="o-cat-acoes" id="oCatAcoes"><ul class="saved" id="customList"></ul></div>
           <p class="rule-msg" id="ruleMsg" role="status" hidden></p>
         </section>
-        <div class="subnav" role="tablist" aria-label="Seções da categoria">
-          <button type="button" role="tab" id="tabOrigem" data-sub="origem" aria-selected="true" aria-controls="subOrigem">Origens</button>
-          <button type="button" role="tab" id="tabLanc" data-sub="lanc" aria-selected="false" aria-controls="subLanc">Lançamentos <span class="cnt" id="cntLanc"></span></button>
-          <button type="button" role="tab" id="tabNova" data-sub="nova" aria-selected="false" aria-controls="subNova">Criar</button>
-          <button type="button" role="tab" id="tabRegras" data-sub="regras" aria-selected="false" aria-controls="subRegras">Regras <span class="cnt" id="cntRegras"></span></button>
-        </div>
         <section class="card" id="subOrigem" role="tabpanel" aria-labelledby="tabOrigem">
           <div class="card-head"><h2 id="orTitle">Origens</h2><span class="hint">Pagamentos agrupados pela descrição do extrato</span></div>
           <ul class="origins scrolly" id="origins"></ul>
@@ -775,11 +769,11 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <section class="card" id="subRegras" role="tabpanel" aria-labelledby="tabRegras" hidden>
       <div class="card-head"><h2 id="rlTitle">Regras</h2><span class="hint">Valem para todos os extratos, inclusive os próximos</span></div>
       <ul class="saved scrolly" id="rulesList"></ul>
-      <p class="empty" id="rulesEmpty">Você ainda não criou nenhuma regra. Mude a categoria de um lançamento com a opção "Lembrar para esta origem" e ela aparece aqui.</p>
+      <p class="empty" id="rulesEmpty">Nenhuma regra ainda. Para criar uma, corrija a categoria de um lançamento em Lançamentos e escolha que a mudança vale para os próximos extratos.</p>
     </section>
         <section class="card" id="subNova" role="tabpanel" aria-labelledby="tabNova" hidden>
-          <div class="card-head"><h2>Criar</h2><span class="hint">Fica disponível em todos os extratos</span></div>
-          <div class="seg subseg" role="tablist" aria-label="Criar categoria">
+          <div class="card-head"><h2>Nova categoria</h2><span class="hint">Fica disponível em todos os extratos</span></div>
+          <div class="seg subseg" role="tablist" aria-label="Criar categoria" hidden>
             <button type="button" role="tab" id="tabNcNew" data-nc="new" aria-selected="true" aria-controls="ncNew">Nova</button>
             <button type="button" role="tab" id="tabNcList" data-nc="list" aria-selected="false" aria-controls="ncList">Criadas <span class="cnt" id="cntCustom"></span></button>
           </div>
@@ -811,7 +805,6 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
               <input id="catQ" type="search" placeholder="Procurar categoria" aria-label="Procurar categoria" autocomplete="off">
             </label>
             <p class="foot" id="catQInfo" aria-live="polite"></p>
-            <ul class="saved scrolly" id="customList"></ul>
             <p class="empty" id="customEmpty">Nenhuma categoria criada ainda. Use "Nova categoria" para criar a primeira.</p>
           </div>
         </section>

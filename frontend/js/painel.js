@@ -127,9 +127,11 @@ function setRule(origin, label, cat){
 }
 function renderRules(){
   renderPrefNotes();
-  var keys = Object.keys(state.rules).sort(function(a,b){ return (state.rules[b].at||'').localeCompare(state.rules[a].at||''); });
+  var todas = Object.keys(state.rules).sort(function(a,b){ return (state.rules[b].at||'').localeCompare(state.rules[a].at||''); });
+  var keys = state.catView==='cat' ? todas.filter(function(k){ return state.rules[k].cat===state.cat; }) : todas;
   $('rulesEmpty').hidden = keys.length>0;
-  $('cntRegras').textContent = keys.length ? keys.length : '';
+  $('cntRegras').textContent = todas.length ? todas.length : '';
+  $('rlTitle').textContent = state.catView==='cat' ? 'Regras desta categoria' : 'Regras';
   $('rulesList').innerHTML = keys.map(function(k){
     var r = state.rules[k];
     var n = state.tx.filter(function(t){return t.origin===k;}).length;
@@ -777,7 +779,6 @@ function render(){
   var cats = Object.keys(byCat).map(function(k){return {name:k, v:byCat[k]};}).sort(function(a,b){
     if (a.name===OTHER) return 1; if (b.name===OTHER) return -1; return b.v-a.v; });
   var top = cats.filter(function(c){return c.name!==OTHER;})[0] || cats[0];
-  if (!state.cat || !byCat[state.cat]) state.cat = top ? top.name : null;
   renderDespesas(tx, prev);
   renderTable();
   renderCategorias();
@@ -859,23 +860,43 @@ window.addEventListener('resize', function(){
 });
 
 function renderCategorias(){
-  var base = state.tx, outs = 0, byC = {};
-  base.forEach(function(t){ if (saiDaConta(t)){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; } });
-  var S = { outs: outs, cats: Object.keys(byC).map(function(k){return {name:k, v:byC[k]};}).sort(function(a,b){
-    if (a.name===OTHER) return 1; if (b.name===OTHER) return -1; return b.v-a.v; }) };
-  if (!state.cat || !byC[state.cat]) state.cat = S.cats.length ? S.cats[0].name : null;
+  var base = state.tx, outs = 0, byC = {}, nC = {};
+  base.forEach(function(t){ if (saiDaConta(t)){ outs -= t.value; var c = catOf(t); byC[c] = (byC[c]||0) - t.value; nC[c] = (nC[c]||0)+1; } });
+  var L = Analise.listaOrganizar(byC, allDefs().filter(function(d){ return !d.interna; }).map(function(d){ return d.name; }), OTHER, INTERNOS);
+  var view = state.catView || 'cat';
+  var existe = function(n){ return n===OTHER || allCats().indexOf(n)!==-1; };
+  if ((view==='cat' || view==='rev') && (!state.cat || !existe(state.cat))) state.cat = L.comGastos.length ? L.comGastos[0].nome : OTHER;
+  if (view==='cat' && state.cat===OTHER) view = 'rev';
+  if (view==='rev') state.cat = OTHER;
+  state.catView = view;
+  /* lista: Para revisar, categorias com gastos e sem gastos */
+  var nRev = nC[OTHER]||0, escolhida = function(n){ return (view==='cat' || view==='rev') && n===state.cat; };
+  var item = function(n, rotulo, meta, cls){ return '<button type="button" class="cat-item'+(cls ? ' '+cls : '')+'" data-cat="'+esc(n)+'" aria-current="'+escolhida(n)+'"><span class="n">'+rotulo+'</span><span class="m">'+meta+'</span></button>'; };
+  var tagFixa = function(n){ return FIXED.indexOf(n)!==-1 ? ' <span class="ctag fixa">fixa</span>' : ''; };
+  $('catList').innerHTML = item(OTHER, 'Para revisar', nRev ? '<span class="num">'+nRev+'</span> '+(nRev===1 ? 'lançamento' : 'lançamentos') : '✓ Tudo revisado', 'rev'+(nRev ? '' : ' zerado'))+
+    L.comGastos.map(function(c){ var n = nC[c.nome]||0; return item(c.nome, esc(c.nome)+tagFixa(c.nome), '<span class="num">'+brl0.format(c.v)+'</span><br>'+n+(n===1?' lançamento':' lançamentos')); }).join('')+
+    L.semGastos.map(function(n){ return item(n, esc(n)+tagFixa(n), 'sem gastos', 'sem'); }).join('');
+  $('oNova').setAttribute('aria-pressed', String(view==='nova'));
+  $('oRegras').setAttribute('aria-pressed', String(view==='regras'));
+  /* detalhe */
+  $('subLanc').hidden = true;
+  $('oCatAcoes').hidden = view!=='cat';
+  $('subOrigem').hidden = !(view==='cat' || view==='rev');
+  $('subRegras').hidden = !(view==='cat' || view==='regras');
+  $('subNova').hidden = view!=='nova';
+  if (view==='nova'){ $('cdName').textContent = 'Nova categoria'; $('cdFacts').innerHTML = '<span>Crie uma categoria sua. Ela fica disponível em todos os extratos.</span>'; showNc('new'); return; }
+  if (view==='regras'){ $('cdName').textContent = 'Todas as regras'; $('cdFacts').innerHTML = '<span>As regras valem para todos os extratos, inclusive os próximos.</span>'; return; }
   var span = base.length ? 'Todo o extrato, de '+fmtDate(base[0].date)+' a '+fmtDate(base[base.length-1].date) : '';
-  $('catList').innerHTML = S.cats.map(function(c){
-    var n = base.filter(function(t){return ehSaida(t) && catOf(t)===c.name;}).length;
-    return '<button type="button" class="cat-item" data-cat="'+esc(c.name)+'" aria-current="'+(c.name===state.cat)+'">'+
-      '<span class="n">'+esc(c.name)+'</span><span class="m"><span class="num">'+brl0.format(c.v)+'</span><br>'+n+(n===1?' lançamento':' lançamentos')+'</span></button>';
-  }).join('') || '<p class="empty">Nenhuma despesa no extrato.</p>';
-
   var name = state.cat;
   var list = base.filter(function(t){return ehSaida(t) && catOf(t)===name;});
-  if (!name || !list.length){ $('cdName').textContent='Nenhuma categoria'; $('cdFacts').innerHTML=''; $('origins').innerHTML=''; $('cdRows').innerHTML=''; return; }
+  $('orTitle').textContent = view==='rev' ? 'Origens sem categoria' : 'Origens';
+  if (!list.length){
+    $('cdName').innerHTML = view==='rev' ? 'Para revisar' : esc(name)+tagFixa(name);
+    $('cdFacts').innerHTML = view==='rev' ? '<span class="o-tudo">✓ Tudo revisado! Nenhum lançamento sem categoria.</span>' : '<span>'+span+'</span><span>Nenhum lançamento nesta categoria neste extrato.</span>';
+    $('origins').innerHTML = ''; $('cdRows').innerHTML = '';
+    return;
+  }
   var total = list.reduce(function(s,t){return s-t.value;},0);
-  $('cntLanc').textContent = list.length;
   var byO = {}, oOrder = [];
   list.forEach(function(t){
     if (!byO[t.origin]){ byO[t.origin]={key:t.origin, label:t.desc, v:0, n:0, last:t.date}; oOrder.push(t.origin); }
@@ -884,7 +905,7 @@ function renderCategorias(){
   var origins = oOrder.map(function(k){return byO[k];}).sort(function(a,b){return b.v-a.v;});
   var maxO = origins[0].v;
 
-  $('cdName').textContent = name;
+  $('cdName').innerHTML = view==='rev' ? 'Para revisar' : esc(name)+tagFixa(name);
   $('cdFacts').innerHTML =
     '<span style="flex-basis:100%">'+span+'</span>'+
     '<span>Total <b>'+brl.format(total)+'</b></span>'+
@@ -949,7 +970,7 @@ function renderCustom(){
     }
     var tag = d.builtin ? (d.edited ? '<span class="ctag">Padrão, editada</span>' : '<span class="ctag">Padrão</span>') : '<span class="ctag mine">Criada por você</span>';
     var kw = d.kws.length ? 'palavras: '+esc(d.kws.slice(0,8).join(', '))+(d.kws.length>8?' e mais '+(d.kws.length-8):'') : 'sem palavras-chave';
-    return '<li class="sv"><div class="svi"><strong>'+esc(d.name)+' '+tag+'</strong>'+
+    return '<li class="sv"><div class="svi"><strong class="o-tag">'+tag+'</strong>'+
       '<span>'+(d.interna ? 'não conta como entrada nem saída' : d.type==='fixo'?'Custo fixo':'Custo variável')+' · '+kw+' · '+n+(n===1?' lançamento':' lançamentos')+' neste extrato</span></div>'+
       '<div class="sva"><button type="button" class="btn" data-cedit="'+esc(d.id)+'">Editar</button>'+
       (d.builtin ? (d.edited ? '<button type="button" class="btn" data-creset="'+esc(d.id)+'">Restaurar padrão</button>' : '')
@@ -958,8 +979,8 @@ function renderCustom(){
   var nO = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===OTHER; }).length;
   var q = norm(state.catQ||'').trim();
   var match = function(name, kws){ return !q || norm(name).indexOf(q)!==-1 || kws.some(function(k){ return norm(k).indexOf(q)!==-1; }); };
-  var shown = defs.filter(function(d){ return d.id===state.editingCat || match(d.name, d.kws); });
-  var showOther = match(OTHER, []);
+  var shown = state.catView==='cat' ? defs.filter(function(d){ return d.name===state.cat; }) : [];
+  var showOther = false;
   var total = defs.length+1, count = shown.length+(showOther?1:0);
   $('catQInfo').textContent = q ? (count ? count+' de '+total+' categorias encontradas.' : 'Nenhuma categoria encontrada para "'+(state.catQ||'').trim()+'".') : '';
   $('customList').innerHTML = shown.map(row).join('') + (showOther ?
@@ -2117,10 +2138,14 @@ $('fCat').addEventListener('change', function(e){
   document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); });
   renderTable();
 });
+function renderOrganizar(){ renderCategorias(); renderRules(); renderCustom(); }
 $('catList').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
-  /* escolher uma categoria sempre mostra "De onde veio" */
-  keepScroll(function(){ state.cat = b.dataset.cat; showSub('origem'); renderCategorias(); });
+  keepScroll(function(){ state.cat = b.dataset.cat; state.catView = b.dataset.cat===OTHER ? 'rev' : 'cat'; state.editingCat = null; renderOrganizar(); });
+});
+document.querySelector('#viewCategorias .o-acoes').addEventListener('click', function(e){
+  var b = e.target.closest('[data-oview]'); if (!b) return;
+  keepScroll(function(){ state.catView = b.dataset.oview; state.editingCat = null; renderOrganizar(); });
 });
 var askState = null;
 var KIND_LABEL = {'criar-pagina':'criar página', 'renomear-pagina':'renomear página', 'excluir-pagina':'excluir página', 'mover-extrato':'mover extrato de página', 'renomear-extrato':'renomear extrato', 'reclass-local':'mudar a categoria só neste extrato', reclass:'mudar a categoria de lançamentos', criar:'criar categoria', editar:'editar categoria', 'excluir-categoria':'excluir categoria', restaurar:'restaurar categoria padrão', 'excluir-regra':'excluir regra', 'excluir-extrato':'excluir extrato salvo', 'excluir-vendas':'remover vendas da planilha', 'apagar-dados':'apagar todos os seus dados'};
@@ -2318,8 +2343,8 @@ function doCreate(name, type, kws){
     var n = state.tx.filter(function(t){ return ehSaida(t) && catOf(t)===name; }).length;
     $('ncName').value = ''; $('ncKw').value = ''; $('ncTypeVar').checked = true; $('ncPreview').textContent = '';
     ruleMsg('Categoria "'+name+'" criada.'+(kws.length ? ' '+n+(n===1?' lançamento foi classificado':' lançamentos foram classificados')+' nela pelas palavras-chave.' : ' Use "Mover para" ou a tabela de lançamentos para colocar despesas nela.'));
+    state.catView = 'cat'; state.cat = name; state.catNova = name;
     render();
-    showNc('list');
     if (CRIAR_PARA) voltarParaLancamentos(name);
   }).catch(falhou);
 }
@@ -2408,14 +2433,9 @@ $('customList').addEventListener('click', function(e){
     } });
 });
 function showSub(sub){
-  state.sub = sub;
-  [['origem','subOrigem','tabOrigem'],['lanc','subLanc','tabLanc'],['regras','subRegras','tabRegras'],['nova','subNova','tabNova']].forEach(function(x){
-    $(x[1]).hidden = x[0]!==sub; $(x[2]).setAttribute('aria-selected', x[0]===sub ? 'true':'false');
-  });
+  state.catView = sub==='nova' ? 'nova' : sub==='regras' ? 'regras' : 'cat';
+  if (state.loaded) renderOrganizar();
 }
-document.querySelector('.subnav').addEventListener('click', function(e){
-  var b = e.target.closest('[data-sub]'); if (b) keepScroll(function(){ showSub(b.dataset.sub); });
-});
 $('rulesList').addEventListener('click', function(e){
   var d = e.target.closest('[data-rdel]'); if (!d) return;
   var r = state.rules[d.dataset.rdel]; if (!r) return;
