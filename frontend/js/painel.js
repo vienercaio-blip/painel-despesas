@@ -1833,7 +1833,7 @@ function setView(){
   $('viewEconomia').hidden = !(v==='economia' && isD);
   var chegouDesp = v==='despesas' && $('viewDespesas').hidden;
   $('viewDespesas').hidden = v!=='despesas';
-  if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; render(); }   /* chegar: desenha na largura real e com movimento */
+  if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; $('xSaiu').dataset.v = '0'; state.despChegou = true; render(); }   /* chegar: desenha na largura real e com movimento */
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
@@ -3087,11 +3087,11 @@ function svgBarras(un, unid, opt){
   var gw = iw/bs.length, bw = Math.max(3, Math.min(34, gw*0.66));
   var passo = Math.max(1, Math.ceil(bs.length/(opt.rotulos||12)));
   var y = function(v){ return mT+ih-Math.max(0, v)/max*ih; };
-  var s = '<svg class="'+opt.cls+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opt.aria)+'">';
+  var s = '<svg class="'+opt.cls+'" style="--n:'+bs.length+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opt.aria)+'">';
   bs.forEach(function(b, i){
     var x = mL+gw*i+(gw-bw)/2, yt = y(b.valor), h = mT+ih-yt;
     var tip = '<b>'+esc(b.rotulo+(b.nota||''))+'</b><br>'+brl.format(b.valor)+(b.parcial && !b.nota ? ' (parcial)' : '');
-    s += '<g class="x-b'+(b.maior ? ' maior' : '')+(b.parcial ? ' parcial' : '')+'" data-tip="'+esc(tip)+'">'+
+    s += '<g class="x-b'+(b.maior ? ' maior' : '')+(b.parcial ? ' parcial' : '')+'" style="--d:'+i+'" data-tip="'+esc(tip)+'">'+
       '<rect class="hit" x="'+(mL+gw*i).toFixed(1)+'" y="'+mT+'" width="'+gw.toFixed(1)+'" height="'+ih+'"></rect>'+
       '<rect class="x-barra" x="'+x.toFixed(1)+'" y="'+yt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0, h).toFixed(1)+'" rx="'+Math.min(4, bw/2).toFixed(1)+'" style="--h:'+h.toFixed(1)+'px"></rect>'+
       (b.maior ? '<text class="x-maior-v" x="'+(x+bw/2).toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="'+(i===0 ? 'start' : i===bs.length-1 ? 'end' : 'middle')+'">'+brl0.format(b.valor)+'</text>' : '')+
@@ -3102,7 +3102,10 @@ function svgBarras(un, unid, opt){
 }
 function renderDespesas(tx, prev){
   var p = state.p, isWeek = p.tipo==='semana';
-  $('viewDespesas').classList.toggle('x-calmo', !!state.despCalmo);   /* redesenho sem mudar de período: nada cresce de novo */
+  var chaveP = JSON.stringify([state.p, state.cmp]);
+  var modo = state.despCalmo ? 'calmo' : (state.despChegou || !state.despChave) ? 'entrada' : chaveP!==state.despChave ? 'troca' : 'calmo';
+  state.despChave = chaveP; state.despChegou = false; state.despModo = modo;
+  ['calmo','entrada','troca'].forEach(function(m){ $('viewDespesas').classList.toggle('x-'+m, modo===m); });
   $('dCmpTopoDesp').hidden = !state.cmp;
   if (state.cmp){ renderDespesasComparacao(); return; }
   var months = {}; tx.forEach(function(t){ months[Periodo.chaveDe(t.date)] = 1; });
@@ -3123,7 +3126,11 @@ function renderDespesas(tx, prev){
   $('xSaiuSub').innerHTML = sub;
   var dv = Despesas.divisao(byCat, FIXED, outs);
   $('xTopo').dataset.total = outs.toFixed(2);
-  $('xDiv').innerHTML = '<i class="x-fix" style="width:'+dv.pFixas+'%"></i><i class="x-dia" style="width:'+dv.pDia+'%"></i>';
+  var velhas = {};
+  document.querySelectorAll('#xDiv i, #xCatList .x-cat').forEach(function(x){ var b = x.classList.contains('x-cat') ? x.querySelector('.bar') : x; if (b) velhas[x.dataset.cat || x.className] = b.style.width; });
+  var desliza = state.despModo==='troca' && !REDUZIR.matches;
+  var larg = function(chave, alvo){ return desliza ? 'width:'+(velhas[chave] || '0%')+'" data-w="'+alvo : 'width:'+alvo; };
+  $('xDiv').innerHTML = '<i class="x-fix" style="--d:0;'+larg('x-fix', dv.pFixas+'%')+'"></i><i class="x-dia" style="--d:1;'+larg('x-dia', dv.pDia+'%')+'"></i>';
   $('xDivLeg').innerHTML = '<span data-fixas="'+dv.fixas.toFixed(2)+'" data-pct="'+dv.pFixas+'"><i class="sw x-fix"></i>Contas fixas '+vm(dv.fixas)+' ('+dv.pFixas+'%)</span>'+
     '<span data-dia="'+dv.dia.toFixed(2)+'" data-pct="'+dv.pDia+'"><i class="sw x-dia"></i>Dia a dia '+vm(dv.dia)+' ('+dv.pDia+'%)</span>';
   /* categorias */
@@ -3135,13 +3142,14 @@ function renderDespesas(tx, prev){
   if (state.despAberta && vis.every(function(c){ return c.nome!==state.despAberta; })){ vis = cats; todas = true; }
   var maxC = cats.reduce(function(m, c){ return Math.max(m, c.v); }, 1);
   $('xCatsH').textContent = ehTotal ? 'Total: '+brl.format(outs)+' · clique para abrir' : 'Por mês · clique para abrir';
-  $('xCatList').innerHTML = vis.map(function(c){
+  $('xCatList').innerHTML = vis.map(function(c, i){
     var on = c.nome===state.despAberta;
     return '<li class="x-cat-li'+(c.nome===OTHER ? ' other' : '')+(on ? ' aberta' : '')+(on && state.despNova===c.nome ? ' x-nova' : '')+'"><button type="button" class="x-cat" data-cat="'+esc(c.nome)+'" aria-expanded="'+on+'">'+
       '<span class="name">'+esc(c.nome)+'</span><span class="amt num">'+vm(c.v)+' · '+pct.format(c.v/outs)+'</span>'+
-      '<span class="track"><span class="bar" style="width:'+(c.v/maxC*100).toFixed(1)+'%"></span></span></button>'+
+      '<span class="track"><span class="bar" style="--d:'+i+';'+larg(c.nome, (c.v/maxC*100).toFixed(1)+'%')+'"></span></span></button>'+
       (on ? detalheCategoria(c.nome, tx, isWeek) : '')+'</li>';
   }).join('');
+  if (desliza){ void $('xCatList').offsetWidth; document.querySelectorAll('#xDiv [data-w], #xCatList [data-w]').forEach(function(b){ b.style.width = b.dataset.w; }); }
   var bt = $('xCatTodas');
   bt.hidden = cats.length<=CAT_VISIVEIS + 1;
   bt.textContent = todas ? 'Mostrar menos' : 'Ver todas as '+cats.length+' categorias';
@@ -3162,15 +3170,15 @@ function renderDespesas(tx, prev){
   $('xMudou').hidden = !mu || !(mu.subiram.length + mu.cairam.length);
   if (mu){
     $('xMudouH').textContent = par.B.label+' contra '+par.A.label;
-    var pil = function(x, cls){ return '<button type="button" class="x-pil '+cls+'" data-cat="'+esc(x.nome)+'">'+esc(x.nome)+' <b>'+(x.d>0 ? '+' : '−')+brl0.format(Math.abs(x.d))+' ('+esc(x.txt)+')</b></button>'; };
-    $('xMudouL').innerHTML = mu.subiram.map(function(x){ return pil(x, 'sobe'); }).join('')+mu.cairam.map(function(x){ return pil(x, 'cai'); }).join('');
+    var pil = function(x, cls, i){ return '<button type="button" class="x-pil '+cls+'" style="--d:'+i+'" data-cat="'+esc(x.nome)+'">'+esc(x.nome)+' <b>'+(x.d>0 ? '+' : '−')+brl0.format(Math.abs(x.d))+' ('+esc(x.txt)+')</b></button>'; };
+    $('xMudouL').innerHTML = mu.subiram.map(function(x, i){ return pil(x, 'sobe', i); }).join('')+mu.cairam.map(function(x, i){ return pil(x, 'cai', mu.subiram.length+i); }).join('');
   }
   /* maiores gastos: um por origem, sem estornos nem movimentos internos */
   var gastos = Analise.maioresGastos(tx.filter(function(t){ return saiDaConta(t) && !t.estorno; })
     .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, chave:t.origin}; }), 5);
   $('xGastos').hidden = !gastos.length;
-  $('xGastosL').innerHTML = gastos.map(function(g){
-    return '<li><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd">'+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>';
+  $('xGastosL').innerHTML = gastos.map(function(g, i){
+    return '<li style="--d:'+i+'"><button type="button" data-gasto="'+esc(g.desc)+'" title="Ver nos lançamentos"><span class="gdt">'+fmtDate(g.data)+'</span><span class="gd">'+esc(g.desc)+'</span><span class="gv">'+brl.format(g.valor)+'</span></button></li>';
   }).join('');
   /* resumo em frases, só sobre gastos */
   var semCat = tx.filter(function(t){ return ehSaida(t) && catOf(t)===OTHER; });
@@ -3180,7 +3188,7 @@ function renderDespesas(tx, prev){
     cats: cats.filter(function(c){ return c.nome!==OTHER; }).map(function(c){ return {nome:c.nome, v:c.v}; }), outs:outs,
     diasRenda: !isWeek && insDia>0 && fixMes>0 ? Math.round(fixMes/insDia) : null });
   $('xResumo').hidden = !fr.length;
-  $('xResumoL').innerHTML = fr.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
+  $('xResumoL').innerHTML = fr.map(function(i, k){ return '<li class="'+(i.w?'warn':'')+'" style="--d:'+k+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
 }
 /* o detalhe da categoria aberta: mês a mês (gráfico B), onde foi o dinheiro e o atalho */
 function detalheCategoria(nome, tx, isWeek){
@@ -3204,12 +3212,13 @@ function contarValor(el, v, fmt){
   var chave = fmt(v);
   if (el.dataset.alvo===chave) return;
   el.dataset.alvo = chave;
-  if (REDUZIR.matches || !el.dataset.visto){ el.dataset.visto = '1'; el.textContent = chave; if (REDUZIR.matches) return; }
+  var de = parseFloat(el.dataset.v || '0') || 0; el.dataset.v = String(v);
+  if (REDUZIR.matches || state.despModo==='calmo'){ el.textContent = chave; return; }
   var ini = performance.now(), dur = 700;
   (function passo(agora){
     if (el.dataset.alvo!==chave) return;
     var k = Math.min(1, (agora-ini)/dur), e = 1-Math.pow(1-k, 3);
-    el.textContent = k<1 ? fmt(v*e) : chave;
+    el.textContent = k<1 ? fmt(de+(v-de)*e) : chave;
     if (k<1) requestAnimationFrame(passo);
   })(ini);
 }
