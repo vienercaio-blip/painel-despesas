@@ -199,6 +199,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     </div>
     <div class="p-caixa" id="pPers" role="dialog" aria-labelledby="pPersT" hidden>
       <h3 class="p-caixa-t" id="pPersT">Escolher o período</h3>
+      <div class="p-linha p-rapidos" id="pPersRapidos" role="group" aria-label="Atalhos"></div>
       <div class="seg" role="tablist" aria-label="Como escolher">
         <button type="button" role="tab" id="pPersMeses" aria-selected="true" aria-controls="pPersPMeses">Meses inteiros</button>
         <button type="button" role="tab" id="pPersDias" aria-selected="false" aria-controls="pPersPDias">Dias exatos</button>
@@ -226,6 +227,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <p class="form-err" id="pCmpErro" role="alert" hidden></p>
       <div class="p-botoes"><button type="button" class="btn btn-sm primary" id="pCmpOk">Comparar</button><button type="button" class="link-btn" id="pCmpCancelar">Cancelar</button></div>
     </div>
+  </section>
+  <section class="meses-caixa" id="mesesSec" aria-label="Resultado por mês">
     <div class="months-wrap"><div class="months" id="pMonths" role="group" aria-label="Resultado por mês"></div></div>
   </section>
 
@@ -272,8 +275,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
         <div>
           <h3>Escolher o período</h3>
-          <ul><li>Um clique nos atalhos: <b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> ou um ano. Eles contam a partir do último mês do extrato.</li>
-          <li>Clique num dos meses para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
+          <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos (<b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> e cada ano) ficam dentro de <b>Personalizado…</b>. Todos contam a partir do último mês do extrato.</li>
+          <li>Na faixa de meses, logo abaixo do quadro, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
           <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
         </div>
         <div>
@@ -573,8 +576,8 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         </div>
         <div>
           <h3>Escolher o período</h3>
-          <ul><li>Um clique nos atalhos: <b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> ou um ano. Eles contam a partir do último mês do extrato.</li>
-          <li>Clique num dos meses para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
+          <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos (<b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> e cada ano) ficam dentro de <b>Personalizado…</b>. Todos contam a partir do último mês do extrato.</li>
+          <li>Na faixa de meses, logo abaixo do quadro, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
           <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
         </div>
       </div>
@@ -617,7 +620,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <div class="ajuda-grade">
         <div>
           <h3>1. Período</h3>
-          <p>Use os atalhos (<b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>…), clique num dos meses ou use <b>Personalizado…</b> para escolher de um mês até outro ou dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
+          <p>Use <b>Todo o extrato</b> ou <b>Último mês</b>, clique num dos meses da faixa logo abaixo, ou abra <b>Personalizado…</b>: lá ficam <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b>, cada ano e a escolha de um mês até outro ou de dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
         </div>
         <div>
           <h3>2. Encontrar um lançamento</h3>

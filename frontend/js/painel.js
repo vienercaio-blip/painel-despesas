@@ -812,10 +812,16 @@ function renderPeriod(tx){
   var all = state.tx, p = state.p, meses = mesesDoExtrato();
   /* atalhos (contam a partir do último mês do extrato) */
   var ats = Periodo.atalhos(meses);
-  $('pAtalhos').innerHTML = ats.map(function(a){
+  /* na linha: Todo o extrato e Último mês; os outros atalhos ficam dentro do Personalizado… */
+  var naLinha = function(a){ return a.id==='tudo' || a.id==='ult1'; };
+  var botao = function(a){
     var on = !state.cmp && (p.tipo==='tudo' ? a.id==='tudo' : !!p.rotulo && p.rotulo===a.rotulo);
     return '<button type="button" class="ptab ini-pilula p-atalho" data-atalho="'+a.id+'" aria-pressed="'+on+'">'+esc(a.rotulo)+'</button>';
-  }).join('')+'<button type="button" class="ptab ini-pilula p-atalho" id="pPersBtn" data-acao="pers" aria-haspopup="dialog" aria-controls="pPers" aria-pressed="'+(!state.cmp && p.rotulo==='Personalizado')+'">Personalizado…</button>'+
+  };
+  var dentroAtivo = !state.cmp && !!p.rotulo && ats.some(function(a){ return !naLinha(a) && a.rotulo===p.rotulo; });
+  $('pPersRapidos').innerHTML = ats.filter(function(a){ return !naLinha(a); }).map(botao).join('');
+  $('pPersRapidos').hidden = !$('pPersRapidos').innerHTML;
+  $('pAtalhos').innerHTML = ats.filter(naLinha).map(botao).join('')+'<button type="button" class="ptab ini-pilula p-atalho" id="pPersBtn" data-acao="pers" aria-haspopup="dialog" aria-controls="pPers" aria-pressed="'+(!state.cmp && (p.rotulo==='Personalizado' || dentroAtivo))+'">Personalizado…</button>'+
     (meses.length>=2 ? '<button type="button" class="ptab ini-pilula p-atalho" id="pCmpBtn" data-acao="cmp" aria-haspopup="dialog" aria-controls="pCmp" aria-pressed="'+!!state.cmp+'"'+($('viewDash').hidden ? ' hidden' : '')+'>Comparar…</button>' : '');
   state.atalhos = ats;
   /* semana: só com um mês escolhido */
@@ -863,7 +869,7 @@ function ajustarEsteira(){
   caixa.classList.remove('parada');
   var half = faixa.scrollWidth/2;
   caixa.classList.toggle('parada', half <= caixa.clientWidth);
-  faixa.style.setProperty('--dur', Math.max(213, half/1.5).toFixed(1)+'s');
+  faixa.style.setProperty('--dur', (Math.max(213, half/1.5)/1.07).toFixed(1)+'s');   /* 7% mais rápida */
 }
 window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira(); });
 var redesenhoTimer = null;
@@ -1849,9 +1855,10 @@ function setView(){
   if ($('pCmpBtn')) $('pCmpBtn').hidden = v!=='dashboard';
   if (v!=='dashboard') $('pCmp').hidden = true;
   /* em Lançamentos o Período fica dentro do quadro dos lançamentos; nas outras, no lugar de sempre */
-  var ps = $('periodSec');
-  if (v==='lancamentos' && ps.parentNode!==$('lancPeriodo')){ $('lancPeriodo').appendChild(ps); ps.classList.add('embutido'); }
-  else if (v!=='lancamentos' && ps.parentNode===$('lancPeriodo')){ $('introSec').insertAdjacentElement('afterend', ps); ps.classList.remove('embutido'); }
+  var ps = $('periodSec'), ms = $('mesesSec');
+  if (v==='lancamentos' && ps.parentNode!==$('lancPeriodo')){ $('lancPeriodo').appendChild(ps); $('lancPeriodo').appendChild(ms); ps.classList.add('embutido'); ms.classList.add('embutido'); }
+  else if (v!=='lancamentos' && ps.parentNode===$('lancPeriodo')){ $('introSec').insertAdjacentElement('afterend', ps); ps.insertAdjacentElement('afterend', ms); ps.classList.remove('embutido'); ms.classList.remove('embutido'); }
+  ms.hidden = ps.hidden;
   if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
@@ -2369,6 +2376,14 @@ function abrirPersonalizado(){
   (state.persAba==='dias' ? $('pDeD') : $('pDeM')).focus();
 }
 function fecharPersonalizado(){ $('pPers').hidden = true; var b = $('pPersBtn'); if (b) b.focus(); }
+$('pPersRapidos').addEventListener('click', function(e){
+  var b = e.target.closest('[data-atalho]'); if (!b) return;
+  var a = (state.atalhos || []).filter(function(x){ return x.id===b.dataset.atalho; })[0];
+  if (!a) return;
+  $('pPers').hidden = true;
+  escolherPeriodo(JSON.parse(JSON.stringify(a.p)));
+  var pb = $('pPersBtn'); if (pb) pb.focus();
+});
 $('pPersMeses').addEventListener('click', function(){ persAba('meses'); });
 $('pPersDias').addEventListener('click', function(){ persAba('dias'); });
 $('pPersCancelar').addEventListener('click', fecharPersonalizado);

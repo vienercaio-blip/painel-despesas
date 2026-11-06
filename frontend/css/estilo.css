@@ -830,3 +830,10 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cmp-tab th,.cmp-tab td{white-space:normal;overflow-wrap:anywhere}
 @media (max-width:560px){.cmp-tab th,.cmp-tab td{font-size:12px;padding:6px 3px}.cmp-tab th:first-child{width:24%}}
 .cmp-aviso{display:block;margin-top:4px;font-size:13px;color:var(--warn)}
+/* esteira de meses: caixa própria, sem fundo, embaixo do Período */
+.meses-caixa{background:transparent;border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.meses-caixa.embutido{border:0;padding:0;margin:-6px 0 14px}
+.meses-caixa .mchip{background:transparent}
+.meses-caixa .mchip[aria-pressed="true"]{background:transparent;border-color:var(--accent);color:var(--ink)}
+.meses-caixa .mchip.no-intervalo{background:transparent;border-color:color-mix(in srgb,var(--accent) 55%,transparent)}
+.p-rapidos{gap:6px}
