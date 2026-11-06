@@ -869,7 +869,7 @@ function ajustarEsteira(){
   caixa.classList.remove('parada');
   var half = faixa.scrollWidth/2;
   caixa.classList.toggle('parada', half <= caixa.clientWidth);
-  faixa.style.setProperty('--dur', (Math.max(213, half/1.5)/1.07).toFixed(1)+'s');   /* 7% mais rápida */
+  faixa.style.setProperty('--dur', (Math.max(213, half/1.5)/1.07/1.10).toFixed(1)+'s');   /* 7% e depois mais 10% mais rápida */
 }
 window.addEventListener('resize', function(){ if (state.loaded) ajustarEsteira(); });
 var redesenhoTimer = null;

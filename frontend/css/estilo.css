@@ -837,3 +837,8 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .meses-caixa .mchip[aria-pressed="true"]{background:transparent;border-color:var(--accent);color:var(--ink)}
 .meses-caixa .mchip.no-intervalo{background:transparent;border-color:color-mix(in srgb,var(--accent) 55%,transparent)}
 .p-rapidos{gap:6px}
+/* "Como funciona": sozinho no canto superior direito de cada página */
+.app > .wrap{position:relative}
+.ajuda-topo{position:absolute;top:20px;right:max(16px,env(safe-area-inset-right,0px));margin:0;z-index:2}
+/* esteira de meses: a caixa não tem borda; os botões têm */
+.meses-caixa{border:0;padding:0 2px}
