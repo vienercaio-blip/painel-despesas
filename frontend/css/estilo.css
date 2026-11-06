@@ -922,3 +922,6 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .x-leg-cmp{margin-right:10px;white-space:nowrap}.x-leg-cmp .sw{margin-right:5px;vertical-align:-1px}
 .cat-cmp .x-cat .name::before{content:none}
 .x-calmo #xMesesG .x-barra,.x-calmo li:not(.x-nova) .x-aberta,.x-calmo li:not(.x-nova) .x-b .x-barra{animation:none}
+/* caixa do Período aberta: o destaque vai para o botão dela */
+.period.caixa-aberta .p-atalho[aria-pressed="true"]:not([aria-expanded="true"]){background:transparent;border-color:var(--line);color:var(--ink-2);font-weight:inherit}
+.p-atalho[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}

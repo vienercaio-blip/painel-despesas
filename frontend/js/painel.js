@@ -70,6 +70,14 @@ function mesesDoExtrato(){ var k = {}; state.tx.forEach(function(t){ k[Periodo.c
 /* escolher um período fecha as caixas Personalizado e Comparar */
 function escolherPeriodo(p){ fecharCaixasPeriodo(); state.p = p; state.cmp = null; render(); }
 function fecharCaixasPeriodo(){ ['pPers','pCmp'].forEach(function(id){ var c = document.getElementById(id); if (c) c.hidden = true; }); }
+/* com uma caixa aberta, só o botão dela fica destacado (aria-expanded); ao fechar, volta o período em uso */
+function sincronizarCaixas(){
+  var pers = $('pPers'), cmp = $('pCmp'), pb = $('pPersBtn'), cb = $('pCmpBtn');
+  if (pb) pb.setAttribute('aria-expanded', String(!pers.hidden));
+  if (cb) cb.setAttribute('aria-expanded', String(!cmp.hidden));
+  $('periodSec').classList.toggle('caixa-aberta', !pers.hidden || !cmp.hidden);
+}
+if (window.MutationObserver) ['pPers','pCmp'].forEach(function(id){ new MutationObserver(sincronizarCaixas).observe(document.getElementById(id), {attributes:true, attributeFilter:['hidden']}); });
 /* inP e periodName no formato antigo {y,m,w}: só a análise de Vendas usa */
 function periodName(p){
   if (p.w!=='all') return 'semana de '+weekLabel(p.w);
@@ -829,6 +837,7 @@ function renderPeriod(tx){
   /* esteira: repete a lista para o loop ser contínuo */
   $('pMonths').innerHTML = mh + mh.replace(/<button type="button" class="mchip"/g, '<button type="button" tabindex="-1" aria-hidden="true" class="mchip"');
   ajustarEsteira();
+  sincronizarCaixas();
 }
 /* a esteira só se move quando os meses não cabem na tela; se couberem, fica
    parada e sem a cópia repetida (senão apareceria "Ago Set Out Ago Set Out") */
