@@ -103,3 +103,43 @@ test('itens: "acima do normal" nunca sugere economizar mais que o gasto médio d
   assert.equal(r[0].economia, 276.67);
   assert.equal(r[0].base, 276.67);
 });
+
+// ---- correções da revisão ----
+test('simular: item "cancelar" de categoria sem gasto no período não soma nada', () => {
+  const I = [{id: 'rep:netflix', tipo: 'cancelar', cat: 'Assinaturas', base: 40}, {id: 'dica:tarifas', tipo: 'categoria', cat: 'Tarifas', base: 30, economia: 30}];
+  const r = Economia.simular(I, {'rep:netflix': true, 'dica:tarifas': true}, {Tarifas: 30});
+  assert.equal(r.porItem['rep:netflix'], 0);
+  assert.equal(r.total, 30);
+});
+test('simular: dica marcada sem mexer no controle vale a economia sugerida, não a arredondada', () => {
+  const I = [{id: 'dica:taxas', tipo: 'categoria', cat: 'Taxas', base: 100, economia: 25}];
+  assert.equal(Economia.simular(I, {'dica:taxas': true}, {Taxas: 100}).total, 25);
+  assert.equal(Economia.simular(I, {'dica:taxas': 0.5}, {Taxas: 100}).total, 50);
+});
+test('repetidos: precisa aparecer nos meses seguidos mais recentes do extrato', () => {
+  const ms = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+  const L = [];
+  // cancelada em março: não entra; espalhada (jan, mar, mai): não entra; seguida até o fim: entra
+  [1, 2, 3].forEach(m => L.push({data: d(2026, m, 5), desc: 'NETFLIX', valor: 40, origem: 'nf', cat: 'Assinaturas'}));
+  [1, 3, 5].forEach(m => L.push({data: d(2026, m, 5), desc: 'CURSO', valor: 100, origem: 'cu', cat: 'Lazer'}));
+  [4, 5, 6].forEach(m => L.push({data: d(2026, m, 5), desc: 'SPOTIFY', valor: 22, origem: 'sp', cat: 'Assinaturas'}));
+  // último mês do extrato incompleto: cobrança até o penúltimo mês ainda conta
+  [3, 4, 5].forEach(m => L.push({data: d(2026, m, 20), desc: 'ACADEMIA', valor: 99, origem: 'ac', cat: 'Academia'}));
+  const r = Economia.repetidos(L, {essenciais: [], minMeses: 3, tolerancia: 0.2, mesesExtrato: ms});
+  assert.deepEqual(r.map(x => x.origem).sort(), ['ac', 'sp']);
+});
+test('lerPrazo: aceita AAAA-MM e MM/AAAA; recusa mês inválido', () => {
+  assert.equal(Economia.lerPrazo('2027-12'), '2027-12');
+  assert.equal(Economia.lerPrazo('12/2027'), '2027-12');
+  assert.equal(Economia.lerPrazo('3/2027'), '2027-03');
+  assert.equal(Economia.lerPrazo('2027-13'), null);
+  assert.equal(Economia.lerPrazo('2027-00'), null);
+  assert.equal(Economia.lerPrazo('abc'), null);
+  assert.equal(Economia.lerPrazo(''), null);
+});
+test('barraMeta: o trecho claro só mostra o que de fato passa a sobrar', () => {
+  assert.deepEqual(Economia.barraMeta(300, 100, 500), {cheia: 60, clara: 20});
+  assert.deepEqual(Economia.barraMeta(-300, 200, 500), {cheia: 0, clara: 0});   // ainda faltaria R$ 100
+  assert.deepEqual(Economia.barraMeta(-100, 300, 500), {cheia: 0, clara: 40});
+  assert.deepEqual(Economia.barraMeta(450, 200, 500), {cheia: 90, clara: 10});
+});

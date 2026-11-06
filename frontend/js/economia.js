@@ -6,6 +6,12 @@ var Economia = (function(){
 function chaveMes(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function mediana(v){ var s = v.slice().sort(function(a, b){ return a-b; }), m = Math.floor(s.length/2); return s.length%2 ? s[m] : (s[m-1]+s[m])/2; }
 
+/* aparece nos n meses seguidos que terminam no último mês do extrato (ou no penúltimo,
+   porque o último pode estar incompleto) */
+function recente(meses, todos, n){
+  function seguidos(fim){ if (fim<n-1) return false; for (var i=fim-n+1; i<=fim; i++){ if (!meses[todos[i]]) return false; } return true; }
+  return seguidos(todos.length-1) || seguidos(todos.length-2);
+}
 /* gastos que se repetem: a mesma origem em minMeses meses ou mais, com o total de
    cada mês perto da mediana (tolerância), fora das categorias essenciais */
 function repetidos(lista, op){
@@ -19,6 +25,7 @@ function repetidos(lista, op){
   Object.keys(g).forEach(function(origem){
     var o = g[origem], tot = Object.keys(o.meses).map(function(k){ return o.meses[k]; });
     if (tot.length<op.minMeses || op.essenciais.indexOf(o.ult.cat)!==-1) return;
+    if (op.mesesExtrato && !recente(o.meses, op.mesesExtrato, op.minMeses)) return;   /* cancelado ou espalhado: não é "todo mês" */
     var med = mediana(tot);
     if (!(med>0) || tot.some(function(v){ return Math.abs(v-med) > med*op.tolerancia + 1e-9; })) return;
     r.push({ id:'rep:'+origem, origem:origem, desc:o.ult.desc, cat:o.ult.cat,
@@ -69,8 +76,10 @@ function simular(lista, marcados, gastoCat){
   lista.forEach(function(it){
     var m = marcados[it.id];
     if (!m || it.tipo==='info') return;
-    var v = it.tipo==='cancelar' ? it.base : (typeof m==='number' ? m : pctInicial(it))*it.base;
+    /* marcado sem mexer no controle (true) vale a economia sugerida; o controle dá a % escolhida */
+    var v = it.tipo==='cancelar' ? it.base : typeof m==='number' ? m*it.base : (it.economia!=null ? it.economia : pctInicial(it)*it.base);
     var lim = gastoCat[it.cat];
+    if (lim==null && it.cat) lim = 0;   /* categoria sem gasto no período: não há o que economizar */
     if (lim!=null){
       var livre = Math.max(0, lim-(usado[it.cat]||0));
       if (v>livre+1e-9){ v = livre; cortados.push(it.id); }
@@ -90,7 +99,21 @@ function objetivo(o, ritmo, fixo, hoje){
   return { falta:falta, porMes: mesesAte>=1 ? Math.ceil(falta/mesesAte) : falta, meses:meses, mesesFixo:mesesFixo, mesesAte:mesesAte, estado:estado };
 }
 
-return { repetidos:repetidos, acimaDoNormal:acimaDoNormal, itens:itens, pctInicial:pctInicial, simular:simular, objetivo:objetivo };
+/* prazo do objetivo: "AAAA-MM" (campo de mês) ou "MM/AAAA" (digitado) */
+function lerPrazo(txt){
+  var t = String(txt==null ? '' : txt).trim(), m = /^(\d{4})-(\d{1,2})$/.exec(t), a, mes;
+  if (m){ a = +m[1]; mes = +m[2]; }
+  else if ((m = /^(\d{1,2})\/(\d{4})$/.exec(t))){ a = +m[2]; mes = +m[1]; }
+  else return null;
+  return mes>=1 && mes<=12 ? a+'-'+String(mes).padStart(2,'0') : null;
+}
+/* barra da meta em %: dourada = o que sobrou; clara = só o que de fato passaria a sobrar a mais */
+function barraMeta(sobra, extra, meta){
+  var cheia = Math.min(100, Math.max(0, sobra)/meta*100), total = Math.min(100, Math.max(0, sobra+extra)/meta*100);
+  return { cheia:cheia, clara:Math.max(0, total-cheia) };
+}
+
+return { lerPrazo:lerPrazo, barraMeta:barraMeta, repetidos:repetidos, acimaDoNormal:acimaDoNormal, itens:itens, pctInicial:pctInicial, simular:simular, objetivo:objetivo };
 })();
 if (typeof window!=='undefined') window.Economia = Economia;
 if (typeof module!=='undefined') module.exports = Economia;

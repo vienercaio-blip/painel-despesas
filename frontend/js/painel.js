@@ -2787,14 +2787,17 @@ function ecoCfg(){
   return e;
 }
 function mesesTxt(n){ return n===1 ? '1 mês' : n+' meses'; }
-function prazoTxt(p){ var x = String(p).split('-'); return MESES[+x[1]-1].slice(0,3)+'/'+x[0]; }
+function prazoTxt(p){ var ok = Economia.lerPrazo(p); if (!ok) return '?'; var x = ok.split('-'); return MESES[+x[1]-1].slice(0,3)+'/'+x[0]; }
 function itensEconomia(E){
-  var essenciais = ['moradia','casa','impostos','dividas','educacao','folha','mercado','saude'].map(catByCode).filter(Boolean);
+  var essenciais = ['moradia','casa','impostos','dividas','educacao','folha','mercado','saude','transferencias','seguros'].map(catByCode).filter(Boolean);
   var saidas = state.tx.filter(function(t){ return saiDaConta(t) && !t.estorno; })
     .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, origem:t.origin, cat:catOf(t)}; });
+  var mesesExtrato = []; state.tx.forEach(function(t){ var k = t.date.getFullYear()+'-'+String(t.date.getMonth()+1).padStart(2,'0'); if (mesesExtrato.indexOf(k)===-1) mesesExtrato.push(k); });
+  mesesExtrato.sort();
   var acima = Economia.acimaDoNormal(E.meses, OTHER), ult = E.meses[E.meses.length-1];
-  var lista = Economia.itens({ dicas: Analise.acoes(E.ctx).lista, repetidos: Economia.repetidos(saidas, {essenciais:essenciais, minMeses:3, tolerancia:0.2}),
-    acima: acima, gastoCat: E.gastoCat });
+  var lista = Economia.itens({ dicas: Analise.acoes(E.ctx).lista, repetidos: Economia.repetidos(saidas, {essenciais:essenciais, minMeses:3, tolerancia:0.2, mesesExtrato:mesesExtrato}),
+    acima: acima, gastoCat: E.gastoCat })
+    .filter(function(it){ return it.tipo!=='cancelar' || E.gastoCat[it.cat]; });   /* sem gasto no período: nada a cancelar aqui */
   lista.forEach(function(it){
     var a = acima.filter(function(x){ return x.id===it.id; })[0];
     if (a) it.motivo = 'Em '+ult.name+' você gastou '+brl.format(a.agora)+' com '+a.cat+', '+brl.format(a.dif)+' acima da média.';
@@ -2806,7 +2809,7 @@ function resumoEconomia(){
   var E = state.eco;
   if (!E || E.semana) return {total:0, n:0};
   var lista = itensEconomia(E), todos = {};
-  lista.forEach(function(it){ if (it.tipo!=='info') todos[it.id] = it.tipo==='categoria' ? Economia.pctInicial(it) : true; });
+  lista.forEach(function(it){ if (it.tipo!=='info') todos[it.id] = true; });
   return { total: Economia.simular(lista, todos, E.gastoCat).total, n: Object.keys(todos).length };
 }
 function renderEconomia(){
@@ -2848,15 +2851,14 @@ function atualizarEconomia(){
     el.textContent = it.economia==null ? 'sem valor estimado' : '~'+brl0.format(v!=null ? v : it.economia)+'/mês';
     if (sim.cortados.indexOf(it.id)!==-1) el.insertAdjacentHTML('beforeend', '<small class="eco-lim">já está no limite do que você gasta em '+esc(it.cat)+'</small>');
     var pv = document.querySelector('#eLista [data-pctv="'+cssEsc(it.id)+'"]');
-    if (pv) pv.textContent = Math.round((typeof C.marcados[it.id]==='number' ? C.marcados[it.id] : Economia.pctInicial(it))*100)+'%';
+    if (pv) pv.textContent = Math.round((typeof C.marcados[it.id]==='number' ? C.marcados[it.id] : it.economia/it.base)*100)+'%';
   });
   /* meta */
   var meta = C.meta, sobra = E.sobraMes, extra = sim.total, tx;
   var cheia = 0, clara = 0;
   if (!meta) tx = 'Defina quanto quer sobrar por mês.';
   else {
-    cheia = Math.min(100, Math.max(0, sobra)/meta*100);
-    clara = Math.min(100-cheia, extra/meta*100);
+    var bm = Economia.barraMeta(sobra, extra, meta); cheia = bm.cheia; clara = bm.clara;
     if (sobra<0) tx = 'Faltou '+brl.format(-sobra)+' por mês no período';
     else if (sobra>=meta) tx = 'Meta batida: sobrou '+brl.format(sobra)+' de '+brl.format(meta);
     else tx = 'Sobrou '+brl.format(sobra)+' de '+brl.format(meta)+' · faltam '+brl.format(meta-sobra);
@@ -2942,7 +2944,7 @@ $('eLista').addEventListener('change', function(e){
   var C = ecoCfg();
   if (e.target.matches('input[type=checkbox][data-id]')){
     var it = ecoItem(e.target.dataset.id); if (!it) return;
-    if (e.target.checked) C.marcados[it.id] = it.tipo==='categoria' ? Economia.pctInicial(it) : true;
+    if (e.target.checked) C.marcados[it.id] = true;   /* vale a economia sugerida até a pessoa mexer no controle */
     else delete C.marcados[it.id];
     saveCfg(); renderEconomia();
     var volta = document.querySelector('#eLista input[data-id="'+cssEsc(it.id)+'"]'); if (volta) volta.focus();
@@ -2962,15 +2964,16 @@ function abrirObjetivo(){
   var o = ecoCfg().objetivo || {};
   state.ecoObjForm = true;
   $('eObjNome').value = o.nome || ''; $('eObjValor').value = o.valor ? numBR.format(o.valor) : '';
-  $('eObjPrazo').value = o.prazo || ''; $('eObjTenho').value = o.tenho ? numBR.format(o.tenho) : '';
+  var h = HOJE(); $('eObjPrazo').min = h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  $('eObjPrazo').value = Economia.lerPrazo(o.prazo) || ''; $('eObjTenho').value = o.tenho ? numBR.format(o.tenho) : '';
   $('eObjErro').hidden = true;
   atualizarEconomia(); $('eObjNome').focus();
 }
 $('eObjAbrir').addEventListener('click', abrirObjetivo);
 $('eObjEditar').addEventListener('click', abrirObjetivo);
 $('eObjSalvar').addEventListener('click', function(){
-  var valor = lerValor($('eObjValor').value), prazo = $('eObjPrazo').value;
-  if (!valor || !/^\d{4}-\d{2}$/.test(prazo)){ $('eObjErro').textContent = 'Preencha quanto quer juntar e até quando.'; $('eObjErro').hidden = false; return; }
+  var valor = lerValor($('eObjValor').value), prazo = Economia.lerPrazo($('eObjPrazo').value);
+  if (!valor || !prazo){ $('eObjErro').textContent = 'Preencha quanto quer juntar e até quando (mês e ano, por exemplo 12/2027).'; $('eObjErro').hidden = false; return; }
   ecoCfg().objetivo = { nome: $('eObjNome').value.trim().slice(0, 40) || 'Objetivo', valor:valor, prazo:prazo, tenho: lerValor($('eObjTenho').value) || 0 };
   state.ecoObjForm = false; saveCfg(); atualizarEconomia(); $('eObjEditar').focus();
 });
