@@ -270,6 +270,18 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <li><b>Ver mais detalhes</b> abre o Saldo (o dinheiro acumulado dia a dia), as Mudanças (categorias que mais mudaram) e outros detalhes.</li>
           <li><b>Exportar PDF</b>, no quadro de Período, gera um relatório para guardar ou imprimir.</li></ul>
         </div>
+        <div>
+          <h3>Escolher o período</h3>
+          <ul><li>Um clique nos atalhos: <b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> ou um ano. Eles contam a partir do último mês do extrato.</li>
+          <li>Clique num dos meses para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
+          <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
+        </div>
+        <div>
+          <h3>Comparar dois períodos</h3>
+          <p><b>Comparar…</b> mostra dois períodos lado a lado, sempre por mês, para que períodos de tamanhos diferentes sejam comparados de forma justa. Use os atalhos ("Este mês × mês passado", "Este ano × ano passado") ou escolha os dois períodos.</p>
+          <ul><li>A frase diz se <b>melhorou</b> ou <b>piorou</b> pelo que sobrou por mês.</li><li>A tabela mostra Entrou, Saiu e Sobrou de cada período e a diferença; as barras mostram as categorias que mais mudaram.</li>
+          <li><b>Sair da comparação</b> (ou ir para outra página) volta ao normal, com o Período 1.</li></ul>
+        </div>
       </div>
     </section>
     <div id="dashBank">
@@ -559,6 +571,12 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <h3>4. Resumo</h3>
           <p>Frases automáticas sobre o período: quanto sobrou ou faltou, a maior despesa, o maior pagamento e a comparação com o período anterior. O que merece atenção aparece com o sinal ⚠.</p>
         </div>
+        <div>
+          <h3>Escolher o período</h3>
+          <ul><li>Um clique nos atalhos: <b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> ou um ano. Eles contam a partir do último mês do extrato.</li>
+          <li>Clique num dos meses para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
+          <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
+        </div>
       </div>
     </section>
   <section class="kpis" aria-label="Resumo do período">
@@ -599,7 +617,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <div class="ajuda-grade">
         <div>
           <h3>1. Período</h3>
-          <p>Escolha o ano, o mês e a semana, ou clique num dos meses. "Ver todo o período" volta ao extrato inteiro. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
+          <p>Use os atalhos (<b>Todo o extrato</b>, <b>Último mês</b>, <b>Últimos 3 meses</b>…), clique num dos meses ou use <b>Personalizado…</b> para escolher de um mês até outro ou dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
         </div>
         <div>
           <h3>2. Encontrar um lançamento</h3>
