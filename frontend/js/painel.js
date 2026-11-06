@@ -2511,11 +2511,18 @@ function renderFluxoComparacao(A, B){
       var k = un==='mes' ? Periodo.chaveDe(t.date) : un==='semana' ? weekKey(t.date) : Periodo.iso(t.date);
       soma[k] = (soma[k]||0) - t.value;
     });
-    return pos.map(function(x){ return {rotulo:x.rotulo, v:soma[x.chave]||0}; });
+    /* cada unidade: coberta inteira pelo período e pelo extrato? (senão "parcial"; sem nenhum dia → "sem dados") */
+    var L = extratoLimites(), lp = Periodo.limites(p);
+    return pos.map(function(x){
+      var de = un==='mes' ? x.chave+'-01' : x.chave, ate = un==='mes' ? Periodo.limites(Periodo.deMeses(x.chave, x.chave)).ate : un==='semana' ? Periodo.iso(new Date(+x.chave.slice(0,4), +x.chave.slice(5,7)-1, +x.chave.slice(8,10)+6)) : x.chave;
+      var cde = [de, lp.de, L.inicio].sort()[2], cate = [ate, lp.ate, L.fim].sort()[0];
+      if (cde>cate) return {rotulo:x.rotulo, v:null};
+      return {rotulo:x.rotulo, v:soma[x.chave]||0, parcial: cde!==de || cate!==ate};
+    });
   };
   var sa = serie(pa), sb = serie(pb), n = Math.max(sa.length, sb.length, 1);
   var W=640,H=260,mL=82,mR=12,mT=12,mB=30, iw=W-mL-mR, ih=H-mT-mB;
-  var max = Math.max.apply(null, sa.concat(sb).map(function(x){ return x.v; }).concat([1]));
+  var max = Math.max.apply(null, sa.concat(sb).map(function(x){ return x.v||0; }).concat([1]));
   var raw = max/4, mag = Math.pow(10,Math.floor(Math.log10(raw))), nn = raw/mag;
   var step = (nn<=1?1:nn<=2?2:nn<=2.5?2.5:nn<=5?5:10)*mag, top = Math.ceil(max/step)*step;
   var x = function(i){ return n===1 ? mL+iw/2 : mL + iw*i/(n-1); }, y = function(v){ return mT + ih - v/top*ih; };
@@ -2525,12 +2532,18 @@ function renderFluxoComparacao(A, B){
     s += '<line class="'+(v===0?'base':'gl')+'" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+yy+'" y2="'+yy+'"></line>';
     s += '<text x="'+(mL-8)+'" y="'+yy+'" dy="0.32em" text-anchor="end">'+(v>=1000? 'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil' : 'R$ '+v)+'</text>';
   }
-  var linha = function(se, cls){ return '<polyline class="'+cls+'" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+se.map(function(p, i){ return x(i).toFixed(1)+','+y(p.v).toFixed(1); }).join(' ')+'"></polyline>'; };
+  /* a linha se interrompe onde não há dados */
+  var linha = function(se, cls){
+    var trechos = [[]];
+    se.forEach(function(pt, i){ if (pt.v===null){ if (trechos[trechos.length-1].length) trechos.push([]); } else trechos[trechos.length-1].push(x(i).toFixed(1)+','+y(pt.v).toFixed(1)); });
+    return trechos.filter(function(t){ return t.length; }).map(function(t){ return '<polyline class="'+cls+'" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+t.join(' ')+'"></polyline>'; }).join('');
+  };
   s += linha(sb, 'fluxo-b') + linha(sa, 'fluxo-a');
   var passo = n>18 ? 3 : n>9 ? 2 : 1, uni = un==='mes' ? 'mês' : un==='semana' ? 'semana' : 'dia';
   for (var i=0; i<n; i++){
     if (i % passo===0) s += '<text x="'+x(i).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+(i+1)+'º</text>';
-    var tip = '<b>'+(i+1)+'º '+uni+'</b><br>'+(sa[i] ? esc(sa[i].rotulo)+': '+brl.format(sa[i].v) : esc(A.nome)+': —')+'<br>'+(sb[i] ? esc(sb[i].rotulo)+': '+brl.format(sb[i].v) : esc(B.nome)+': —');
+    var dica = function(pt, nome){ if (!pt) return esc(nome)+': —'; var r = (un==='semana' ? 'semana de ' : '')+pt.rotulo; return esc(r)+': '+(pt.v===null ? 'sem dados' : brl.format(pt.v)+(pt.parcial ? ' (parcial)' : '')); };
+    var tip = '<b>'+(i+1)+'º '+uni+'</b><br>'+dica(sa[i], A.nome)+'<br>'+dica(sb[i], B.nome);
     var w = iw/n;
     s += '<rect class="hit" x="'+Math.max(mL, x(i)-w/2).toFixed(1)+'" y="'+mT+'" width="'+w.toFixed(1)+'" height="'+ih+'" data-tip="'+esc(tip)+'"></rect>';
   }
