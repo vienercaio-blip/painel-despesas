@@ -1951,11 +1951,23 @@ function renderTable(){
 /* Lançamentos: Entrou, Saiu e Para revisar (totais do período; clicar filtra) */
 function ehRevisar(t){ return saiDaConta(t) && catOf(t)===OTHER; }
 function renderNumerosLanc(fc){
-  var tx = cur(), T = sums(tx), rev = Analise.paraRevisar(tx, ehRevisar);
-  var quando = state.p.tipo==='tudo' ? 'em todo o extrato' : 'em '+Periodo.curto(state.p);
   var on = {in: state.filter==='in' && fc==='all', out: state.filter==='out' && fc==='all', rev: fc===OTHER};
   var item = function(k, rot, v, sub, cls){ return '<button type="button" class="l-num'+(cls ? ' '+cls : '')+'" data-num="'+k+'" aria-pressed="'+on[k]+'"><span class="l">'+rot+'</span><b class="v num">'+v+'</b><span class="s">'+sub+'</span></button>'; };
-  $('lNums').innerHTML = item('in', 'Entrou', brl.format(T.ins), esc(quando), 'pos')+item('out', 'Saiu', brl.format(T.outs), esc(quando))+
+  var rev, entrou, saiu;
+  if (state.cmp){
+    /* comparando: por mês do Período 1, com o Período 2 embaixo; para revisar dos dois, sem repetir */
+    var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b);
+    rev = Analise.paraRevisar(state.tx.filter(function(t){ return Periodo.contem(t.date, state.cmp.a) || Periodo.contem(t.date, state.cmp.b); }), ehRevisar);
+    entrou = item('in', 'Entrou por mês · '+esc(A.nome), brl.format(A.ins/A.divisor), esc(B.nome)+': '+brl.format(B.ins/B.divisor), 'pos');
+    saiu = item('out', 'Saiu por mês · '+esc(A.nome), brl.format(A.outs/A.divisor), esc(B.nome)+': '+brl.format(B.outs/B.divisor));
+  } else {
+    var tx = cur(), T = sums(tx);
+    rev = Analise.paraRevisar(tx, ehRevisar);
+    var quando = state.p.tipo==='tudo' ? 'em todo o extrato' : 'em '+Periodo.curto(state.p);
+    entrou = item('in', 'Entrou', brl.format(T.ins), esc(quando), 'pos');
+    saiu = item('out', 'Saiu', brl.format(T.outs), esc(quando));
+  }
+  $('lNums').innerHTML = entrou+saiu+
     item('rev', 'Para revisar', String(rev), rev ? (rev===1 ? 'lançamento sem categoria certa' : 'lançamentos sem categoria certa') : 'Nada para revisar ✓', rev ? 'warn' : 'ok');
 }
 function sincronizarSeg(){ document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); }); }
