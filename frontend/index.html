@@ -20,6 +20,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     <nav class="tabs" aria-label="Seções">
       <a class="tab" href="#inicio" data-view="inicio"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg><span class="tab-txt">Início</span></a>
       <a class="tab dash-tab" href="#dashboard" data-view="dashboard" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V11"/><path d="M12 19V5"/><path d="M19 19v-7"/><path d="M3 19h18"/></svg><span class="tab-txt">Dashboard</span></a>
+      <a class="tab dash-tab" href="#economia" data-view="economia" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11a7 6 0 0 1 12.5-3.5H20v4l-1.6 1A7 6 0 0 1 15 17v2h-3v-1.5h-2V19H7v-2.5A6 6 0 0 1 5 11z"/><path d="M12 7.5h3"/><circle cx="16" cy="10.5" r=".6"/></svg><span class="tab-txt">Economia</span></a>
       <a class="tab dash-tab" href="#despesas" data-view="despesas" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span class="tab-txt">Despesas</span></a>
       <a class="tab dash-tab" href="#lancamentos" data-view="lancamentos" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg><span class="tab-txt">Lançamentos</span></a>
       <a class="tab dash-tab" href="#categorias" data-view="categorias" hidden data-tip="Corrija categorias, crie as suas e veja suas regras"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg><span class="tab-txt">Organizar</span></a>
@@ -292,6 +293,46 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
     </div>
   </div>
 
+  <div class="view eco" id="viewEconomia" hidden>
+    <p class="card faixa eco-semana" id="eSemana" role="status" hidden>Escolha um mês ou mais para ver onde economizar.</p>
+    <div class="eco-corpo" id="eCorpo">
+      <section class="card faixa eco-bloco" id="eMeta" aria-labelledby="eMetaT">
+        <div class="faixa-head"><h2 class="faixa-t" id="eMetaT">Meta do mês</h2>
+          <label class="eco-campo">Quero sobrar <span class="eco-rs">R$</span><input id="eMetaIn" inputmode="decimal" autocomplete="off" placeholder="500" aria-label="Quanto quero sobrar por mês, em reais"> por mês</label></div>
+        <div class="eco-barra" id="eMetaBarra" aria-hidden="true"><i class="eco-cheia"></i><i class="eco-extra"></i></div>
+        <p class="eco-tx" id="eMetaTx" aria-live="polite"></p>
+      </section>
+
+      <section class="card faixa eco-bloco" id="eObjetivo" aria-labelledby="eObjT">
+        <div class="faixa-head"><h2 class="faixa-t" id="eObjT">Objetivo</h2>
+          <button type="button" class="link-btn" id="eObjAbrir">+ Juntar para um objetivo</button>
+          <button type="button" class="link-btn" id="eObjEditar" hidden>Editar</button></div>
+        <div class="eco-obj-form" id="eObjForm" hidden>
+          <label>Para quê<input id="eObjNome" maxlength="40" autocomplete="off" placeholder="Viagem"></label>
+          <label>Quanto <span class="eco-rs">R$</span><input id="eObjValor" inputmode="decimal" autocomplete="off" placeholder="6.000"></label>
+          <label>Até<input id="eObjPrazo" type="month"></label>
+          <label>Já tenho <span class="eco-rs">R$</span><input id="eObjTenho" inputmode="decimal" autocomplete="off" placeholder="0"></label>
+          <div class="eco-obj-botoes"><button type="button" class="btn btn-sm" id="eObjSalvar">Salvar</button>
+            <button type="button" class="link-btn" id="eObjRemover" hidden>Remover objetivo</button></div>
+          <p class="hint" id="eObjErro" role="alert" hidden></p>
+        </div>
+        <div id="eObjVer" hidden>
+          <div class="eco-barra eco-barra-obj" id="eObjBarra" aria-hidden="true"><i class="eco-cheia"></i></div>
+          <p class="eco-tx" id="eObjTx" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <p class="card faixa eco-bloco eco-guardou" id="eGuardou" hidden></p>
+
+      <section class="card faixa eco-bloco" id="eListaSec" aria-labelledby="eListaT">
+        <div class="faixa-head"><h2 class="faixa-t" id="eListaT">Onde dá para economizar</h2><span class="hint">marque o que topa fazer</span></div>
+        <ul class="eco-lista" id="eLista"></ul>
+        <p class="eco-total" id="eTotal"></p>
+        <label class="eco-campo eco-fixo">Quanto consigo guardar por mês: <span class="eco-rs">R$</span><input id="eFixoIn" inputmode="decimal" autocomplete="off" placeholder="400" aria-label="Quanto consigo guardar por mês, em reais"></label>
+      </section>
+    </div>
+  </div>
+
   <div class="view" id="viewVendas" hidden>
     <section class="card" aria-labelledby="sTitle">
       <div class="card-head"><h2 id="sTitle">Análise de vendas</h2><span class="hint" id="sSpan"></span></div>
@@ -543,6 +584,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 <script src="/js/analise.js"></script>
 <script src="/js/pastas.js"></script>
 <script src="/js/tema.js"></script>
+<script src="/js/economia.js"></script>
 <script src="/js/painel.js"></script>
 </body>
 </html>

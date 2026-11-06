@@ -48,9 +48,13 @@ function itens(f){
     else L.push({ id:'dica:'+a.id, tipo:'info', titulo:a.titulo, motivo:a.motivo, etiqueta:'dica', cat:a.cat, economia:null, base:null });
   });
   (f.acima||[]).forEach(function(x){
-    L.push({ id:x.id, tipo:'categoria', titulo:'Trazer '+x.cat+' de volta ao normal', motivo:'', etiqueta:'acima do normal', cat:x.cat, economia:x.dif, base:x.dif });
+    var v = Math.min(x.dif, f.gastoCat[x.cat]!=null ? f.gastoCat[x.cat] : x.dif);   /* nunca mais que o gasto médio da categoria */
+    L.push({ id:x.id, tipo:'categoria', titulo:'Trazer '+x.cat+' de volta ao normal', motivo:'', etiqueta:'acima do normal', cat:x.cat, economia:v, base:v });
   });
+  /* categoria que já tem dica com valor: a dica cobre, o gasto repetido não entra de novo */
+  var comDica = (f.dicas||[]).filter(function(a){ return a.economia && a.cat && a.id!=='normal'; }).map(function(a){ return a.cat; });
   (f.repetidos||[]).forEach(function(r){
+    if (comDica.indexOf(r.cat)!==-1) return;
     L.push({ id:r.id, tipo:'cancelar', titulo:'Cancelar '+r.desc, motivo:'Aparece em '+r.meses+' meses do extrato.', etiqueta:'repete todo mês', cat:r.cat, economia:r.mensal, base:r.mensal, origem:r.origem });
   });
   var com = L.filter(function(x){ return x.economia; }).sort(function(a, b){ return b.economia-a.economia; });

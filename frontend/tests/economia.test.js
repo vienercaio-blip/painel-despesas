@@ -89,3 +89,17 @@ test('objetivo: por mês arredondado para cima e os estados', () => {
   assert.equal(Economia.objetivo({valor: 600, prazo: '2026-11', tenho: 0}, 600, null, hoje).porMes, 600);   // prazo no mês atual = 1 mês
   assert.equal(Economia.objetivo(O, 400, 500, hoje).mesesFixo, 8);
 });
+test('itens: gasto repetido de categoria que já tem dica com valor não entra de novo', () => {
+  const r = Economia.itens({
+    dicas: [{id: 'tarifas', titulo: 'Conta sem tarifa', motivo: 'm', economia: 30, cat: 'Tarifas'}],
+    repetidos: [{id: 'rep:tarifa', origem: 'tarifa', desc: 'TARIFA', cat: 'Tarifas', mensal: 30, meses: 3},
+      {id: 'rep:netflix', origem: 'netflix', desc: 'NETFLIX', cat: 'Assinaturas', mensal: 56, meses: 3}],
+    acima: [], gastoCat: {Tarifas: 30, Assinaturas: 56}
+  });
+  assert.deepEqual(r.map(x => x.id), ['rep:netflix', 'dica:tarifas']);
+});
+test('itens: "acima do normal" nunca sugere economizar mais que o gasto médio da categoria', () => {
+  const r = Economia.itens({dicas: [], repetidos: [], acima: [{id: 'cat:Delivery', cat: 'Delivery', agora: 520, media: 155, dif: 365}], gastoCat: {Delivery: 276.67}});
+  assert.equal(r[0].economia, 276.67);
+  assert.equal(r[0].base, 276.67);
+});

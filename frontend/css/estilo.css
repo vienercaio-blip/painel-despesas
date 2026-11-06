@@ -717,3 +717,50 @@ input,select,textarea{border-radius:10px}
   @keyframes pulsoA{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 55%,transparent)}to{box-shadow:0 0 0 14px transparent}}
   @keyframes pulsoV{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--bad) 55%,transparent)}to{box-shadow:0 0 0 14px transparent}}
 }
+
+/* ---------- página Economia ---------- */
+.eco-corpo{display:flex;flex-direction:column;gap:8px}
+.eco .faixa-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.eco-campo{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-2);margin-left:auto}
+.eco-campo input{width:96px;min-height:34px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums}
+.eco-rs{color:var(--ink-3)}
+.eco-barra{display:flex;height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin:10px 0 6px}
+.eco-barra i{display:block;height:100%}
+.eco-barra .eco-cheia{background:var(--accent);border-radius:6px 0 0 6px}
+.eco-barra .eco-extra{background:color-mix(in srgb, var(--accent) 38%, transparent)}
+.eco-barra-obj .eco-cheia{background:var(--good)}
+.eco-tx{margin:0;font-size:14px;color:var(--ink-2)}
+.eco-obj-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;margin-top:8px}
+.eco-obj-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink-3)}
+.eco-obj-form input{min-height:36px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit;width:130px}
+.eco-obj-form label:first-child input{width:170px}
+.eco-obj-botoes{display:flex;gap:12px;align-items:center}
+.eco-guardou{margin:0;font-size:14px;color:var(--ink-2)}
+.eco-lista{list-style:none;margin:8px 0 0;padding:0}
+.eco-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line)}
+.eco-item:last-child{border-bottom:0}
+.eco-item input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+.eco-ck-vazio{width:18px}
+.eco-tit{all:unset;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink)}
+span.eco-tit{cursor:default}
+button.eco-tit:hover{text-decoration:underline;text-underline-offset:3px}
+button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.eco-tag{font-size:11px;padding:1px 8px;border-radius:10px;background:var(--surface-2);color:var(--ink-3);border:1px solid var(--line);white-space:nowrap}
+.eco-motivo{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.eco-corte{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin-top:6px}
+.eco-corte input{width:160px;accent-color:var(--accent)}
+.eco-val{font-weight:600;font-variant-numeric:tabular-nums;color:var(--good);white-space:nowrap;text-align:right}
+.eco-lim{display:block;font-size:11.5px;font-weight:400;color:var(--ink-3);white-space:normal;max-width:190px;margin-left:auto}
+.eco-item.info .eco-val{color:var(--ink-3);font-weight:400}
+.eco-total{margin:8px 0 0;font-weight:600;color:var(--ink)}
+.eco-total:empty{display:none}
+.eco-fixo{margin:10px 0 0}
+.eco-vazio{color:var(--ink-3);font-size:14px;padding:6px 0}
+@media (max-width:560px){
+  .eco-campo{margin-left:0;flex-wrap:wrap}
+  .eco-item{grid-template-columns:auto minmax(0,1fr)}
+  .eco-val{grid-column:2;text-align:left;white-space:normal}
+  .eco-lim{margin-left:0;max-width:none}
+  .eco-obj-form input,.eco-obj-form label:first-child input{width:100%}
+  .eco-obj-form label{flex:1 1 140px}
+}

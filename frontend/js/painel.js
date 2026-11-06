@@ -1198,6 +1198,12 @@ function renderDashboard(){
       (a.link==='organizar' ? '<a href="#categorias">classificar →</a>' : '')+'</div>';
   }).join('') : '<p class="acoes-vazio'+(isWeek?' neutro':'')+'">'+esc(ac.vazio)+'</p>';
 
+  /* a página Economia usa exatamente estes números do período */
+  var gastoCat = {}; Object.keys(byCat).forEach(function(c){ if (byCat[c]>0) gastoCat[c] = byCat[c]/nM; });
+  state.eco = { semana:isWeek, nM:nM, sobraMes:(T.ins-T.outs)/nM, gastoCat:gastoCat, ctx:ctx,
+    guardado:aplicado-resgatado, meses: months.map(function(o){ return {name:o.name, cat:o.cat}; }) };
+  if (!$('viewEconomia').hidden) renderEconomia();
+
   /* Parte 3: para onde vai o dinheiro */
   var bar = Analise.barras(ctx, sel);
   var nTodas = Object.keys(byCat).filter(function(c){ return byCat[c]!==0; }).length;
@@ -1779,7 +1785,7 @@ function readSalesFile(f){
 }
 /* nenhum extrato escolhido: esconde as abas do painel e volta ao Início */
 function fecharExtrato(){
-  state.loaded = false; state.savedId = null; state.raw = []; state.tx = []; state.overrides = {}; state.resumo = null;
+  state.loaded = false; state.savedId = null; state.raw = []; state.tx = []; state.overrides = {}; state.resumo = null; state.eco = null;
   refreshTabs(); setView(); renderSaved();
 }
 function refreshTabs(){
@@ -1800,19 +1806,20 @@ function setView(){
   var h = location.hash.slice(1);
   var isV = MODE==='vendas', isD = MODE==='despesas';
   var ok = isV ? sales.length>0 : (isD && state.loaded);
-  var okHash = isV ? h==='dashboard' : (isD && (h==='dashboard'||h==='despesas'||h==='categorias'||h==='lancamentos'));
+  var okHash = isV ? h==='dashboard' : (isD && (h==='dashboard'||h==='economia'||h==='despesas'||h==='categorias'||h==='lancamentos'));
   var v = (ok && okHash) ? h : 'inicio';
   if (v==='inicio' && h && h!=='inicio'){ location.hash = 'inicio'; return; }
   $('viewEnviar').hidden = v!=='inicio';
   $('viewDash').hidden = !(v==='dashboard' && isD);
   $('viewVendas').hidden = !(v==='dashboard' && isV);
+  $('viewEconomia').hidden = !(v==='economia' && isD);
   $('viewDespesas').hidden = v!=='despesas';
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
-  $('pageTitle').textContent = {dashboard:'Dashboard', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
-  $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
+  $('pageTitle').textContent = {dashboard:'Dashboard', economia:'Economia', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
+  $('periodSec').hidden = !((v==='dashboard' && isD) || v==='economia' || v==='despesas' || v==='lancamentos');
   if (!$('periodSec').hidden) ajustarEsteira();
   $('tip').hidden = true;
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
@@ -2602,6 +2609,7 @@ function chegou(){
   if (noDash) renderDashboard();
   if (noDash && state.vistaDash!=='dashboard') animarDashboard();
   state.vistaDash = noDash ? 'dashboard' : 'outra';
+  if (state.loaded && MODE==='despesas' && !$('viewEconomia').hidden) renderEconomia();
   window.scrollTo(0, 0);
   if (state.depois){ var f = state.depois; state.depois = null; f(); }
 }
@@ -2773,6 +2781,171 @@ function abrirLancamentos(cat){
   renderTable();
   irPara('lancamentos');
 }
+
+/* ---------- página Economia ----------
+   Lê só state.eco (gravado por renderDashboard com os números do período) e
+   cfg.economia (meta, objetivo, itens marcados e valor fixo, salvos na conta). */
+var numBR = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:2});
+/* "1.234,56", "500", "R$ 500" → número; vazio, zero, negativo ou texto → null */
+function lerValor(txt){
+  var s = String(txt==null ? '' : txt).replace(/R\$|\s/g, '');
+  if (!s) return null;
+  if (s.indexOf(',')!==-1) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  var n = Number(s);
+  return isFinite(n) && n>0 ? n : null;
+}
+function ecoCfg(){
+  var e = cfg.economia = cfg.economia || {};
+  if (!e.marcados || typeof e.marcados!=='object') e.marcados = {};
+  return e;
+}
+function mesesTxt(n){ return n===1 ? '1 mês' : n+' meses'; }
+function prazoTxt(p){ var x = String(p).split('-'); return MESES[+x[1]-1].slice(0,3)+'/'+x[0]; }
+function itensEconomia(E){
+  var essenciais = ['moradia','casa','impostos','dividas','educacao','folha','mercado','saude'].map(catByCode).filter(Boolean);
+  var saidas = state.tx.filter(function(t){ return saiDaConta(t) && !t.estorno; })
+    .map(function(t){ return {data:t.date, desc:t.desc, valor:-t.value, origem:t.origin, cat:catOf(t)}; });
+  var acima = Economia.acimaDoNormal(E.meses, OTHER), ult = E.meses[E.meses.length-1];
+  var lista = Economia.itens({ dicas: Analise.acoes(E.ctx).lista, repetidos: Economia.repetidos(saidas, {essenciais:essenciais, minMeses:3, tolerancia:0.2}),
+    acima: acima, gastoCat: E.gastoCat });
+  lista.forEach(function(it){
+    var a = acima.filter(function(x){ return x.id===it.id; })[0];
+    if (a) it.motivo = 'Em '+ult.name+' você gastou '+brl.format(a.agora)+' com '+a.cat+', '+brl.format(a.dif)+' acima da média.';
+  });
+  return lista;
+}
+/* o total de tudo que dá para economizar (cada item no valor sugerido), com o limite por categoria */
+function resumoEconomia(){
+  var E = state.eco;
+  if (!E || E.semana) return {total:0, n:0};
+  var lista = itensEconomia(E), todos = {};
+  lista.forEach(function(it){ if (it.tipo!=='info') todos[it.id] = it.tipo==='categoria' ? Economia.pctInicial(it) : true; });
+  return { total: Economia.simular(lista, todos, E.gastoCat).total, n: Object.keys(todos).length };
+}
+function renderEconomia(){
+  var E = state.eco;
+  if (!E) return;
+  var C = ecoCfg();
+  $('eSemana').hidden = !E.semana;
+  $('eCorpo').hidden = !!E.semana;
+  if (E.semana) return;
+  var lista = state.ecoItens = itensEconomia(E);
+  state.ecoResumo = resumoEconomia();
+  $('eLista').innerHTML = lista.length ? lista.map(function(it){
+    var marc = C.marcados[it.id], cat = it.tipo==='cancelar' ? '' : it.cat;
+    var abre = it.tipo==='cancelar' ? ' data-abre-busca="'+esc(it.titulo.replace(/^Cancelar /, ''))+'"' : (cat ? ' data-abre-cat="'+esc(cat)+'"' : '');
+    var corte = it.tipo==='categoria' && marc ? '<label class="eco-corte">Cortar <input type="range" min="10" max="100" step="10" value="'+Math.round((typeof marc==='number' ? marc : Economia.pctInicial(it))*100)+'" data-pct="'+esc(it.id)+'"> <b data-pctv="'+esc(it.id)+'"></b> de '+brl0.format(it.base)+'/mês</label>' : '';
+    return '<li class="eco-item'+(marc ? ' marcado' : '')+(it.tipo==='info' ? ' info' : '')+'">'+
+      (it.tipo==='info' ? '<span class="eco-ck-vazio" aria-hidden="true"></span>' : '<input type="checkbox" data-id="'+esc(it.id)+'"'+(marc ? ' checked' : '')+' aria-label="Topo fazer: '+esc(it.titulo)+'">')+
+      '<div class="eco-txt">'+(abre ? '<button type="button" class="eco-tit"'+abre+' title="Ver os lançamentos">'+esc(it.titulo)+'</button>' : '<span class="eco-tit">'+esc(it.titulo)+'</span>')+
+        ' <span class="eco-tag">'+esc(it.etiqueta)+'</span>'+(it.motivo ? '<span class="eco-motivo">'+esc(it.motivo)+'</span>' : '')+corte+'</div>'+
+      '<span class="eco-val" data-val="'+esc(it.id)+'"></span></li>';
+  }).join('') : '<li class="eco-vazio">Nada para sugerir neste período: os gastos estão dentro do normal.</li>';
+  var ativo = document.activeElement;
+  if (ativo!==$('eMetaIn')) $('eMetaIn').value = C.meta ? numBR.format(C.meta) : '';
+  if (ativo!==$('eFixoIn')) $('eFixoIn').value = C.fixo ? numBR.format(C.fixo) : '';
+  var g = E.guardado;
+  $('eGuardou').hidden = !(g>0.005);
+  $('eGuardou').textContent = g>0.005 ? 'Você guardou '+brl.format(g)+' em investimentos e reservas'+(E.nM>1 ? ' ('+brl.format(g/E.nM)+' por mês)' : '')+'.' : '';
+  atualizarEconomia();
+}
+/* números que mudam ao marcar ou mexer num corte, sem redesenhar a lista */
+function atualizarEconomia(){
+  var E = state.eco, C = ecoCfg(), lista = state.ecoItens || [];
+  if (!E || E.semana) return;
+  var sim = state.ecoSim = Economia.simular(lista, C.marcados, E.gastoCat);
+  lista.forEach(function(it){
+    var el = document.querySelector('#eLista [data-val="'+cssEsc(it.id)+'"]');
+    if (!el) return;
+    var v = sim.porItem[it.id];
+    el.textContent = it.economia==null ? 'sem valor estimado' : '~'+brl0.format(v!=null ? v : it.economia)+'/mês';
+    if (sim.cortados.indexOf(it.id)!==-1) el.insertAdjacentHTML('beforeend', '<small class="eco-lim">já está no limite do que você gasta em '+esc(it.cat)+'</small>');
+    var pv = document.querySelector('#eLista [data-pctv="'+cssEsc(it.id)+'"]');
+    if (pv) pv.textContent = Math.round((typeof C.marcados[it.id]==='number' ? C.marcados[it.id] : Economia.pctInicial(it))*100)+'%';
+  });
+  /* meta */
+  var meta = C.meta, sobra = E.sobraMes, extra = sim.total, tx;
+  var cheia = 0, clara = 0;
+  if (!meta) tx = 'Defina quanto quer sobrar por mês.';
+  else {
+    cheia = Math.min(100, Math.max(0, sobra)/meta*100);
+    clara = Math.min(100-cheia, extra/meta*100);
+    if (sobra<0) tx = 'Faltou '+brl.format(-sobra)+' por mês no período';
+    else if (sobra>=meta) tx = 'Meta batida: sobrou '+brl.format(sobra)+' de '+brl.format(meta);
+    else tx = 'Sobrou '+brl.format(sobra)+' de '+brl.format(meta)+' · faltam '+brl.format(meta-sobra);
+    if (extra>0.005) tx += ' · com o que você marcou: '+(sobra+extra>=0 ? brl.format(sobra+extra) : 'ainda faltaria '+brl.format(-(sobra+extra)));
+  }
+  $('eMetaBarra').hidden = !meta;
+  $('eMetaBarra').querySelector('.eco-cheia').style.width = cheia.toFixed(2)+'%';
+  $('eMetaBarra').querySelector('.eco-extra').style.width = clara.toFixed(2)+'%';
+  $('eMetaTx').textContent = tx;
+  $('eMetaTx').dataset.extra = extra>0.005 ? brl.format(sobra+extra) : '';
+  /* objetivo */
+  var o = C.objetivo, form = !!state.ecoObjForm;
+  $('eObjForm').hidden = !form;
+  $('eObjAbrir').hidden = !!o || form;
+  $('eObjEditar').hidden = !o || form;
+  $('eObjRemover').hidden = !o;
+  $('eObjVer').hidden = !o || form;
+  if (o){
+    var r = Economia.objetivo(o, Math.max(0, sobra)+extra, C.fixo, HOJE());
+    var t = esc(o.nome)+' · '+brl0.format(o.valor)+' até '+prazoTxt(o.prazo)+'. ';
+    if (r.estado==='alcancado') t += 'Objetivo alcançado!';
+    else if (r.estado==='prazo-passou') t += 'O prazo passou: escolha um novo.';
+    else {
+      t += 'Juntou '+brl0.format(o.tenho||0)+'. Faltam '+brl0.format(r.falta)+' · precisa de '+brl0.format(r.porMes)+'/mês até '+prazoTxt(o.prazo)+'. ';
+      t += r.estado==='ok' ? 'No ritmo atual, chega em '+mesesTxt(r.meses)+'.' : r.estado==='nao-chega' ? 'Neste ritmo não chega no prazo.' : 'Neste ritmo não sobra nada para o objetivo.';
+      if (r.mesesFixo) t += ' Guardando '+brl0.format(C.fixo)+'/mês, chega em '+mesesTxt(r.mesesFixo)+'.';
+    }
+    $('eObjTx').innerHTML = t;
+    $('eObjBarra').querySelector('.eco-cheia').style.width = Math.min(100, (o.tenho||0)/o.valor*100).toFixed(2)+'%';
+  }
+  /* total */
+  $('eTotal').textContent = extra>0.005 ? 'Com o que você marcou: ~'+brl0.format(extra)+'/mês · '+brl0.format(extra*12)+'/ano'
+    : (state.ecoResumo && state.ecoResumo.n ? 'Tudo somado: ~'+brl0.format(state.ecoResumo.total)+'/mês' : '');
+}
+function cssEsc(s){ return String(s).replace(/["\\]/g, '\\$&'); }
+function ecoItem(id){ return (state.ecoItens || []).filter(function(x){ return x.id===id; })[0]; }
+$('eMetaIn').addEventListener('change', function(){ ecoCfg().meta = lerValor(this.value); saveCfg(); this.blur(); renderEconomia(); });
+$('eFixoIn').addEventListener('change', function(){ ecoCfg().fixo = lerValor(this.value); saveCfg(); this.blur(); renderEconomia(); });
+$('eLista').addEventListener('change', function(e){
+  var C = ecoCfg();
+  if (e.target.matches('input[type=checkbox][data-id]')){
+    var it = ecoItem(e.target.dataset.id); if (!it) return;
+    if (e.target.checked) C.marcados[it.id] = it.tipo==='categoria' ? Economia.pctInicial(it) : true;
+    else delete C.marcados[it.id];
+    saveCfg(); renderEconomia();
+    var volta = document.querySelector('#eLista input[data-id="'+cssEsc(it.id)+'"]'); if (volta) volta.focus();
+  } else if (e.target.matches('input[type=range][data-pct]')) saveCfg();
+});
+$('eLista').addEventListener('input', function(e){
+  if (!e.target.matches('input[type=range][data-pct]')) return;
+  ecoCfg().marcados[e.target.dataset.pct] = (+e.target.value)/100;
+  atualizarEconomia();
+});
+$('eLista').addEventListener('click', function(e){
+  var b = e.target.closest('[data-abre-cat], [data-abre-busca]'); if (!b) return;
+  if (b.dataset.abreCat) abrirLancamentos(b.dataset.abreCat);
+  else { state.q = b.dataset.abreBusca; $('q').value = state.q; abrirLancamentos('all'); }
+});
+function abrirObjetivo(){
+  var o = ecoCfg().objetivo || {};
+  state.ecoObjForm = true;
+  $('eObjNome').value = o.nome || ''; $('eObjValor').value = o.valor ? numBR.format(o.valor) : '';
+  $('eObjPrazo').value = o.prazo || ''; $('eObjTenho').value = o.tenho ? numBR.format(o.tenho) : '';
+  $('eObjErro').hidden = true;
+  atualizarEconomia(); $('eObjNome').focus();
+}
+$('eObjAbrir').addEventListener('click', abrirObjetivo);
+$('eObjEditar').addEventListener('click', abrirObjetivo);
+$('eObjSalvar').addEventListener('click', function(){
+  var valor = lerValor($('eObjValor').value), prazo = $('eObjPrazo').value;
+  if (!valor || !/^\d{4}-\d{2}$/.test(prazo)){ $('eObjErro').textContent = 'Preencha quanto quer juntar e até quando.'; $('eObjErro').hidden = false; return; }
+  ecoCfg().objetivo = { nome: $('eObjNome').value.trim().slice(0, 40) || 'Objetivo', valor:valor, prazo:prazo, tenho: lerValor($('eObjTenho').value) || 0 };
+  state.ecoObjForm = false; saveCfg(); atualizarEconomia(); $('eObjEditar').focus();
+});
+$('eObjRemover').addEventListener('click', function(){ ecoCfg().objetivo = null; state.ecoObjForm = false; saveCfg(); atualizarEconomia(); $('eObjAbrir').focus(); });
 
 /* ---------- inicialização: busca tudo no servidor ---------- */
 state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};
