@@ -1837,7 +1837,9 @@ function setView(){
   $('viewDespesas').hidden = v!=='despesas';
   if (chegouDesp && state.loaded){ $('xSaiu').dataset.alvo = ''; $('xSaiu').dataset.v = '0'; state.despChegou = true; render(); }   /* chegar: desenha na largura real e com movimento */
   $('viewCategorias').hidden = v!=='categorias';
+  var chegouLanc = v==='lancamentos' && $('viewLanc').hidden;
   $('viewLanc').hidden = v!=='lancamentos';
+  if (chegouLanc && state.loaded){ state.lancChegou = true; renderTable(); }
   $('introSec').hidden = v==='inicio' || isV;
   $('pageTitle').textContent = {dashboard:'Dashboard', economia:'Economia', despesas:'Despesas', lancamentos:'Lançamentos', categorias:'Organizar'}[v] || '';
   $('periodSec').hidden = !((v==='dashboard' && isD) || v==='despesas' || v==='lancamentos');
@@ -1877,6 +1879,18 @@ var ICON_WARN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" str
 function renderTable(){
   var q = norm(state.q).trim();
   var fc = state.fcat || 'all';
+  /* animação: entrada (chegou), ordem (FLIP), pagina (desliza), troca (cascata) ou calmo (correção, busca) */
+  var ordAgora = JSON.stringify(state.txOrd || {col:'data', dir:'desc'});
+  var chaveF = JSON.stringify([fc, state.filter, state.p, state.cmp, state.txPer, state.txPor]), chaveP = JSON.stringify([state.p, state.cmp]);
+  var modo = state.lancChegou ? 'entrada' : (state.lancOrdAntes && ordAgora!==state.lancOrdAntes) ? 'ordem' : state.lancDir ? 'pagina' : state.lancBusca ? 'calmo'
+    : (state.lancChaveF!==undefined && chaveF!==state.lancChaveF) ? 'troca' : 'calmo';
+  var contaNums = state.lancChegou ? 'zero' : (state.lancChaveP!==undefined && chaveP!==state.lancChaveP) ? 'antigo' : null;
+  var dirPag = state.lancDir, pulsa = state.lancPulsa, okAntes = state.lancOkAntes;
+  state.lancChegou = false; state.lancDir = 0; state.lancBusca = false; state.lancPulsa = false; state.lancOkAntes = null;
+  state.lancOrdAntes = ordAgora; state.lancChaveF = chaveF; state.lancChaveP = chaveP;
+  if (REDUZIR.matches){ modo = 'calmo'; contaNums = null; pulsa = false; }
+  var posAntes = null;
+  if (modo==='ordem'){ posAntes = {}; $('rows').querySelectorAll('tr[data-tx]').forEach(function(tr){ posAntes[tr.dataset.tx] = tr.getBoundingClientRect().top; }); }
   var opts = '<option value="all">Todas</option><option value="__in">Entradas</option>'+catsCom(fc==='all'||fc==='__in' ? null : fc).map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>';}).join('');
   $('fCat').innerHTML = opts; $('fCat').value = fc;
   /* comparando: lançamentos de A ou de B, com o filtro "Os dois · A · B" */
@@ -1891,14 +1905,29 @@ function renderTable(){
   }
   var emA = function(t){ return Periodo.contem(t.date, cmp.a); }, emB = function(t){ return Periodo.contem(t.date, cmp.b); };
   var base = !cmp ? cur() : state.tx.filter(function(t){ return per==='a' ? emA(t) : per==='b' ? emB(t) : (emA(t) || emB(t)); });
-  var list = base.filter(function(t){
+  var passa = function(t){
     if (fc==='__in' && ehSaida(t)) return false;
     var fcInterna = INTERNOS.indexOf(fc)!==-1;  /* categoria interna: entradas (resgates) e saídas juntas */
     if (fc!=='all' && fc!=='__in' && ((ehEntrada(t) && !fcInterna) || catOf(t)!==fc)) return false;
     if (state.filter==='out' && ehEntrada(t) && !fcInterna) return false;
     if (state.filter==='in' && ehSaida(t)) return false;
     return !q || norm(t.desc).indexOf(q)!==-1;
-  });
+  };
+  /* a linha recém-corrigida que deixou de bater com o filtro fica ~1 s mostrando o ✓ e depois sai */
+  var mantem = null;
+  if (okAntes && !REDUZIR.matches){
+    var tOk = state.tx[okAntes.id], catOk = tOk ? (ehEntrada(tOk) ? (ehInterno(tOk) ? catOf(tOk) : ENTRADA) : catOf(tOk)) : okAntes.cat;
+    if (tOk && catOk!==okAntes.cat && !passa(tOk)) mantem = tOk.id;
+  }
+  var list = base.filter(function(t){ return t.id===mantem || passa(t); });
+  if (mantem!==null){
+    clearTimeout(state.lancMantemTimer);
+    state.lancMantemTimer = setTimeout(function(){
+      var tr = $('rows').querySelector('tr[data-tx="'+mantem+'"]');
+      if (tr) tr.classList.add('l-saindo');
+      setTimeout(function(){ state.lancBusca = true; renderTable(); }, tr ? 300 : 0);
+    }, 1300);
+  }
   /* ordem: data (mais nova primeiro) ou valor (o maior primeiro), clicando no título */
   var ord = state.txOrd || {col:'data', dir:'desc'};
   list = Analise.ordenarLancamentos(list, ord.col, ord.dir);
@@ -1907,18 +1936,24 @@ function renderTable(){
     b.closest('th').setAttribute('aria-sort', on ? (ord.dir==='desc' ? 'descending' : 'ascending') : 'none');
     b.classList.toggle('ativo', on); b.classList.toggle('sobe', on && ord.dir==='asc');
   });
-  renderNumerosLanc(fc);
+  var numsAntes = state.lancNums || {}, nums = renderNumerosLanc(fc);
+  ['in','out'].forEach(function(k){
+    var el = $('lNums').querySelector('[data-num="'+k+'"] .v');
+    if (el && contaNums) contarDe(el, contaNums==='zero' ? 0 : (numsAntes[k]==null ? nums[k] : numsAntes[k]), nums[k], function(v){ return brl.format(v); });
+  });
+  if (numsAntes.rev!=null && numsAntes.rev!==nums.rev && !REDUZIR.matches){ var rv = $('lNums').querySelector('[data-num="rev"] .v'); if (rv) rv.classList.add('l-pula'); }
+  state.lancNums = nums;
   /* quantos lançamentos por vez; 0 = todos. Começa em 50 */
   var por = [10,25,50,100,0].indexOf(state.txPor)!==-1 ? state.txPor : 50;
   $('txPor').value = String(por);
-  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length, ord.col, ord.dir].join('|');
+  var chave = [fc, state.filter, q, JSON.stringify(state.p), JSON.stringify(cmp), per, list.length - (mantem!==null ? 1 : 0), ord.col, ord.dir].join('|');
   if (chave!==state.txChave){ state.txChave = chave; state.txPag = 0; }  /* filtro mudou: volta ao começo */
   var nPag = por ? Math.max(1, Math.ceil(list.length/por)) : 1;
   state.txPag = Math.min(state.txPag||0, nPag-1);
   var ini = por ? state.txPag*por : 0, shown = por ? list.slice(ini, ini+por) : list;
   $('txPrev').hidden = $('txNext').hidden = nPag<=1;
   $('txPrev').disabled = state.txPag===0; $('txNext').disabled = state.txPag>=nPag-1;
-  $('rows').innerHTML = shown.map(function(t){
+  $('rows').innerHTML = shown.map(function(t, iLin){
     var c = ehEntrada(t) ? null : catOf(t);
     var ci = ehInterno(t) ? catOf(t) : ENTRADA;
     /* a categoria sempre se corrige na linha: o seletor tem cara de etiqueta */
@@ -1927,8 +1962,9 @@ function renderTable(){
       : '<select class="cat-sel'+(c===OTHER ? ' rev' : '')+'" data-id="'+t.id+'" aria-label="Categoria de '+esc(t.desc)+'">'+catsCom(c).map(function(x){ return '<option value="'+esc(x)+'"'+(x===c?' selected':'')+'>'+esc(x===OTHER ? 'Revisar' : x)+'</option>'; }).join('')+'<option value="'+NOVA_CAT+'">+ Criar nova categoria…</option></select>';
     if (t.estorno) catCell += ' <span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span>';
     var perCell = cmp ? '<td>'+(emA(t) ? '<span class="tag-per tag-per-a">'+esc(CA.nome)+'</span>' : '')+(emB(t) ? '<span class="tag-per tag-per-b">'+esc(CB.nome)+'</span>' : '')+'</td>' : '';
-    return '<tr data-tx="'+t.id+'"><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+realce(t.desc, state.q)+'</td><td>'+catCell+'</td><td class="r num'+(t.value>0 ? ' pos' : '')+'">'+brl.format(t.value)+'</td></tr>';
+    return '<tr data-tx="'+t.id+'" style="--d:'+Math.min(iLin, 20)+'"><td class="num">'+fmtDate(t.date)+'</td>'+perCell+'<td>'+realce(t.desc, state.q)+'</td><td>'+catCell+'</td><td class="r num'+(t.value>0 ? ' pos' : '')+'">'+brl.format(t.value)+'</td></tr>';
   }).join('') || '<tr><td colspan="'+(cmp ? 5 : 4)+'">Nenhum lançamento encontrado.</td></tr>';
+  animarLinhas(modo, dirPag, posAntes, okAntes, pulsa);
   var tot = list.reduce(function(s,t){return s+t.value;},0);
   if (cmp){
     /* rodapé comparando: soma de cada período (das linhas filtradas) e a diferença por mês */
@@ -1948,6 +1984,47 @@ function renderTable(){
   $('foot').textContent = (nPag>1 ? 'Mostrando '+(ini+1)+' a '+(ini+shown.length)+' de '+list.length+' lançamentos' : list.length+(list.length===1?' lançamento':' lançamentos'))+' · soma: '+brl.format(tot)+aviso+' · '+Periodo.nome(state.p)+'.';
 }
 
+/* Lançamentos: animações das linhas depois de desenhar */
+function animarLinhas(modo, dir, posAntes, okAntes, pulsa){
+  var tb = $('rows');
+  tb.classList.remove('l-cascata', 'l-direita', 'l-esquerda');
+  if (modo==='entrada' || modo==='troca' || modo==='pagina'){ void tb.offsetWidth; tb.classList.add(modo==='pagina' ? (dir>0 ? 'l-direita' : 'l-esquerda') : 'l-cascata'); }
+  if (posAntes){
+    /* FLIP: cada linha começa onde estava e desliza até o novo lugar */
+    var mov = [];
+    tb.querySelectorAll('tr[data-tx]').forEach(function(tr){
+      var antes = posAntes[tr.dataset.tx], agora = tr.getBoundingClientRect().top;
+      if (antes==null){ tr.classList.add('l-novo'); return; }
+      if (Math.abs(antes-agora)<1) return;
+      tr.style.transition = 'none'; tr.style.transform = 'translateY('+(antes-agora).toFixed(1)+'px)'; mov.push(tr);
+    });
+    void tb.offsetWidth;
+    mov.forEach(function(tr){
+      tr.style.transition = 'transform .45s cubic-bezier(.2,.7,.2,1)'; tr.style.transform = '';
+      tr.addEventListener('transitionend', function f(){ tr.style.transition = ''; tr.removeEventListener('transitionend', f); });
+    });
+  }
+  if (okAntes){
+    /* correção confirmada: a etiqueta acende em verde com ✓ (só se a categoria mudou mesmo) */
+    var sel = tb.querySelector('select[data-id="'+okAntes.id+'"]');
+    if (sel && sel.value!==okAntes.cat && !REDUZIR.matches){ sel.classList.add('l-ok'); sel.insertAdjacentHTML('afterend', '<span class="l-ok-v" aria-hidden="true">✓</span>'); }
+  }
+  if (pulsa) tb.querySelectorAll('select.rev').forEach(function(x){ x.classList.add('l-pulsa'); });
+}
+/* conta de um valor a outro (sem movimento: direto) */
+function contarDe(el, de, ate, fmt){
+  var token = String(Math.random()); el.dataset.conta = token;
+  if (REDUZIR.matches || Math.abs(ate-de)<0.005){ el.textContent = fmt(ate); return; }
+  el.textContent = fmt(de);
+  var ini = null, dur = 700;
+  requestAnimationFrame(function passo(agora){
+    if (el.dataset.conta!==token || !el.isConnected) return;
+    if (ini===null) ini = agora;
+    var k = Math.max(0, Math.min(1, (agora-ini)/dur)), e = 1-Math.pow(1-k, 3);
+    el.textContent = k<1 ? fmt(de+(ate-de)*e) : fmt(ate);
+    if (k<1) requestAnimationFrame(passo);
+  });
+}
 /* Lançamentos: Entrou, Saiu e Para revisar (totais do período; clicar filtra) */
 function ehRevisar(t){ return saiDaConta(t) && catOf(t)===OTHER; }
 function renderNumerosLanc(fc){
@@ -1958,10 +2035,12 @@ function renderNumerosLanc(fc){
     /* comparando: por mês do Período 1, com o Período 2 embaixo; para revisar dos dois, sem repetir */
     var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b);
     rev = Analise.paraRevisar(state.tx.filter(function(t){ return Periodo.contem(t.date, state.cmp.a) || Periodo.contem(t.date, state.cmp.b); }), ehRevisar);
+    var vals = {in:A.ins/A.divisor, out:A.outs/A.divisor};
     entrou = item('in', 'Entrou por mês · '+esc(A.nome), brl.format(A.ins/A.divisor), esc(B.nome)+': '+brl.format(B.ins/B.divisor), 'pos');
     saiu = item('out', 'Saiu por mês · '+esc(A.nome), brl.format(A.outs/A.divisor), esc(B.nome)+': '+brl.format(B.outs/B.divisor));
   } else {
     var tx = cur(), T = sums(tx);
+    var vals = {in:T.ins, out:T.outs};
     rev = Analise.paraRevisar(tx, ehRevisar);
     var quando = state.p.tipo==='tudo' ? 'em todo o extrato' : 'em '+Periodo.curto(state.p);
     entrou = item('in', 'Entrou', brl.format(T.ins), esc(quando), 'pos');
@@ -1969,12 +2048,13 @@ function renderNumerosLanc(fc){
   }
   $('lNums').innerHTML = entrou+saiu+
     item('rev', 'Para revisar', String(rev), rev ? (rev===1 ? 'lançamento sem categoria certa' : 'lançamentos sem categoria certa') : 'Nada para revisar ✓', rev ? 'warn' : 'ok');
+  return {in:vals.in, out:vals.out, rev:rev};
 }
 function sincronizarSeg(){ document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); }); }
 $('lNums').addEventListener('click', function(e){
   var b = e.target.closest('[data-num]'); if (!b) return;
   var k = b.dataset.num, ligado = b.getAttribute('aria-pressed')==='true';
-  if (k==='rev'){ state.fcat = ligado ? 'all' : OTHER; state.filter = ligado ? 'all' : 'out'; }
+  if (k==='rev'){ state.fcat = ligado ? 'all' : OTHER; state.filter = ligado ? 'all' : 'out'; state.lancPulsa = !ligado; }
   else { state.fcat = 'all'; state.filter = ligado ? 'all' : k; }
   sincronizarSeg(); renderTable();
   var nb = document.querySelector('#lNums [data-num="'+k+'"]'); if (nb) nb.focus();
@@ -2008,7 +2088,13 @@ document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(fun
     renderTable();
   });
 });
-$('q').addEventListener('input', function(e){ state.q = e.target.value; renderTable(); });
+var qTimer = null;
+$('q').addEventListener('input', function(e){
+  var v = e.target.value, nq = norm(v).trim(), sai = 0;
+  clearTimeout(qTimer);
+  if (!semMovimento() && nq) $('rows').querySelectorAll('tr[data-tx]').forEach(function(tr){ var t = state.tx[+tr.dataset.tx]; if (t && norm(t.desc).indexOf(nq)===-1){ tr.classList.add('l-saindo'); sai++; } });
+  qTimer = setTimeout(function(){ state.q = v; state.lancBusca = true; renderTable(); }, sai ? 300 : 0);
+});
 $('fCat').addEventListener('change', function(e){
   state.fcat = e.target.value;
   if (state.fcat==='__in'){ state.filter='all'; }
@@ -2087,6 +2173,7 @@ var RECLASS_HELP = 'As próximas mudanças de categoria vão usar esta mesma res
 function mudarCategoria(e){
   var s = e.target.closest('select[data-id]'); if (!s) return;
   var t = state.tx[+s.dataset.id];
+  if (s.closest('#rows')) state.lancOkAntes = {id:+s.dataset.id, cat: ehEntrada(t) ? (ehInterno(t) ? catOf(t) : ENTRADA) : catOf(t)};
   if (s.value===NOVA_CAT){ irCriarCategoria(t); return; }
   perguntarMudanca(t, s.value, s);
 }
@@ -2154,8 +2241,8 @@ function voltarParaLancamentos(categoria){
 }
 $('ncPara').addEventListener('click', function(e){ if (e.target.closest('[data-ncvoltar]')) voltarParaLancamentos(null); });
 $('txPor').addEventListener('change', function(){ state.txPor = +this.value; state.txPag = 0; renderTable(); });
-$('txPrev').addEventListener('click', function(){ state.txPag--; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
-$('txNext').addEventListener('click', function(){ state.txPag++; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
+$('txPrev').addEventListener('click', function(){ state.txPag--; state.lancDir = -1; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
+$('txNext').addEventListener('click', function(){ state.txPag++; state.lancDir = 1; renderTable(); $('txTitle').scrollIntoView({block:'start'}); });
 $('origins').addEventListener('change', function(e){
   var s = e.target.closest('select'); if (!s) return;
   var key = s.dataset.origin, from = state.cat, to = s.value;

@@ -1009,3 +1009,30 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cat-sel.entrada{color:var(--good)}
 #rows td.pos{color:var(--good)}
 #rows mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+/* ---------- Lançamentos: animações ---------- */
+#rows tr{transition:background .15s ease}
+#rows tr:hover{background:var(--surface-2)}
+.l-ok-v{color:var(--good);font-weight:700;margin-left:6px;display:inline-block}
+@media (prefers-reduced-motion: no-preference){
+  #rows tr{transition:background .15s ease,transform .15s ease}
+  #rows tr:hover{transform:translateX(3px)}
+  #rows tr:hover td:last-child{color:var(--accent)}
+  #rows.l-cascata tr{animation:l-sobe .35s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--d,0)*25ms)}
+  #rows tr.l-novo{animation:l-sobe .35s cubic-bezier(.2,.7,.2,1) both}
+  #rows.l-direita{animation:l-direita .35s cubic-bezier(.2,.7,.2,1) both}
+  #rows.l-esquerda{animation:l-esquerda .35s cubic-bezier(.2,.7,.2,1) both}
+  #rows tr.l-saindo{animation:l-sai .3s ease forwards}
+  .cat-sel.l-ok{animation:l-ok 1.3s ease both}
+  .l-ok-v{animation:l-okv 1.6s ease forwards}
+  #lNums .v.l-pula{animation:l-pula .5s cubic-bezier(.3,1.6,.5,1)}
+  .cat-sel.l-pulsa{animation:l-pulsa .9s ease 2}
+  @keyframes l-sobe{from{opacity:0;transform:translateY(8px)}}
+  @keyframes l-direita{from{opacity:0;transform:translateX(40px)}}
+  @keyframes l-esquerda{from{opacity:0;transform:translateX(-40px)}}
+  @keyframes l-sai{to{opacity:0;transform:translateX(16px)}}
+  @keyframes l-ok{25%{background-color:color-mix(in srgb,var(--good) 28%,transparent);border-color:var(--good);color:var(--good)}}
+  @keyframes l-okv{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.2)}35%{transform:none}80%{opacity:1}100%{opacity:0}}
+  @keyframes l-pula{from{transform:scale(1.5)}}
+  @keyframes l-pulsa{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 40%,transparent)}}
+}
+#lNums .v{display:inline-block;transform-origin:left center}
