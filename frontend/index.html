@@ -212,6 +212,20 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <p class="form-err" id="pPersErro" role="alert" hidden></p>
       <div class="p-botoes"><button type="button" class="btn btn-sm primary" id="pPersAplicar">Aplicar</button><button type="button" class="link-btn" id="pPersCancelar">Cancelar</button></div>
     </div>
+    <div class="p-caixa" id="pCmp" role="dialog" aria-labelledby="pCmpT" hidden>
+      <h3 class="p-caixa-t" id="pCmpT">Comparar dois períodos</h3>
+      <div class="p-linha" id="pCmpAtalhos"></div>
+      <div class="seg" role="tablist" aria-label="Como escolher">
+        <button type="button" role="tab" id="pCmpMeses" aria-selected="true">Meses inteiros</button>
+        <button type="button" role="tab" id="pCmpDias" aria-selected="false">Dias exatos</button>
+      </div>
+      <div class="p-linha p-cmp-linha" data-modo="meses"><b class="cmp-p1">● Período 1</b><label>De <select id="pC1De"></select></label><label>até <select id="pC1Ate"></select></label></div>
+      <div class="p-linha p-cmp-linha" data-modo="meses"><b class="cmp-p2">● Período 2</b><label>De <select id="pC2De"></select></label><label>até <select id="pC2Ate"></select></label></div>
+      <div class="p-linha p-cmp-linha" data-modo="dias" hidden><b class="cmp-p1">● Período 1</b><label>De <input id="pC1DeD" type="date" placeholder="dd/mm/aaaa"></label><label>até <input id="pC1AteD" type="date" placeholder="dd/mm/aaaa"></label></div>
+      <div class="p-linha p-cmp-linha" data-modo="dias" hidden><b class="cmp-p2">● Período 2</b><label>De <input id="pC2DeD" type="date" placeholder="dd/mm/aaaa"></label><label>até <input id="pC2AteD" type="date" placeholder="dd/mm/aaaa"></label></div>
+      <p class="form-err" id="pCmpErro" role="alert" hidden></p>
+      <div class="p-botoes"><button type="button" class="btn btn-sm primary" id="pCmpOk">Comparar</button><button type="button" class="link-btn" id="pCmpCancelar">Cancelar</button></div>
+    </div>
     <div class="months-wrap"><div class="months" id="pMonths" role="group" aria-label="Resultado por mês"></div></div>
   </section>
 
@@ -259,6 +273,19 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       </div>
     </section>
     <div id="dashBank">
+    <section class="cmp-modo" id="dCmpModo" aria-label="Comparação de dois períodos" hidden>
+      <p class="card faixa cmp-topo" id="dCmpTopo"></p>
+      <p class="card verdict faixa" id="dCmpVer" aria-live="polite"></p>
+      <section class="card faixa" aria-labelledby="dCmpTabT">
+        <h2 class="faixa-t" id="dCmpTabT">Por mês</h2>
+        <table class="cmp-tab" id="dCmpTab"><thead><tr><th></th><th class="cmp-p1" id="dCmpA"></th><th class="cmp-p2" id="dCmpB"></th><th>Diferença</th></tr></thead><tbody></tbody></table>
+      </section>
+      <section class="card faixa" aria-labelledby="dCmpCatT">
+        <div class="faixa-head"><h2 class="faixa-t" id="dCmpCatT">Categorias</h2><button type="button" class="link-btn" id="dCmpTodas" hidden>Ver todas</button></div>
+        <ul class="cmp-cats" id="dCmpCats"></ul>
+      </section>
+      <p class="card faixa faixa-linha" id="dCmpMudou"></p>
+    </section>
     <section class="card verdict faixa" id="dVer" aria-live="polite">
       <p class="verdict-frase"><b id="dVerT"></b> <span id="dVerTx"></span> <span class="verdict-pesa" id="dVerPesa"></span></p>
       <p class="aviso-pasta" id="dAvisoPasta" role="status" hidden></p>
