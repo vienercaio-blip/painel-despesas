@@ -998,11 +998,12 @@ function axisY(sc, y, mL, W, mR){
   return s;
 }
 function roundedBar(x, y0, y1, w, fill, op){
+  /* as barras para cima crescem de baixo; as para baixo (negativas), de cima */
   var fo = op ? '" fill-opacity="'+op : '';
   var up = y1<y0, top = Math.min(y0,y1), h = Math.abs(y1-y0);
   if (h<0.5) return '';
   var r = Math.min(4, h, w/2);
-  if (up) return '<path fill="'+fill+fo+'" d="M'+x.toFixed(1)+' '+y0.toFixed(1)+'V'+(top+r).toFixed(1)+'Q'+x.toFixed(1)+' '+top.toFixed(1)+' '+(x+r).toFixed(1)+' '+top.toFixed(1)+'H'+(x+w-r).toFixed(1)+'Q'+(x+w).toFixed(1)+' '+top.toFixed(1)+' '+(x+w).toFixed(1)+' '+(top+r).toFixed(1)+'V'+y0.toFixed(1)+'Z"></path>';
+  if (up) return '<path class="bar-up" fill="'+fill+fo+'" d="M'+x.toFixed(1)+' '+y0.toFixed(1)+'V'+(top+r).toFixed(1)+'Q'+x.toFixed(1)+' '+top.toFixed(1)+' '+(x+r).toFixed(1)+' '+top.toFixed(1)+'H'+(x+w-r).toFixed(1)+'Q'+(x+w).toFixed(1)+' '+top.toFixed(1)+' '+(x+w).toFixed(1)+' '+(top+r).toFixed(1)+'V'+y0.toFixed(1)+'Z"></path>';
   var bot = y1;
   return '<path fill="'+fill+fo+'" d="M'+x.toFixed(1)+' '+y0.toFixed(1)+'V'+(bot-r).toFixed(1)+'Q'+x.toFixed(1)+' '+bot.toFixed(1)+' '+(x+r).toFixed(1)+' '+bot.toFixed(1)+'H'+(x+w-r).toFixed(1)+'Q'+(x+w).toFixed(1)+' '+bot.toFixed(1)+' '+(x+w).toFixed(1)+' '+(bot-r).toFixed(1)+'V'+y0.toFixed(1)+'Z"></path>';
 }
@@ -1173,6 +1174,7 @@ function renderDashboard(){
   $('dNums').innerHTML = nums.map(function(x, i){
     return '<div class="kpi"><span class="label">'+x.rotulo+'</span><span class="value num'+(x.neg?' neg':'')+'">'+esc(x.valor)+'</span><span class="sub">'+x.sub+'</span>'+sparks[i]+'</div>';
   }).join('');
+  contarNumeros();
   var nInv = catByCode('investimentos'), nEc = catByCode('entre_contas'), aplicado = 0, resgatado = 0, transferido = 0;
   tx.forEach(function(t){
     var c = catOf(t);
@@ -1218,6 +1220,7 @@ function renderDashboard(){
   $('dFatias').innerHTML = fat.map(function(f, i){
     return '<button type="button" class="'+(f.outros ? 'outros' : '')+'" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+' data-flex="'+f.pct+'" style="flex-grow:'+f.pct+(f.outros ? '' : ';background:'+corFatia(f, i))+'" title="'+esc(f.nome)+' · '+f.pct+'%" aria-label="'+esc(f.nome)+', '+f.pct+'% dos gastos"></button>';
   }).join('');
+  crescerFatias(fat.map(function(f){ return f.nome+':'+f.pct; }).join('|'));
   $('dLegenda').innerHTML = fat.map(function(f, i){
     return '<li><button type="button" '+(f.demais ? 'data-demais="1"' : 'data-cat="'+esc(f.nome)+'"')+'><i class="'+(f.outros ? 'outros' : '')+'" style="'+(f.outros ? 'background:var(--surface-2);border:1px dashed var(--line)' : 'background:'+corFatia(f, i))+'"></i>'+esc(f.nome)+' <b>'+f.pct+'%</b></button></li>';
   }).join('');
@@ -2583,7 +2586,11 @@ function chegou(){
   }
   state.vistaAntes = noInicio ? 'inicio' : 'outra';
   /* o Dashboard é desenhado com a largura real dos cartões: redesenha já visível */
-  if (state.loaded && MODE==='despesas' && !$('viewDash').hidden) renderDashboard();
+  var noDash = state.loaded && MODE==='despesas' && !$('viewDash').hidden;
+  if (noDash && state.vistaDash!=='dashboard'){ state.numsAntes = null; state.fatiasAntes = null; }   /* na chegada, conta e enche do zero */
+  if (noDash) renderDashboard();
+  if (noDash && state.vistaDash!=='dashboard') animarDashboard();
+  state.vistaDash = noDash ? 'dashboard' : 'outra';
   window.scrollTo(0, 0);
   if (state.depois){ var f = state.depois; state.depois = null; f(); }
 }
@@ -2624,6 +2631,61 @@ document.addEventListener('mousemove', function(e){
 document.addEventListener('mouseleave', hideTip);
 window.addEventListener('scroll', hideTip, true);
 
+/* ---------- dashboard em faixas: movimentos ----------
+   Todos respeitam "reduzir movimento" (semMovimento): o estado final aparece na hora. */
+var dashTimer = null;
+function animarDashboard(){
+  var v = $('viewDash');
+  if (semMovimento()) return;
+  v.classList.remove('entra'); void v.offsetWidth; v.classList.add('entra');
+  /* meses: as barras sobem uma após a outra (no máximo 0,8 s no total) */
+  var barras = v.querySelectorAll('#dRes path');
+  var passo = barras.length>1 ? Math.min(40, 300/(barras.length-1)) : 0;
+  Array.prototype.forEach.call(barras, function(b, i){ b.style.animationDelay = (i*passo)+'ms'; });
+  /* aviso que pulsa uma vez, só em Atenção ou Alerta */
+  var ver = $('dVer');
+  ver.classList.remove('pulsa');
+  if (/\b(amarelo|vermelho)\b/.test(ver.className)){ void ver.offsetWidth; ver.classList.add('pulsa'); }
+  clearTimeout(dashTimer);
+  dashTimer = setTimeout(function(){ v.classList.remove('entra'); ver.classList.remove('pulsa'); }, 1400);
+}
+/* Entrou, Saiu e Sobrou contam do valor anterior até o novo; o texto final é
+   sempre o mesmo que o Dashboard escreveu (nunca para num número diferente) */
+function numeroDe(txt){ var n = parseFloat(String(txt).replace(/[^\d,-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+function contarNumeros(){
+  var els = Array.prototype.slice.call(document.querySelectorAll('#dNums .value'));
+  var finais = els.map(function(e){ return e.textContent; });
+  var antes = state.numsAntes || finais.map(function(){ return '0'; });
+  state.numsAntes = finais;
+  var token = state.contaToken = (state.contaToken || 0) + 1;
+  if (semMovimento() || !window.requestAnimationFrame) return;
+  els.forEach(function(el, i){
+    var de = numeroDe(antes[i]), ate = numeroDe(finais[i]);
+    if (Math.abs(de-ate) < 0.005) return;
+    var ini = null;
+    var passo = function(t){
+      if (token !== state.contaToken){ return; }   /* um redesenho mais novo assumiu */
+      if (ini===null) ini = t;
+      var p = Math.min(1, (t-ini)/800), v = de + (ate-de)*(1-Math.pow(1-p, 3));
+      el.textContent = p<1 ? brl.format(v) : finais[i];
+      if (p<1) requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  });
+}
+/* a barra de categorias se enche cor por cor quando a divisão muda */
+function crescerFatias(assinatura){
+  var mudou = assinatura !== state.fatiasAntes;
+  state.fatiasAntes = assinatura;
+  if (!mudou || semMovimento()) return;
+  var bs = Array.prototype.slice.call(document.querySelectorAll('#dFatias button'));
+  bs.forEach(function(b){ b.style.transition = 'none'; b.style.flexGrow = '0'; });
+  void $('dFatias').offsetWidth;
+  bs.forEach(function(b, i){
+    b.style.transition = 'flex-grow .7s cubic-bezier(.2,.7,.2,1) '+(i*80)+'ms';
+    b.style.flexGrow = b.dataset.flex;
+  });
+}
 /* ---------- dashboard em faixas: altura do gráfico e cliques das faixas ---------- */
 function alturaMeses(){ return window.innerWidth < 560 ? 140 : 120; }
 var pct0 = new Intl.NumberFormat('pt-BR', {style:'percent', maximumFractionDigits:0});
