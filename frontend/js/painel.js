@@ -762,45 +762,11 @@ function render(){
 
   renderPeriod(tx);
 
-  var nIn = tx.filter(entraNaConta).length, nOut = tx.filter(saiDaConta).length;
-  $('kIn').textContent = brl.format(ins);  $('kInSub').innerHTML = nIn+' lançamentos'+(prev?deltaTxt(ins, prev.ins, prev.label):'');
-  $('kOut').textContent = brl.format(outs); $('kOutSub').innerHTML = nOut+' lançamentos'+(prev?deltaTxt(outs, prev.outs, prev.label):'');
-  $('kRes').textContent = brl.format(res);
-  var pill = $('kResPill');
-  pill.className = 'pill ' + (res>=0?'pos':'neg');
-  pill.innerHTML = (res>=0
-    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>Sobrou dinheiro'
-    : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>Gastou mais do que entrou');
-
   var cats = Object.keys(byCat).map(function(k){return {name:k, v:byCat[k]};}).sort(function(a,b){
     if (a.name===OTHER) return 1; if (b.name===OTHER) return -1; return b.v-a.v; });
   var top = cats.filter(function(c){return c.name!==OTHER;})[0] || cats[0];
-  $('kTop').textContent = top ? top.name : '—';
-  $('kTopSub').textContent = top ? brl.format(top.v)+' · '+pct.format(outs?top.v/outs:0)+' das saídas' : '';
-
-  var maxC = Math.max.apply(null, cats.map(function(c){return c.v;}).concat([1]));
-  $('catHint').textContent = 'Total: '+brl.format(outs);
-  $('cats').innerHTML = cats.map(function(c){
-    var share = outs ? c.v/outs : 0;
-    return '<li class="cat'+(c.name===OTHER?' other':'')+'"><button type="button" class="catbtn" data-cat="'+esc(c.name)+'" aria-label="Ver detalhes de '+esc(c.name)+'" data-tip="<b>'+esc(c.name)+'</b><br>'+brl.format(c.v)+' · '+pct.format(share)+' das saídas<br>Clique para ver de onde veio">'+
-      '<span class="name">'+esc(c.name)+'</span><span class="amt num">'+brl0.format(c.v)+' · '+pct.format(share)+'</span>'+
-      '<span class="track"><span class="bar" style="display:block;width:'+(c.v/maxC*100).toFixed(1)+'%"></span></span></button></li>';
-  }).join('');
-  $('catHint').textContent = 'Total: '+brl.format(outs)+' · clique para detalhar';
-
-  state.catSummary = {cats:cats, outs:outs};
   if (!state.cat || !byCat[state.cat]) state.cat = top ? top.name : null;
-
-  var p = state.p, mode;
-  if (p.tipo==='semana') mode = 'day';
-  else if (p.tipo==='mes') mode = 'week';
-  else {
-    var span = (tx[tx.length-1].date - tx[0].date)/864e5;
-    mode = span > 730 ? 'year' : span > 40 ? 'month' : 'week';
-  }
-  renderFlow(tx, mode);
-  renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev);
-  renderDespesasComparacao();
+  renderDespesas(tx, prev);
   renderTable();
   renderCategorias();
   renderRules();
@@ -1846,7 +1812,9 @@ function setView(){
   $('viewDash').hidden = !(v==='dashboard' && isD);
   $('viewVendas').hidden = !(v==='dashboard' && isV);
   $('viewEconomia').hidden = !(v==='economia' && isD);
+  var chegouDesp = v==='despesas' && $('viewDespesas').hidden;
   $('viewDespesas').hidden = v!=='despesas';
+  if (chegouDesp && state.loaded && state.despAberta) despesasCalmo();
   $('viewCategorias').hidden = v!=='categorias';
   $('viewLanc').hidden = v!=='lancamentos';
   if (v!=='lancamentos' && state.editLanc){ state.editLanc = false; if (state.loaded) renderTable(); }
@@ -1882,77 +1850,9 @@ function setMode(m){
   setView();
 }
 
-function renderFlow(tx, mode){
-  $('flowTitle').textContent = 'Fluxo';
-  var groups = {}, order = [];
-  function add(key, label){ if (!groups[key]){ groups[key]={label:label,inn:0,out:0}; order.push(key); } return groups[key]; }
-  if (mode==='day'){
-    var d0 = keyDate(state.p.w);
-    var DIAS = ['seg','ter','qua','qui','sex','sáb','dom'];
-    for (var i=0;i<7;i++){ var dd = new Date(d0); dd.setDate(dd.getDate()+i); add(weekKey(dd)+'-'+i, DIAS[i]+' '+shortDate(dd)); }
-  }
-  tx.forEach(function(t){
-    var d = t.date, g;
-    if (mode==='year') g = add(String(d.getFullYear()), String(d.getFullYear()));
-    else if (mode==='month') g = add(d.getFullYear()+'-'+String(d.getMonth()).padStart(2,'0'), MESES[d.getMonth()].slice(0,3)+'/'+String(d.getFullYear()).slice(2));
-    else if (mode==='week'){ var k = weekKey(d); g = add(k, 'sem. '+shortDate(keyDate(k))); }
-    else g = add(weekKey(d)+'-'+((d.getDay()+6)%7), '');
-    if (entraNaConta(t)) g.inn += t.value; else if (saiDaConta(t)) g.out -= t.value;
-  });
-  order.sort();
-  var data = order.map(function(k){return groups[k];});
-  var W=640,H=260,mL=82,mR=8,mT=12,mB=30, iw=W-mL-mR, ih=H-mT-mB;
-  var lblStep = data.length>18 ? 3 : data.length>9 ? 2 : 1;
-  var max = Math.max.apply(null, data.map(function(g){return Math.max(g.inn,g.out);}).concat([1]));
-  var raw = max/4, mag = Math.pow(10,Math.floor(Math.log10(raw))), n = raw/mag;
-  var step = (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*mag, top = Math.ceil(max/step)*step;
-  var y = function(v){return mT + ih - v/top*ih;};
-  var s = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Gráfico de barras de entradas e saídas">';
-  for (var v=0; v<=top+1e-6; v+=step){
-    var yy = y(v).toFixed(1);
-    s += '<line class="'+(v===0?'base':'gl')+'" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+yy+'" y2="'+yy+'"></line>';
-    s += '<text x="'+(mL-8)+'" y="'+yy+'" dy="0.32em" text-anchor="end">'+(v>=1000? 'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil' : 'R$ '+v)+'</text>';
-  }
-  var gw = iw/data.length, bw = Math.min(28, (gw*0.7-2)/2);
-  data.forEach(function(g,i){
-    var cx = mL + gw*i + gw/2;
-    s += bar(cx-bw-1, g.inn, 'var(--s1)') + bar(cx+1, g.out, 'var(--s2)');
-    if (i % lblStep === 0) s += '<text x="'+cx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+esc(g.label)+'</text>';
-    var tip = '<b>'+esc(g.label)+'</b><br>Entradas: '+brl.format(g.inn)+'<br>Saídas: '+brl.format(g.out)+'<br>Saldo: '+brl.format(g.inn-g.out);
-    s += '<rect class="hit" x="'+(mL+gw*i).toFixed(1)+'" y="'+mT+'" width="'+gw.toFixed(1)+'" height="'+ih+'" data-tip="'+esc(tip)+'"></rect>';
-  });
-  function bar(x, val, fill){
-    if (val<=0) return '';
-    var h = Math.max(1, val/top*ih), yb = mT+ih, yt = yb-h, r = Math.min(4,h,bw/2);
-    return '<path fill="'+fill+'" d="M'+x.toFixed(1)+' '+yb+'V'+(yt+r).toFixed(1)+'Q'+x.toFixed(1)+' '+yt.toFixed(1)+' '+(x+r).toFixed(1)+' '+yt.toFixed(1)+
-      'H'+(x+bw-r).toFixed(1)+'Q'+(x+bw).toFixed(1)+' '+yt.toFixed(1)+' '+(x+bw).toFixed(1)+' '+(yt+r).toFixed(1)+'V'+yb+'Z"></path>';
-  }
-  $('flow').innerHTML = s + '</svg>';
-}
 
 var ICON_INFO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.01"></path></svg>';
 var ICON_WARN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19z"></path><path d="M12 10v4M12 17v.01"></path></svg>';
-function renderInsights(ins, outs, res, cats, biggest, byCat, tx, prev){
-  var L = [];
-  if (prev && prev.ins && prev.outs){
-    var di = (ins-prev.ins)/prev.ins, dout = (outs-prev.outs)/prev.outs;
-    var worse = dout > di + 0.02;
-    L.push({w:worse, t:'Em relação ao '+prev.label+', as entradas '+(di>=0?'subiram ':'caíram ')+pct.format(Math.abs(di))+' e as saídas '+(dout>=0?'subiram ':'caíram ')+pct.format(Math.abs(dout))+'.'+(worse?' Os gastos estão crescendo mais rápido que o faturamento.':'')});
-  }
-  if (res<0) L.push({w:true, t:'No período, as saídas superaram as entradas em '+brl.format(-res)+'. Vale olhar primeiro as maiores categorias abaixo.'});
-  else L.push({w:false, t:'Sobraram '+brl.format(res)+' no período, ou '+pct.format(ins?res/ins:0)+' de tudo o que entrou.'});
-  var top = cats.filter(function(c){return c.name!==OTHER;})[0];
-  if (top) L.push({w:false, t:'A maior despesa é '+top.name.toLowerCase()+': '+brl.format(top.v)+', o que representa '+pct.format(top.v/outs)+' de todas as saídas.'});
-  var fees = byCat[feesName()];
-  if (fees && ins) L.push({w: fees/ins>0.05, t:'Taxas de cartão, antecipação e aplicativos levaram '+brl.format(fees)+', o equivalente a '+pct.format(fees/ins)+' do que entrou. Compare as taxas da sua maquininha e evite antecipar recebíveis quando puder.'});
-  var oth = byCat[OTHER];
-  if (oth){
-    var n = tx.filter(function(t){return ehSaida(t) && catOf(t)===OTHER;}).length;
-    L.push({w:true, t:n+(n===1?' despesa ficou':' despesas ficaram')+' sem categoria ('+brl.format(oth)+'). Classifique na aba Organizar para o painel ficar mais preciso.'});
-  }
-  if (biggest) L.push({w:false, t:'O maior pagamento individual foi "'+biggest.desc+'", de '+brl.format(-biggest.value)+', em '+fmtDate(biggest.date)+'.'});
-  $('insights').innerHTML = L.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
-}
 
 function renderTable(){
   var q = norm(state.q).trim();
@@ -2051,12 +1951,6 @@ $('fCat').addEventListener('change', function(e){
   else if (state.fcat!=='all'){ state.filter='out'; }
   document.querySelectorAll('.table-tools .seg:not(#txPerCmp) button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f===state.filter ? 'true':'false'); });
   renderTable();
-});
-$('cats').addEventListener('click', function(e){
-  var b = e.target.closest('[data-cat]'); if (!b) return;
-  if (state.cmp){ abrirLancamentos(b.dataset.cat); return; }   /* comparando: vai aos lançamentos, ainda comparando */
-  state.cat = b.dataset.cat; renderCategorias(); tip.hidden = true;
-  irPara('categorias');
 });
 $('catList').addEventListener('click', function(e){
   var b = e.target.closest('[data-cat]'); if (!b) return;
@@ -2463,42 +2357,6 @@ function htmlTopoComparacao(A, B){
     (av.length ? '<span class="cmp-aviso">'+av.map(esc).join(' ')+'</span>' : '');
 }
 function maiorCat(cat){ var m = null; Object.keys(cat).forEach(function(c){ if (c!==OTHER && cat[c]>0 && (!m || cat[c]>cat[m])) m = c; }); return m; }
-/* ---------- Despesas comparando: cada quadro com os dois períodos ---------- */
-function renderDespesasComparacao(){
-  var on = !!state.cmp;
-  $('dCmpTopoDesp').hidden = !on;
-  var rot = {kIn:['Entradas','Entradas por mês'], kOut:['Saídas','Saídas por mês'], kRes:['Resultado do período','Resultado por mês']};
-  Object.keys(rot).forEach(function(id){ var l = $(id).parentNode.querySelector('.label'); if (l) l.textContent = rot[id][on ? 1 : 0]; });
-  if (!state.flowLegend) state.flowLegend = $('flowLegend').innerHTML;
-  if (!on){ $('flowLegend').innerHTML = state.flowLegend; return; }
-  var A = dadosPeriodo(state.cmp.a), B = dadosPeriodo(state.cmp.b), r = Periodo.comparar(A, B);
-  $('dCmpTopoDesp').innerHTML = htmlTopoComparacao(A, B);
-  var difTxt = function(d, bom){ return '<span class="'+(bom===true ? 'pos' : bom===false ? 'neg' : '')+'">'+(d>=0.005 ? '+' : d<=-0.005 ? '−' : '')+brl.format(Math.abs(d))+'</span>'; };
-  var linha = function(id, a, b, d, bom){ $(id).textContent = brl.format(a); $(id+'Sub').innerHTML = esc(B.nome)+': '+brl.format(b)+' · '+difTxt(d, bom); };
-  linha('kIn', r.linhas[0].a, r.linhas[0].b, r.linhas[0].dif, r.linhas[0].bom);
-  linha('kOut', r.linhas[1].a, r.linhas[1].b, r.linhas[1].dif, r.linhas[1].bom);
-  var resA = A.ins/A.divisor - A.outs/A.divisor, resB = B.ins/B.divisor - B.outs/B.divisor;
-  $('kRes').textContent = brl.format(resA);
-  $('kResPill').className = 'pill '+(resA>=0 ? 'pos' : 'neg');
-  $('kResPill').innerHTML = esc(B.nome)+': '+brl.format(resB)+' · '+difTxt(resA-resB, Math.abs(resA-resB)<0.5 ? null : resA>resB);
-  var mA = maiorCat(A.cat), mB = maiorCat(B.cat);
-  $('kTop').textContent = mA || '—';
-  $('kTopSub').textContent = esc(B.nome)+': '+(mB && mB===mA ? 'a mesma' : (mB || '—'));
-  /* categorias: barras duplas por mês, na ordem do Período 1 */
-  var cats = r.categorias.slice().sort(function(x, y){ return (y.a-x.a) || (y.b-x.b); });
-  var max = cats.reduce(function(m, c){ return Math.max(m, c.a, c.b); }, 0) || 1;
-  $('catHint').textContent = 'Por mês, '+A.nome+' × '+B.nome+' · clique para ver os lançamentos';
-  $('cats').innerHTML = cats.map(function(c){
-    return '<li class="cat cat-cmp"><button type="button" class="catbtn" data-cat="'+esc(c.nome)+'" aria-label="Ver os lançamentos de '+esc(c.nome)+'">'+
-      '<span class="name">'+esc(c.nome)+'</span><span class="amt num"><span class="cmp-p1">'+brl0.format(c.a)+'</span> · <span class="cmp-p2">'+brl0.format(c.b)+'</span> <b class="cmp-txt '+(c.dif>0 ? 'neg' : 'pos')+'">'+esc(c.txt)+'</b></span>'+
-      '<span class="cmp-barra" aria-hidden="true"><i class="cmp-a" style="width:'+(c.a/max*100).toFixed(2)+'%"></i><i class="cmp-b" style="width:'+(c.b/max*100).toFixed(2)+'%"></i></span></button></li>';
-  }).join('') || '<li class="cmp-vazio">Nenhuma saída nos dois períodos.</li>';
-  renderFluxoComparacao(A, B);
-  /* Resumo em frases */
-  var frases = Periodo.resumoComparacao(r, A, B, mA, mB).map(function(t){ return {w:false, t:t}; })
-    .concat(avisosComparacao(A, B).map(function(t){ return {w:true, t:t}; }));
-  $('insights').innerHTML = frases.map(function(i){ return '<li class="'+(i.w?'warn':'')+'">'+(i.w?ICON_WARN:ICON_INFO)+'<p>'+esc(i.t)+'</p></li>'; }).join('');
-}
 /* Fluxo comparando: duas linhas de saídas alinhadas por posição (1º, 2º, 3º…) */
 function renderFluxoComparacao(A, B){
   var pa = state.cmp.a, pb = state.cmp.b;
@@ -3128,6 +2986,161 @@ $('dInterno').addEventListener('click', function(e){
   e.preventDefault(); abrirLancamentos(a.dataset.interno);
 });
 /* clicar numa barra: abre a aba Lançamentos já filtrada naquela categoria */
+/* ---------- página Despesas: para onde foi o dinheiro ----------
+   Contas em Despesas (despesas.js); aqui só o desenho. */
+var CAT_VISIVEIS = 6;
+/* unidade dos gráficos: semana → dia; um mês ou até 40 dias → semana; mais de 2 anos → ano; senão mês */
+function unidadeDe(p){
+  if (p.tipo==='semana') return 'dia';
+  if (p.tipo==='mes') return 'semana';
+  var L = extratoLimites(), c = Periodo.cobertura(p, L.inicio, L.fim);
+  return c.dias<=40 ? 'semana' : c.dias>730 ? 'ano' : 'mes';
+}
+/* saídas por unidade do período (com filtro opcional), marcando unidades cortadas
+   (parcial) e sem nenhum dia de dados (semDados) */
+function unidadesSaida(p, un, filtro){
+  var L = extratoLimites();
+  var pp = p.tipo==='tudo' ? {tipo:'intervalo', de:L.inicio, ate:L.fim, dias:true} : p;
+  var base = un==='ano' ? 'mes' : un;
+  var pos = Periodo.posicoes(pp, base), soma = {}, lp = Periodo.limites(pp);
+  state.tx.forEach(function(t){
+    if (!saiDaConta(t) || !Periodo.contem(t.date, pp) || (filtro && !filtro(t))) return;
+    var k = base==='mes' ? Periodo.chaveDe(t.date) : base==='semana' ? weekKey(t.date) : Periodo.iso(t.date);
+    soma[k] = (soma[k]||0) - t.value;
+  });
+  var r = pos.map(function(x){
+    var de = base==='mes' ? x.chave+'-01' : x.chave,
+        ate = base==='mes' ? Periodo.limites(Periodo.deMeses(x.chave, x.chave)).ate : base==='semana' ? Periodo.iso(new Date(+x.chave.slice(0,4), +x.chave.slice(5,7)-1, +x.chave.slice(8,10)+6)) : x.chave;
+    var cde = [de, lp.de, L.inicio].sort()[2], cate = [ate, lp.ate, L.fim].sort()[0];
+    if (cde>cate) return {chave:x.chave, rotulo:x.rotulo, valor:0, semDados:true, parcial:true};
+    var ddmm = function(z){ return z.slice(8,10)+'/'+z.slice(5,7); };
+    var nota = cde!==de ? ' (desde '+ddmm(cde)+')' : cate!==ate ? ' (até '+ddmm(cate)+')' : '';
+    return {chave:x.chave, rotulo:x.rotulo, valor:soma[x.chave]||0, parcial: cde!==de || cate!==ate, nota:nota};
+  });
+  if (un!=='ano') return r;
+  var anos = {}, ordem = [];
+  r.forEach(function(u){ var a = u.chave.slice(0,4);
+    if (!anos[a]){ anos[a] = {chave:a, rotulo:a, valor:0, parcial:false, semDados:true, nota:''}; ordem.push(a); }
+    anos[a].valor += u.valor; if (u.parcial) anos[a].parcial = true; if (!u.semDados) anos[a].semDados = false; });
+  return ordem.map(function(a){ var o = anos[a]; if (o.parcial) o.nota = ' (parcial)'; return o; });
+}
+/* gráfico de barras de uma série (Despesas.serie): o maior em dourado com o valor em cima, média tracejada */
+function svgBarras(un, unid, opt){
+  var S = Despesas.serie(unid.filter(function(u){ return !u.semDados; })), bs = S.barras;
+  if (!bs.length) return '';
+  var W = opt.W||600, H = opt.H||150, mL = 8, mR = 8, mT = 22, mB = 22, iw = W-mL-mR, ih = H-mT-mB;
+  var max = Math.max.apply(null, bs.map(function(b){ return b.valor; }).concat([1]));
+  var gw = iw/bs.length, bw = Math.max(3, Math.min(34, gw*0.66));
+  var passo = Math.max(1, Math.ceil(bs.length/(opt.rotulos||12)));
+  var y = function(v){ return mT+ih-Math.max(0, v)/max*ih; };
+  var s = '<svg class="'+opt.cls+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opt.aria)+'">';
+  bs.forEach(function(b, i){
+    var x = mL+gw*i+(gw-bw)/2, yt = y(b.valor), h = mT+ih-yt;
+    var tip = '<b>'+esc(b.rotulo+(b.nota||''))+'</b><br>'+brl.format(b.valor)+(b.parcial && !b.nota ? ' (parcial)' : '');
+    s += '<g class="x-b'+(b.maior ? ' maior' : '')+(b.parcial ? ' parcial' : '')+'" data-tip="'+esc(tip)+'">'+
+      '<rect class="hit" x="'+(mL+gw*i).toFixed(1)+'" y="'+mT+'" width="'+gw.toFixed(1)+'" height="'+ih+'"></rect>'+
+      '<rect class="x-barra" x="'+x.toFixed(1)+'" y="'+yt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0, h).toFixed(1)+'" rx="'+Math.min(4, bw/2).toFixed(1)+'" style="--h:'+h.toFixed(1)+'px"></rect>'+
+      (b.maior ? '<text class="x-maior-v" x="'+(x+bw/2).toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="'+(i===0 ? 'start' : i===bs.length-1 ? 'end' : 'middle')+'">'+brl0.format(b.valor)+'</text>' : '')+
+      (i%passo===0 ? '<text class="x-rot" x="'+(mL+gw*i+gw/2).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(b.rotulo)+'</text>' : '')+'</g>';
+  });
+  if (bs.length>1) s += '<line class="x-media" x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(S.media).toFixed(1)+'" y2="'+y(S.media).toFixed(1)+'"></line>';
+  return {svg: s+'</svg>', media:S.media, n:bs.length};
+}
+function renderDespesas(tx, prev){
+  var p = state.p, isWeek = p.tipo==='semana';
+  $('viewDespesas').classList.toggle('x-calmo', !!state.despCalmo);   /* redesenho sem mudar de período: nada cresce de novo */
+  var months = {}; tx.forEach(function(t){ months[Periodo.chaveDe(t.date)] = 1; });
+  var nMeses = Object.keys(months).length, fm = Periodo.fatorMes(p, nMeses), div = isWeek ? 1 : fm.divisor;
+  var T = sums(tx), outs = T.outs, byCat = {}, nOut = 0;
+  tx.forEach(function(t){ if (saiDaConta(t)){ nOut++; var c = catOf(t); byCat[c] = (byCat[c]||0) - t.value; } });
+  var ehTotal = div===1 && !fm.nota;
+  var quando = p.tipo==='tudo' ? 'em todo o extrato' : fm.dias && !fm.nota ? 'em '+fm.dias+' dias' : 'em '+Periodo.curto(p);
+  var vm = function(v){ return ehTotal ? brl.format(v) : brl.format(v/div)+'/mês'; };
+  /* topo */
+  $('xVazio').hidden = outs>0;
+  ['xCats','xTopo'].forEach(function(id){ $(id).hidden = !(outs>0); });
+  if (!(outs>0)){ $('xCatList').innerHTML = ''; ['xMeses','xMudou','xGastos','xResumo'].forEach(function(id){ $(id).hidden = true; }); return; }
+  contarAte($('xSaiu'), outs/div, function(v){ return 'Saiu '+brl.format(v)+(ehTotal ? ' '+quando : ' por mês'); });
+  var sub = ehTotal ? nOut+' lançamentos'
+    : brl.format(outs)+(fm.nota ? ' em '+fm.dias+' dias ('+fm.nota+')' : ' em '+nMeses+' meses')+' · '+nOut+' lançamentos';
+  if (prev && prev.outs>0){ var d = (outs-prev.outs)/prev.outs; sub += ' · <span class="'+(d>0.005 ? 'neg' : d<-0.005 ? 'pos' : '')+'">'+(d>=0 ? '+' : '−')+pct0.format(Math.abs(d))+'</span> que '+esc(prev.label); }
+  $('xSaiuSub').innerHTML = sub;
+  var dv = Despesas.divisao(byCat, FIXED, outs);
+  $('xTopo').dataset.total = outs.toFixed(2);
+  $('xDiv').innerHTML = '<i class="x-fix" style="width:'+dv.pFixas+'%"></i><i class="x-dia" style="width:'+dv.pDia+'%"></i>';
+  $('xDivLeg').innerHTML = '<span data-fixas="'+dv.fixas.toFixed(2)+'" data-pct="'+dv.pFixas+'"><i class="sw x-fix"></i>Contas fixas '+vm(dv.fixas)+' ('+dv.pFixas+'%)</span>'+
+    '<span data-dia="'+dv.dia.toFixed(2)+'" data-pct="'+dv.pDia+'"><i class="sw x-dia"></i>Dia a dia '+vm(dv.dia)+' ('+dv.pDia+'%)</span>';
+  /* categorias */
+  var cats = Object.keys(byCat).filter(function(k){ return byCat[k]>0; }).map(function(k){ return {nome:k, v:byCat[k]}; })
+    .sort(function(a, b){ if (a.nome===OTHER) return 1; if (b.nome===OTHER) return -1; return b.v-a.v; });
+  if (state.despAberta && !byCat[state.despAberta]) state.despAberta = null;
+  var todas = !!state.despTodas || cats.length<=CAT_VISIVEIS + 1;
+  var vis = todas ? cats : cats.slice(0, CAT_VISIVEIS);
+  if (state.despAberta && vis.every(function(c){ return c.nome!==state.despAberta; })){ vis = cats; todas = true; }
+  var maxC = cats.reduce(function(m, c){ return Math.max(m, c.v); }, 1);
+  $('xCatsH').textContent = ehTotal ? 'Total: '+brl.format(outs)+' · clique para abrir' : 'Por mês · clique para abrir';
+  $('xCatList').innerHTML = vis.map(function(c){
+    var on = c.nome===state.despAberta;
+    return '<li class="x-cat-li'+(c.nome===OTHER ? ' other' : '')+(on ? ' aberta' : '')+'"><button type="button" class="x-cat" data-cat="'+esc(c.nome)+'" aria-expanded="'+on+'">'+
+      '<span class="name">'+esc(c.nome)+'</span><span class="amt num">'+vm(c.v)+' · '+pct.format(c.v/outs)+'</span>'+
+      '<span class="track"><span class="bar" style="width:'+(c.v/maxC*100).toFixed(1)+'%"></span></span></button>'+
+      (on ? detalheCategoria(c.nome, tx, isWeek) : '')+'</li>';
+  }).join('');
+  var bt = $('xCatTodas');
+  bt.hidden = cats.length<=CAT_VISIVEIS + 1;
+  bt.textContent = state.despTodas ? 'Mostrar menos' : 'Ver todas as '+cats.length+' categorias';
+  ['xMeses','xMudou','xGastos','xResumo'].forEach(function(id){ $(id).hidden = true; });
+}
+/* o detalhe da categoria aberta: mês a mês (gráfico B), onde foi o dinheiro e o atalho */
+function detalheCategoria(nome, tx, isWeek){
+  var lista = tx.filter(function(t){ return saiDaConta(t) && catOf(t)===nome; });
+  var h = '<div class="x-aberta">';
+  if (!isWeek){
+    var un = unidadeDe(state.p);
+    var larg = $('xCatList').clientWidth ? $('xCatList').clientWidth-30 : 600;
+    var g = svgBarras(un, unidadesSaida(state.p, un, function(t){ return catOf(t)===nome; }), {cls:'x-mes', aria:nome+' por '+(un==='semana' ? 'semana' : un==='ano' ? 'ano' : 'mês'), W:Math.max(280, larg), H:150, rotulos:Math.max(4, Math.floor(larg/52))});
+    if (g && g.n>1) h += '<p class="x-mini-t">'+(un==='semana' ? 'Semana a semana' : un==='ano' ? 'Ano a ano' : 'Mês a mês')+' <span class="x-media-leg">- - - média '+brl0.format(g.media)+'</span></p>'+g.svg;
+  }
+  var o = Despesas.origens(lista.map(function(t){ return {chave:t.origin, rotulo:t.desc, valor:-t.value}; }), 3);
+  h += '<p class="x-mini-t">Onde foi o dinheiro</p><ul class="x-orig">'+o.top.map(function(x){
+    return '<li><span class="x-o-n">'+esc(x.rotulo)+'</span><span class="num">'+brl.format(x.valor)+' · '+pct.format(x.pct)+'</span></li>';
+  }).join('')+(o.resto ? '<li class="x-resto"><span>+ '+o.resto.n+(o.resto.n===1 ? ' outra origem' : ' outras origens')+'</span><span class="num">'+brl.format(o.resto.valor)+'</span></li>' : '')+'</ul>';
+  h += '<button type="button" class="link-btn x-lanc" data-lanc="'+esc(nome)+'">Ver '+(lista.length===1 ? 'o lançamento' : 'os '+lista.length+' lançamentos')+' →</button>';
+  return h+'</div>';
+}
+/* o número do topo conta até o valor (sem movimento: direto) */
+function contarAte(el, v, fmt){
+  var chave = fmt(v);
+  if (el.dataset.alvo===chave) return;
+  el.dataset.alvo = chave;
+  if (REDUZIR.matches || !el.dataset.visto){ el.dataset.visto = '1'; el.textContent = chave; if (REDUZIR.matches) return; }
+  var ini = performance.now(), dur = 700;
+  (function passo(agora){
+    if (el.dataset.alvo!==chave) return;
+    var k = Math.min(1, (agora-ini)/dur), e = 1-Math.pow(1-k, 3);
+    el.textContent = k<1 ? fmt(v*e) : chave;
+    if (k<1) requestAnimationFrame(passo);
+  })(ini);
+}
+$('xCatList').addEventListener('click', function(e){
+  var l = e.target.closest('[data-lanc]');
+  if (l){ abrirLancamentos(l.dataset.lanc); return; }
+  var b = e.target.closest('.x-cat'); if (!b) return;
+  if (state.cmp){ abrirLancamentos(b.dataset.cat); return; }   /* comparando: vai aos lançamentos, ainda comparando */
+  var nome = b.dataset.cat;
+  state.despAberta = state.despAberta===nome ? null : nome;
+  despesasCalmo();
+  var nb = document.querySelector('#xCatList .x-cat[data-cat="'+CSS.escape(nome)+'"]'); if (nb) nb.focus();
+});
+$('xCatTodas').addEventListener('click', function(){ state.despTodas = !state.despTodas; despesasCalmo(); });
+function despesasCalmo(){ state.despCalmo = true; try { render(); } finally { state.despCalmo = false; } }
+/* o gráfico da categoria aberta é desenhado na largura real: redesenha ao chegar na página e ao redimensionar */
+var despTimer = null;
+window.addEventListener('resize', function(){
+  clearTimeout(despTimer);
+  despTimer = setTimeout(function(){ if (state.loaded && !$('viewDespesas').hidden && state.despAberta) despesasCalmo(); }, 150);
+});
+
 function abrirLancamentos(cat){
   state.fcat = cat; state.filter = 'out';
   document.querySelectorAll('.table-tools .seg button').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f==='out' ? 'true':'false'); });

@@ -587,28 +587,33 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       </section>
     </div>
   <p class="card faixa cmp-topo" id="dCmpTopoDesp" hidden></p>
-  <section class="kpis" aria-label="Resumo do período">
-    <div class="kpi"><span class="label">Entradas</span><span class="value num" id="kIn">—</span><span class="sub" id="kInSub"></span></div>
-    <div class="kpi"><span class="label">Saídas</span><span class="value num" id="kOut">—</span><span class="sub" id="kOutSub"></span></div>
-    <div class="kpi"><span class="label">Resultado do período</span><span class="value num" id="kRes">—</span><span id="kResPill" class="pill"></span></div>
-    <div class="kpi"><span class="label">Maior despesa</span><span class="value" id="kTop" style="font-family:var(--font-display);font-size:22px">—</span><span class="sub" id="kTopSub"></span></div>
+  <section class="card faixa x-topo" id="xTopo" aria-labelledby="xSaiu">
+    <h2 class="x-saiu num" id="xSaiu">—</h2>
+    <p class="x-sub" id="xSaiuSub"></p>
+    <div class="x-div" id="xDiv" aria-hidden="true"></div>
+    <p class="x-leg" id="xDivLeg"></p>
   </section>
-
-  <section class="grid2">
-    <div class="card">
-      <div class="card-head"><h2>Categorias</h2><span class="hint" id="catHint"></span></div>
-      <ul class="cats scrolly" id="cats" style="max-height:240px"></ul>
-    </div>
-    <div class="card flow-card">
-      <div class="card-head"><h2 id="flowTitle">Fluxo</h2></div>
-      <div class="legend" id="flowLegend"><span><i class="sw" style="background:var(--s1)"></i>Entradas</span><span><i class="sw" style="background:var(--s2)"></i>Saídas</span></div>
-      <div class="chart-box" id="flow"></div>
-    </div>
+  <p class="card faixa x-vazio" id="xVazio" hidden>Nenhuma saída neste período.</p>
+  <section class="card faixa" id="xCats" aria-labelledby="xCatsT">
+    <div class="faixa-head"><h2 class="faixa-t" id="xCatsT">Categorias</h2><span class="hint" id="xCatsH"></span></div>
+    <ul class="x-cats" id="xCatList"></ul>
+    <button type="button" class="link-btn" id="xCatTodas" hidden></button>
   </section>
-
-  <section class="card" aria-labelledby="insTitle">
-    <div class="card-head"><h2 id="insTitle">Resumo</h2></div>
-    <ul class="insights scrolly" id="insights"></ul>
+  <section class="card faixa" id="xMeses" aria-labelledby="xMesesT" hidden>
+    <div class="faixa-head"><h2 class="faixa-t" id="xMesesT">Gastos mês a mês</h2><span class="hint" id="xMesesH"></span></div>
+    <div class="chart-box" id="xMesesG"></div>
+  </section>
+  <section class="card faixa" id="xMudou" aria-labelledby="xMudouT" hidden>
+    <div class="faixa-head"><h2 class="faixa-t" id="xMudouT">O que mudou</h2><span class="hint" id="xMudouH"></span></div>
+    <div class="x-pilulas" id="xMudouL"></div>
+  </section>
+  <section class="card faixa" id="xGastos" aria-labelledby="xGastosT" hidden>
+    <h2 class="faixa-t" id="xGastosT">Maiores gastos</h2>
+    <ul class="gastos" id="xGastosL"></ul>
+  </section>
+  <section class="card faixa" id="xResumo" aria-labelledby="xResumoT" hidden>
+    <h2 class="faixa-t" id="xResumoT">Resumo</h2>
+    <ul class="insights" id="xResumoL"></ul>
   </section>
 
 
