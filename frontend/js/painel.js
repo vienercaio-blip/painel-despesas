@@ -633,7 +633,7 @@ function renderSaved(){
     ini.classList.toggle('grande', grande); ini.classList.toggle('faixa', !grande);
     $('drop').classList.toggle('drop-big', grande); $('drop').classList.toggle('drop-faixa', !grande);
     /* primeira visita: o balão de Ajuda abre sozinho (fecha no X); ao sair dela, fecha */
-    if (grande && !state.eraGrande){ $('iAjuda').hidden = false; $('iAjudaBtn').setAttribute('aria-expanded', 'true'); }
+    if (grande && !state.eraGrande){ $('iAjuda').hidden = false; $('iAjudaBtn').setAttribute('aria-expanded', 'true'); ajudaAltura($('iAjuda')); }
     else if (!grande && state.eraGrande){ $('iAjuda').hidden = true; $('iAjudaBtn').setAttribute('aria-expanded', 'false'); }
     state.eraGrande = grande;
     $('upTitle').textContent = !state.salvosProntos ? 'Início' : grande ? 'Comece pelo seu extrato' : 'Seus extratos';
@@ -3768,8 +3768,17 @@ function ajudaAbrir(btn, abrir){
   var q = $(btn.getAttribute('aria-controls'));
   q.hidden = !abrir;
   btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-  if (abrir){ var h = q.querySelector('h2'); if (h) h.focus(); } else btn.focus();
+  if (abrir){ ajudaAltura(q); var h = q.querySelector('h2'); if (h) h.focus({preventScroll:true}); } else btn.focus();
 }
+/* o balão cabe na tela: do ponto onde começa (logo abaixo do botão) até o fim da janela; o resto rola por dentro */
+function ajudaAltura(q){
+  var topo = q.parentNode.getBoundingClientRect().bottom + 12;
+  q.style.maxHeight = Math.max(240, Math.floor(window.innerHeight - topo - 16))+'px';
+}
+window.addEventListener('resize', function(){
+  var q = document.querySelector('.ajuda-quadro:not([hidden])');
+  if (q) ajudaAltura(q);
+});
 document.addEventListener('click', function(e){
   var b = e.target.closest('.ajuda-btn');
   if (b){ ajudaAbrir(b, $(b.getAttribute('aria-controls')).hidden); return; }   /* o botão abre e fecha */

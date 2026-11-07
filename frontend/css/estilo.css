@@ -1115,3 +1115,13 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @keyframes ajuda-sobe{from{opacity:0;transform:translateY(8px)}}
   @keyframes ajuda-trilho{from{transform:scaleY(0)}}
 }
+/* balão grande demais rola por dentro: cabe na tela, com título e × sempre à vista;
+   a setinha sai do balão (a área que rola cortaria) e vai para o .ajuda-topo */
+.ajuda-quadro{max-height:calc(100vh - 96px);max-height:calc(100dvh - 96px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.ajuda-quadro::before{content:none}
+.ajuda-topo:has(> .ajuda-quadro:not([hidden]))::after{content:"";position:absolute;top:calc(100% + 5px);right:34px;width:14px;height:14px;background:var(--surface);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg);z-index:1}
+.ajuda-quadro .ajuda-head{position:sticky;top:-16px;z-index:3;margin:-16px -18px 0;padding:16px 18px 8px;background:var(--surface)}
+@media (prefers-reduced-motion: no-preference){
+  .ajuda-topo:has(> .ajuda-quadro:not([hidden]))::after{animation:ajuda-seta .2s ease .15s both}
+  @keyframes ajuda-seta{from{opacity:0}}
+}
