@@ -938,6 +938,7 @@ function renderCategorias(){
       '<span class="track"><span class="bar" style="--d:'+Math.min(iO, 12)+';width:'+Math.max(0, maxO>0 ? o.v/maxO*100 : 0).toFixed(1)+'%"></span></span></div>'+
       '<label>Mover todos para <select data-origin="'+esc(o.key)+'" aria-label="Mover todos os pagamentos de '+esc(o.label)+'">'+opts(name)+'</select></label></li>';
   }).join('');
+  minimoOrigens();
 
   $('cdRows').innerHTML = list.map(function(t){
     var why = (t.estorno ? '<span class="why estorno" data-tip="Dinheiro de volta de uma despesa: desconta do total da categoria">estorno</span> ' : '')+
@@ -1899,6 +1900,8 @@ function setView(){
   document.querySelectorAll('a.tab[data-view]').forEach(function(a){
     if (a.dataset.view===v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   });
+  /* por último: só agora o Período e as outras páginas já sumiram de cima */
+  if (v==='categorias') ajustarOrganizar();
 }
 function setMode(m){
   MODE = m || null;
@@ -2162,6 +2165,25 @@ $('fCat').addEventListener('change', function(e){
   renderTable();
 });
 function renderOrganizar(){ renderCategorias(); renderRules(); renderCustom(); }
+/* Organizar no computador (lista e detalhe lado a lado): a caixa das categorias tem a altura
+   da tela e a lista rola por dentro; a página rola normalmente. No celular, a lista tem até 440px. */
+function ajustarOrganizar(){
+  var L = document.querySelector('.cat-layout'), n = L.querySelector('.cat-list'), d = L.querySelector('.cat-detail');
+  var rn = n.getBoundingClientRect(), rd = d.getBoundingClientRect();
+  var lado = !$('viewCategorias').hidden && rn.width > 0 && Math.abs(rn.top - rd.top) < 2 && rn.right <= rd.left;
+  n.style.height = lado ? Math.max(420, Math.floor(window.innerHeight - (rn.top + (window.scrollY || 0)) - 20))+'px' : '';
+  minimoOrigens();
+}
+/* Origens mostra 3 origens inteiras por vez e rola por dentro quando há mais.
+   offsetTop/offsetHeight não sofrem com as animações das linhas. */
+function minimoOrigens(){
+  var ul = $('origins');
+  ul.style.maxHeight = '';
+  var li = ul.querySelectorAll('li.origin');
+  if (li.length <= 3 || ul.offsetParent===null) return;
+  ul.style.maxHeight = Math.ceil(li[2].offsetTop + li[2].offsetHeight - li[0].offsetTop)+'px';
+}
+window.addEventListener('resize', function(){ if (!$('viewCategorias').hidden) ajustarOrganizar(); });
 /* "mover", em todo o site: um fantasma da linha voa até o destino, que pisca; o número dele salta.
    prepararVoo guarda onde a linha estava (antes de redesenhar); voar anima depois. */
 function prepararVoo(el, texto){

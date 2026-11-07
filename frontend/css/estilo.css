@@ -58,7 +58,7 @@ a.tab:hover{background:var(--surface-2);color:var(--ink)}
 .catbtn:hover{background:var(--surface-2)}
 .catbtn:focus-visible{outline:2px solid var(--accent);outline-offset:0}
 .cat-layout{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
-.cat-list{flex:1 1 310px;min-width:0;display:flex;flex-direction:column;gap:4px;padding:10px}
+.cat-list{flex:1 1 370px;min-width:0;display:flex;flex-direction:column;gap:4px;padding:10px}
 .cat-list h2{font-size:15px;padding:6px 8px 8px;color:var(--ink-2);font-family:var(--font-body);font-weight:600}
 .cat-item{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;padding:8px 12px;border-radius:10px;cursor:pointer}
 .cat-item:hover{background:var(--surface-2)}
@@ -1125,3 +1125,12 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .ajuda-topo:has(> .ajuda-quadro:not([hidden]))::after{animation:ajuda-seta .2s ease .15s both}
   @keyframes ajuda-seta{from{opacity:0}}
 }
+/* Organizar: lado a lado, a caixa das categorias tem a altura da tela (ajustarOrganizar) e a lista
+   rola só na vertical; height:0 + flex:1 faz a lista ocupar o que sobra da caixa. A página rola. */
+.cat-layout{container-type:inline-size;align-items:flex-start}
+.cat-detail{align-self:flex-start}
+#catList{flex:1 1 0;height:0;min-height:240px;max-height:none;overflow-x:hidden;overflow-y:auto}
+/* uma embaixo da outra (largura menor que 370 + 16 + 520): a lista volta a ter até 440px */
+@container (max-width:905.98px){#catList{flex:none;height:auto;max-height:440px}}
+/* Origens mostra 3 origens por vez e rola por dentro (altura medida em minimoOrigens) */
+#origins{overflow-x:hidden}
