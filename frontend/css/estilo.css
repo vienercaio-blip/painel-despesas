@@ -1134,3 +1134,25 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @container (max-width:905.98px){#catList{flex:none;height:auto;max-height:440px}}
 /* Origens mostra 3 origens por vez e rola por dentro (altura medida em minimoOrigens) */
 #origins{overflow-x:hidden}
+/* ---------- menu lateral minimizável (computador): só ícones ---------- */
+/* botão só com o ícone, preso por fora na borda direita do menu, no alto; acompanha a borda */
+.menu-mini-btn{display:none}
+@media (min-width:900px){
+  .menu-mini-btn{display:flex;align-items:center;justify-content:center;position:fixed;top:18px;left:220px;z-index:45;width:22px;height:34px;padding:0;border:0;border-radius:0 8px 8px 0;background:var(--menu-bg);color:#B4C0D3;cursor:pointer;border:1px solid rgba(255,255,255,.14);border-left:0;box-shadow:2px 2px 8px rgba(0,0,0,.18);transition:left .2s ease,color .15s ease}
+  .menu-mini-btn:hover{color:var(--menu-ink)}
+  .menu-mini-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .menu-mini-btn svg{transition:transform .2s ease}
+  .app{transition:grid-template-columns .2s ease}
+  .app > .wrap{padding-left:max(36px,env(safe-area-inset-left,0px))}   /* espaço para o botão de minimizar */
+  html.menu-mini .app{grid-template-columns:64px minmax(0,1fr)}
+  html.menu-mini .menu-mini-btn{left:64px}
+  html.menu-mini .menu-mini-btn svg{transform:rotate(180deg)}
+  html.menu-mini .lateral{padding:18px 8px;overflow-x:hidden}
+  html.menu-mini .lateral .logo{padding:0 0 14px;text-align:center}
+  html.menu-mini .logo-resto{display:inline-block;width:0;overflow:hidden;vertical-align:bottom}
+  html.menu-mini .lateral .tab{justify-content:center;padding:0}
+  html.menu-mini .lateral .tab-txt,html.menu-mini .menu-pe .cfg-txt{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  html.menu-mini .menu-pe{padding:12px 0 0;align-items:center}
+  html.menu-mini .menu-pe .user-area{display:none}
+  html.menu-mini .cfg-btn{margin:0;padding:0;width:42px;justify-content:center}
+}

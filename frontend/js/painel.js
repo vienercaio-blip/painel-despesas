@@ -3220,6 +3220,26 @@ function irPara(v){
 window.addEventListener('hashchange', chegou);
 setView();
 var tip = $('tip');
+/* menu lateral minimizável: só ícones, nome no balãozinho ao passar o mouse; lembrado neste navegador */
+function menuMini(on, salvar){
+  document.documentElement.classList.toggle('menu-mini', on);
+  var b = $('menuMiniBtn');
+  b.setAttribute('aria-expanded', on ? 'false' : 'true');
+  b.setAttribute('aria-label', on ? 'Expandir menu' : 'Minimizar menu');
+  b.setAttribute('data-tip', on ? 'Expandir menu' : 'Minimizar menu');
+  document.querySelectorAll('.lateral .tab').forEach(function(a){
+    if (a.dataset.tipOrig === undefined) a.dataset.tipOrig = a.getAttribute('data-tip') || '';
+    var nome = a.querySelector('.tab-txt').textContent;
+    if (on) a.setAttribute('data-tip', nome); else if (a.dataset.tipOrig) a.setAttribute('data-tip', a.dataset.tipOrig); else a.removeAttribute('data-tip');
+  });
+  if (salvar){
+    try { if (on) localStorage.setItem('sobrou-menu', 'mini'); else localStorage.removeItem('sobrou-menu'); } catch (e) {}
+    hideTip();
+    /* gráficos e a lista do Organizar se refazem na largura nova, depois da animação */
+    setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 230);
+  }
+}
+$('menuMiniBtn').addEventListener('click', function(){ menuMini(!document.documentElement.classList.contains('menu-mini'), true); });
 var tipEl = null, tipTimer = null, tipX = 0, tipY = 0, DWELL = 1500;
 function placeTip(){
   var x = tipX + 14, y = tipY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
@@ -3248,6 +3268,7 @@ document.addEventListener('mousemove', function(e){
   placeTip();
 });
 document.addEventListener('mouseleave', hideTip);
+menuMini(document.documentElement.classList.contains('menu-mini'), false);
 window.addEventListener('scroll', hideTip, true);
 
 /* ---------- dashboard em faixas: movimentos ----------

@@ -7,6 +7,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>/* aparência escolhida (atalho do localStorage): evita piscar a cor errada ao carregar */
 try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.documentElement.setAttribute('data-theme','light'); else if (t==='escuro') document.documentElement.setAttribute('data-theme','dark'); } catch (e) {}
+/* menu minimizado (lembrado neste navegador): já começa assim, sem piscar aberto */
+try { if (localStorage.getItem('sobrou-menu')==='mini') document.documentElement.classList.add('menu-mini'); } catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;600;700;800&display=swap">
@@ -16,7 +18,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
 
 <div class="app">
   <aside class="lateral">
-    <a class="logo" href="#inicio" aria-label="sobrou., página inicial">sobrou<span class="ponto">.</span></a>
+    <a class="logo" href="#inicio" aria-label="sobrou., página inicial">s<span class="logo-resto">obrou</span><span class="ponto">.</span></a>
     <nav class="tabs" aria-label="Seções">
       <a class="tab" href="#inicio" data-view="inicio"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg><span class="tab-txt">Início</span></a>
       <a class="tab dash-tab" href="#dashboard" data-view="dashboard" hidden><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V11"/><path d="M12 19V5"/><path d="M19 19v-7"/><path d="M3 19h18"/></svg><span class="tab-txt">Dashboard</span></a>
@@ -34,6 +36,7 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <button type="button" class="cfg-btn" id="cfgBtn" aria-haspopup="dialog" aria-controls="cfgBg" aria-label="Configurações" data-tip="Configurações"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span class="cfg-txt">Configurações</span></button>
     </div>
   </aside>
+  <button type="button" class="menu-mini-btn" id="menuMiniBtn" aria-expanded="true" aria-label="Minimizar menu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg></button>
 <div class="wrap">
 
   <div class="view" id="viewEnviar" hidden>
