@@ -246,51 +246,40 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <div class="ajuda-head"><h2 class="faixa-t" id="dAjudaT" tabindex="-1">Como funciona o Dashboard</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
         <p class="ajuda-lead">O resumo do extrato numa tela só, de cima para baixo, começando pelo veredito. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
-        <div class="ajuda-grade">
-          <div>
-            <h3>1. Veredito</h3>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><div><h3><span class="sr-only">1. </span>Veredito</h3>
             <p>Uma frase diz como está o período:</p>
             <ul><li><b>Tudo certo</b> (verde): sobra 10% ou mais do que entra.</li><li><b>Atenção</b> (amarelo): sobra menos de 10%; um imprevisto já aperta.</li><li><b>Alerta</b> (vermelho): saiu mais do que entrou.</li></ul>
-            <p>Ao lado, "O que mais pesa" mostra a categoria que mais levou dinheiro.</p>
-          </div>
-          <div>
-            <h3>2. Entrou, Saiu e Sobrou</h3>
-            <p>O total do período e, embaixo, a média por mês. O minigráfico mostra cada mês.</p>
-            <p>Dinheiro guardado (aplicação, poupança, caixinha) e transferências entre as suas contas <b>não contam</b> como entrada nem saída: aparecem numa linha à parte. Estornos descontam do gasto.</p>
-          </div>
-          <div>
-            <h3>3. Comparação</h3>
-            <p>O último mês do período comparado com o anterior: quanto saiu a mais ou a menos e as categorias que mais subiram e caíram. Se o extrato termina no meio do mês, aparece "(até dd/mm)". Clique numa categoria para ver os lançamentos.</p>
-          </div>
-          <div>
-            <h3>4. Categorias</h3>
+            <p>Ao lado, "O que mais pesa" mostra a categoria que mais levou dinheiro.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><div><h3><span class="sr-only">2. </span>Entrou, Saiu, Sobrou e Faltou</h3>
+            <ul><li><b>Entrou</b>: tudo que chegou na conta (salário, PIX recebido, vendas).</li><li><b>Saiu</b>: tudo que você pagou ou gastou.</li><li><b>Sobrou</b>: Entrou − Saiu, quando entrou mais do que saiu.</li><li><b>Faltou</b>: Saiu − Entrou, quando você gastou mais do que entrou. O cartão "Sobrou" troca de nome para "Faltou" e fica vermelho.</li></ul>
+            <div class="ajuda-conta" role="img" aria-label="Exemplo: entrou 5.000 reais, saiu 4.200, sobrou 800"><span class="ajuda-k en" aria-hidden="true"><small>Entrou</small><strong>5.000</strong></span><span class="ajuda-op" aria-hidden="true">−</span><span class="ajuda-k" aria-hidden="true"><small>Saiu</small><strong>4.200</strong></span><span class="ajuda-op" aria-hidden="true">=</span><span class="ajuda-k so" aria-hidden="true"><small>Sobrou</small><strong>800</strong></span></div>
+            <div class="ajuda-conta" role="img" aria-label="Exemplo: entrou 3.000 reais, saiu 3.400, faltou 400"><span class="ajuda-k en" aria-hidden="true"><small>Entrou</small><strong>3.000</strong></span><span class="ajuda-op" aria-hidden="true">−</span><span class="ajuda-k" aria-hidden="true"><small>Saiu</small><strong>3.400</strong></span><span class="ajuda-op" aria-hidden="true">=</span><span class="ajuda-k fa" aria-hidden="true"><small>Faltou</small><strong>400</strong></span></div>
+            <p>Cada cartão mostra o total do período e, embaixo, a média por mês. O minigráfico mostra cada mês.</p>
+            <p>Dinheiro guardado (aplicação, poupança, caixinha) e transferências entre as suas contas <b>não contam</b> como entrada nem saída: aparecem numa linha à parte. Estornos descontam do gasto.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><div><h3><span class="sr-only">3. </span>Comparação</h3>
+            <p>O último mês do período comparado com o anterior: quanto saiu a mais ou a menos e as categorias que mais subiram e caíram. Se o extrato termina no meio do mês, aparece "(até dd/mm)". Clique numa categoria para ver os lançamentos.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">4</span><div><h3><span class="sr-only">4. </span>Categorias</h3>
             <p>A barra colorida mostra as 5 categorias que mais levaram dinheiro e "Outras categorias" com o resto, em porcentagem do total que saiu.</p>
-            <ul><li><b>Ver todas as categorias</b> abre a lista completa, com o valor por mês.</li><li><b>Todas as despesas</b> escolhe quais categorias entram na análise.</li><li>Clique numa cor ou num nome para ver os lançamentos.</li></ul>
-          </div>
-          <div>
-            <h3>5. Meses, Maiores gastos e Previsão</h3>
+            <ul><li><b>Ver todas as categorias</b> abre a lista completa, com o valor por mês.</li><li><b>Todas as despesas</b> escolhe quais categorias entram na análise.</li><li>Clique numa cor ou num nome para ver os lançamentos.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">5</span><div><h3><span class="sr-only">5. </span>Meses, Maiores gastos e Previsão</h3>
             <ul><li><b>Meses</b>: quanto sobrou (dourado) ou faltou (vermelho) em cada mês. Passe o mouse para ver os detalhes.</li>
             <li><b>Maiores gastos</b>: os 3 maiores lançamentos do período, um de cada origem. Clique para encontrá-los nos lançamentos.</li>
-            <li><b>Previsão</b>: a média dos últimos 3 meses do extrato, seja qual for o período escolhido.</li></ul>
-          </div>
-          <div>
-            <h3>6. Dicas, detalhes e PDF</h3>
+            <li><b>Previsão</b>: a média dos últimos 3 meses do extrato, seja qual for o período escolhido.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">6</span><div><h3><span class="sr-only">6. </span>Dicas, detalhes e PDF</h3>
             <ul><li><b>Dá para economizar…</b> leva à página Economia, com o plano de ação.</li>
             <li><b>Ver mais detalhes</b> abre o Saldo (o dinheiro acumulado dia a dia), as Mudanças (categorias que mais mudaram) e outros detalhes.</li>
-            <li><b>Exportar PDF</b>, no quadro de Período, gera um relatório para guardar ou imprimir.</li></ul>
-          </div>
-          <div>
-            <h3>Escolher o período</h3>
+            <li><b>Exportar PDF</b>, no quadro de Período, gera um relatório para guardar ou imprimir.</li></ul></div></li>
+        </ol>
+        <div class="ajuda-extras">
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><div><h3>Escolher o período</h3>
             <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos (<b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b> e cada ano) ficam dentro de <b>Personalizado…</b>. Todos contam a partir do último mês do extrato.</li>
             <li>Na faixa de meses, logo abaixo do quadro, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
-            <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul>
-          </div>
-          <div>
-            <h3>Comparar dois períodos</h3>
+            <li><b>Personalizado…</b> escolhe de um mês até outro, ou dias exatos (por exemplo, de 10/03 a 25/08). Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>, para um mês cortado no meio não distorcer a conta.</li></ul></div></div>
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg></span><div><h3>Comparar dois períodos</h3>
             <p><b>Comparar…</b> mostra dois períodos lado a lado, sempre por mês, para que períodos de tamanhos diferentes sejam comparados de forma justa. Use os atalhos ("Este mês × mês passado", "Este ano × ano passado") ou escolha os dois períodos.</p>
             <ul><li>A frase diz se <b>melhorou</b> ou <b>piorou</b> pelo que sobrou por mês.</li><li>A tabela mostra Entrou, Saiu e Sobrou de cada período e a diferença; as barras mostram as categorias que mais mudaram.</li>
-            <li><b>Sair da comparação</b> (ou ir para outra página) volta ao normal, com o Período 1.</li></ul>
-          </div>
+            <li><b>Sair da comparação</b> (ou ir para outra página) volta ao normal, com o Período 1.</li></ul></div></div>
         </div>
       </section>
     </div>
