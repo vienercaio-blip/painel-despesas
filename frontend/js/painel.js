@@ -1870,6 +1870,8 @@ function setView(){
   var okHash = isV ? h==='dashboard' : (isD && (h==='dashboard'||h==='economia'||h==='despesas'||h==='categorias'||h==='lancamentos'));
   var v = (ok && okHash) ? h : 'inicio';
   if (v==='inicio' && h && h!=='inicio'){ location.hash = 'inicio'; return; }
+  if (state.viewAtual && v!==state.viewAtual) ajudaFecharTodas();
+  state.viewAtual = v;
   $('viewEnviar').hidden = v!=='inicio';
   $('viewDash').hidden = !(v==='dashboard' && isD);
   $('viewVendas').hidden = !(v==='dashboard' && isV);
@@ -3770,7 +3772,7 @@ function ajudaAbrir(btn, abrir){
 }
 document.addEventListener('click', function(e){
   var b = e.target.closest('.ajuda-btn');
-  if (b){ if ($(b.getAttribute('aria-controls')).hidden) ajudaAbrir(b, true); return; }   /* fecha só no X */
+  if (b){ ajudaAbrir(b, $(b.getAttribute('aria-controls')).hidden); return; }   /* o botão abre e fecha */
   var f = e.target.closest('[data-ajuda-fechar]');
   if (f){ var q = f.closest('.ajuda-quadro'); ajudaAbrir(document.querySelector('.ajuda-btn[aria-controls="'+q.id+'"]'), false); }
 });
@@ -3778,6 +3780,14 @@ document.addEventListener('keydown', function(e){
   var q = e.key==='Escape' && e.target.closest && e.target.closest('.ajuda-quadro');
   if (q) ajudaAbrir(document.querySelector('.ajuda-btn[aria-controls="'+q.id+'"]'), false);
 });
+
+/* trocar de página fecha o balão que estava aberto, sem mexer no foco */
+function ajudaFecharTodas(){
+  Array.prototype.forEach.call(document.querySelectorAll('.ajuda-btn'), function(b){
+    var q = $(b.getAttribute('aria-controls'));
+    if (q && !q.hidden){ q.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+  });
+}
 
 /* ---------- inicialização: busca tudo no servidor ---------- */
 state.rules = {}; state.askPrefs = {}; state.custom = []; state.bEdits = {};
