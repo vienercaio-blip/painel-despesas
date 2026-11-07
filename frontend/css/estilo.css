@@ -763,7 +763,6 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ajuda-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .ajuda-head h2:focus{outline:none}
 .ajuda-lead{margin:8px 0 12px;color:var(--ink)}
-.ajuda-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px 24px}
 .ajuda-quadro h3{font-size:14.5px;margin:0 0 4px;color:var(--ink)}
 .ajuda-quadro p{margin:0 0 6px;line-height:1.5}
 .ajuda-quadro ul,.ajuda-quadro ol{margin:0 0 6px;padding-left:18px;line-height:1.5}
@@ -848,7 +847,6 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ajuda-x{all:unset;cursor:pointer;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:22px;line-height:1;color:var(--ink-2);border:1px solid var(--line);background:var(--surface-2);flex:none}
 .ajuda-x:hover{color:var(--ink);border-color:var(--ink-3)}
 .ajuda-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.ajuda-quadro .ajuda-grade{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 /* Despesas comparando */
 #viewDespesas .cmp-topo{margin:0}
 .cat-cmp .catbtn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
@@ -1103,3 +1101,5 @@ button.eco-tit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ajuda-k.so{border-color:var(--accent)}.ajuda-k.so strong{color:var(--accent)}
 .ajuda-k.fa{border-color:var(--bad)}.ajuda-k.fa strong{color:var(--bad)}
 .ajuda-op{flex:none;color:var(--ink-3);font-weight:700}
+.ajuda-frase{margin:4px 0 0;color:var(--ink)}
+.ajuda-extras .fmts{padding-left:0;margin-top:6px}

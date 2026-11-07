@@ -65,26 +65,22 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
       <section class="card ajuda-quadro" role="dialog" id="iAjuda" aria-labelledby="iAjudaT" hidden>
         <div class="ajuda-head"><h2 class="faixa-t" id="iAjudaT" tabindex="-1">Como enviar o extrato</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
-        <div class="ajuda-grade">
-          <div>
-            <h3>Passo a passo</h3>
-            <ol class="steps">
-          <li>Abra o app ou o site do banco e entre no <b>extrato</b>.</li>
-          <li>Escolha o período (um mês ou vários).</li>
-          <li>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</li>
-          <li>Envie o arquivo aqui.</li>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><p class="ajuda-frase"><span class="sr-only">1. </span>Abra o app ou o site do banco e entre no <b>extrato</b>.</p></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><p class="ajuda-frase"><span class="sr-only">2. </span>Escolha o período (um mês ou vários).</p></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><p class="ajuda-frase"><span class="sr-only">3. </span>Toque em <b>exportar</b>, <b>baixar</b> ou <b>compartilhar</b> e escolha <b>PDF</b> (ou OFX, se tiver).</p></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">4</span><p class="ajuda-frase"><span class="sr-only">4. </span>Envie o arquivo aqui.</p></li>
         </ol>
-            <p class="ajuda-exemplo">Quer ver antes como fica? <button type="button" class="link-btn" data-exemplo>Ver um exemplo do painel</button></p>
-          </div>
-          <div>
-            <h3>Formatos aceitos</h3>
+        <div class="ajuda-extras">
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><h3>Formatos aceitos</h3>
             <ul class="fmts">
           <li><span class="fmt ok">PDF</span><span>Conferido com os totais do banco no C6, Inter, Nubank, Bradesco, Banco do Brasil e Mercado Pago. Nos outros bancos, em teste.</span></li>
           <li><span class="fmt ok">OFX</span><span>O mais confiável. Alguns bancos chamam de "Money".</span></li>
           <li><span class="fmt ok">CSV</span><span>Com colunas de data, descrição e valor.</span></li>
           <li><span class="fmt ok">Excel</span><span>Arquivos .xlsx, .xls ou .ods, com o cabeçalho na primeira linha.</span></li>
-        </ul>
-          </div>
+        </ul></div></div>
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><h3>Ver um exemplo</h3>
+            <p class="ajuda-exemplo">Quer ver antes como fica? <button type="button" class="link-btn" data-exemplo>Ver um exemplo do painel</button></p></div></div>
         </div>
       </section>
     </div>
@@ -393,31 +389,24 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
           <button type="button" class="ajuda-x" id="eAjudaFechar" data-ajuda-fechar aria-label="Fechar">×</button></div>
         <p class="ajuda-lead">Esta página responde três perguntas: <b>quanto está sobrando</b>, <b>se você está perto da sua meta</b> e <b>o que cortar primeiro</b>. Tudo sai do extrato que está aberto. Nenhum número é inventado.</p>
 
-        <div class="ajuda-grade">
-          <div>
-            <h3>1. Meta do mês</h3>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><div><h3><span class="sr-only">1. </span>Meta do mês</h3>
             <p>Digite quanto você quer que sobre por mês. O site compara com o <b>Sobrou por mês</b> de todo o extrato, o mesmo número do Dashboard em "Ver todo o período".</p>
             <ul>
               <li>A parte <b>dourada</b> da barra é o que já sobrou.</li>
               <li>A parte <b>clara</b> é o que passaria a sobrar a mais com os itens que você marcou na lista.</li>
               <li>Se faltou dinheiro, a barra fica vazia e o texto mostra quanto faltou.</li>
-            </ul>
-          </div>
-          <div>
-            <h3>2. Objetivo (opcional)</h3>
+            </ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><div><h3><span class="sr-only">2. </span>Objetivo (opcional)</h3>
             <p>Para juntar um valor até uma data, como uma viagem ou um carro. Você informa o nome, o valor, o prazo e quanto <b>já tem</b>.</p>
             <ul>
               <li>O "já tenho" é sempre você quem digita, porque o extrato não mostra o que está guardado em outros lugares.</li>
               <li><b>Precisa de R$ X/mês</b> é o que falta dividido pelos meses até o prazo, contando o mês atual.</li>
               <li><b>Chega em N meses</b> usa o que sobra por mês mais o que você marcou na lista.</li>
-            </ul>
-          </div>
-          <div>
-            <h3>3. Quanto já guardou</h3>
-            <p>O dinheiro que foi para investimentos e reservas no extrato (aplicação, poupança, caixinha). Ele não conta como gasto, porque continua sendo seu.</p>
-          </div>
-          <div>
-            <h3>4. Onde dá para economizar</h3>
+            </ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><div><h3><span class="sr-only">3. </span>Quanto já guardou</h3>
+            <p>O dinheiro que foi para investimentos e reservas no extrato (aplicação, poupança, caixinha). Ele não conta como gasto, porque continua sendo seu.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">4</span><div><h3><span class="sr-only">4. </span>Onde dá para economizar</h3>
             <p>Uma lista só, da maior economia para a menor, que junta três tipos de sugestão:</p>
             <ul>
               <li><b>dica</b>: as sugestões do site, como pedir delivery metade das vezes ou trocar para uma conta sem tarifa.</li>
@@ -425,18 +414,13 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
               <li><b>acima do normal</b>: categorias que, no último mês, ficaram mais de 20% e pelo menos R$ 50 acima da média dos meses anteriores. Aparece com 3 meses ou mais no extrato.</li>
             </ul>
             <p>Marque a caixinha do que você topa fazer. Nas dicas e nas categorias, aparece um controle para escolher quanto cortar, de 10% a 100%. Clique no nome do item para ver os lançamentos.</p>
-            <p>A economia de uma categoria <b>nunca passa do que você gasta nela</b>. Se duas sugestões forem da mesma categoria, a soma para no limite, e a linha avisa.</p>
-          </div>
-          <div>
-            <h3>5. Quanto consigo guardar por mês</h3>
-            <p>Um valor livre, para quem já sabe quanto consegue separar. Ele só serve para calcular o prazo do objetivo e não mexe na barra da meta.</p>
-          </div>
-          <div>
-            <h3>6. Extrato inteiro e onde fica salvo</h3>
+            <p>A economia de uma categoria <b>nunca passa do que você gasta nela</b>. Se duas sugestões forem da mesma categoria, a soma para no limite, e a linha avisa.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">5</span><div><h3><span class="sr-only">5. </span>Quanto consigo guardar por mês</h3>
+            <p>Um valor livre, para quem já sabe quanto consegue separar. Ele só serve para calcular o prazo do objetivo e não mexe na barra da meta.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">6</span><div><h3><span class="sr-only">6. </span>Extrato inteiro e onde fica salvo</h3>
             <p>Esta página usa sempre o <b>extrato inteiro</b>, por isso não tem o quadro de Período: hábitos de gasto aparecem melhor em vários meses. A linha no topo mostra quais meses entraram.</p>
-            <p>A meta, o objetivo e o que você marcou ficam salvos na sua conta e valem em qualquer computador.</p>
-          </div>
-        </div>
+            <p>A meta, o objetivo e o que você marcou ficam salvos na sua conta e valem em qualquer computador.</p></div></li>
+        </ol>
 
         <div class="ajuda-ex">
           <h3>Exemplo</h3>
@@ -551,42 +535,30 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <div class="ajuda-head"><h2 class="faixa-t" id="pAjudaT" tabindex="-1">Como funciona a página Despesas</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
         <p class="ajuda-lead">Esta página mostra só os gastos: para onde foi o dinheiro. Entradas e quanto sobrou ficam no Dashboard. Tudo segue o <b>Período</b> escolhido no quadro de cima.</p>
-        <div class="ajuda-grade">
-          <div>
-            <h3>1. Quanto saiu</h3>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><div><h3><span class="sr-only">1. </span>Quanto saiu</h3>
             <p>O total que saiu, por mês (num mês ou numa semana, o total do período), e a diferença para o período anterior.</p>
             <p>A barra divide as saídas em <b>Contas fixas</b> (as categorias marcadas como fixas em Organizar, como aluguel e escola) e <b>Dia a dia</b> (todo o resto).</p>
-            <p>Dinheiro guardado e transferências entre as suas contas não contam como saída.</p>
-          </div>
-          <div>
-            <h3>2. Categorias</h3>
+            <p>Dinheiro guardado e transferências entre as suas contas não contam como saída.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><div><h3><span class="sr-only">2. </span>Categorias</h3>
             <p>Da maior para a menor. Clique numa categoria para abrir:</p>
             <ul><li><b>Mês a mês</b>: o mês mais caro em dourado, com o valor em cima; a linha tracejada é a média dos meses completos.</li>
             <li><b>Onde foi o dinheiro</b>: os três destinos que mais levaram dinheiro nela.</li>
-            <li><b>Ver os lançamentos</b>: abre a lista já filtrada.</li></ul>
-          </div>
-          <div>
-            <h3>3. Gastos mês a mês</h3>
-            <p>Só as saídas, por mês (por semana com um mês escolhido, por dia com uma semana). Meses que o extrato corta no meio ficam mais claros e não entram na média.</p>
-          </div>
-          <div>
-            <h3>4. O que mudou</h3>
-            <p>As categorias que mais subiram e as que mais caíram entre o último mês do período e o anterior (o mesmo par do Dashboard). Clique numa para ver os lançamentos.</p>
-          </div>
-          <div>
-            <h3>5. Maiores gastos e Resumo</h3>
-            <p><b>Maiores gastos</b>: os cinco maiores pagamentos, um por destino. <b>Resumo</b>: frases sobre os gastos; o que merece atenção aparece com o sinal ⚠.</p>
-          </div>
-          <div>
-            <h3>Comparar dois períodos</h3>
-            <p>Com <b>Comparar…</b>, tudo fica por mês e com os dois períodos: o que saiu em cada um e a diferença, as categorias em barras duplas (dourado e azul; clique para ver os lançamentos), duas linhas nos gastos, o que mudou entre eles, os três maiores gastos de cada um e um resumo em frases.</p>
-          </div>
-          <div>
-            <h3>Escolher o período</h3>
+            <li><b>Ver os lançamentos</b>: abre a lista já filtrada.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><div><h3><span class="sr-only">3. </span>Gastos mês a mês</h3>
+            <p>Só as saídas, por mês (por semana com um mês escolhido, por dia com uma semana). Meses que o extrato corta no meio ficam mais claros e não entram na média.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">4</span><div><h3><span class="sr-only">4. </span>O que mudou</h3>
+            <p>As categorias que mais subiram e as que mais caíram entre o último mês do período e o anterior (o mesmo par do Dashboard). Clique numa para ver os lançamentos.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">5</span><div><h3><span class="sr-only">5. </span>Maiores gastos e Resumo</h3>
+            <p><b>Maiores gastos</b>: os cinco maiores pagamentos, um por destino. <b>Resumo</b>: frases sobre os gastos; o que merece atenção aparece com o sinal ⚠.</p></div></li>
+        </ol>
+        <div class="ajuda-extras">
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg></span><div><h3>Comparar dois períodos</h3>
+            <p>Com <b>Comparar…</b>, tudo fica por mês e com os dois períodos: o que saiu em cada um e a diferença, as categorias em barras duplas (dourado e azul; clique para ver os lançamentos), duas linhas nos gastos, o que mudou entre eles, os três maiores gastos de cada um e um resumo em frases.</p></div></div>
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><div><h3>Escolher o período</h3>
             <ul><li>Um clique em <b>Todo o extrato</b> ou <b>Último mês</b>. Os outros atalhos ficam dentro de <b>Personalizado…</b>.</li>
             <li>Na faixa de meses, clique num mês para ver só aquele mês; com um mês escolhido, aparece a escolha da semana.</li>
-            <li>Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>.</li></ul>
-          </div>
+            <li>Com dias exatos, o "por mês" vira a <b>média de 30 dias</b>.</li></ul></div></div>
         </div>
       </section>
     </div>
@@ -630,34 +602,24 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <div class="ajuda-head"><h2 class="faixa-t" id="lAjudaT" tabindex="-1">Como funciona a página Lançamentos</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
         <p class="ajuda-lead">Todos os lançamentos do extrato, um por linha. O <b>Período</b> fica dentro deste quadro, logo abaixo do título.</p>
-        <div class="ajuda-grade">
-          <div>
-            <h3>1. Período</h3>
-            <p>Use <b>Todo o extrato</b> ou <b>Último mês</b>, clique num dos meses da faixa logo abaixo, ou abra <b>Personalizado…</b>: lá ficam <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b>, cada ano e a escolha de um mês até outro ou de dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p>
-          </div>
-          <div>
-            <h3>2. Entrou, Saiu e Para revisar</h3>
-            <p>Os três números do topo são os totais do período (os mesmos do Dashboard). Clique em um deles para ver só aqueles lançamentos; clique de novo para voltar a todos. <b>Para revisar</b> são as saídas que ficaram em "Outros (revisar)".</p>
-          </div>
-          <div>
-            <h3>3. Encontrar e ordenar</h3>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><div><h3><span class="sr-only">1. </span>Período</h3>
+            <p>Use <b>Todo o extrato</b> ou <b>Último mês</b>, clique num dos meses da faixa logo abaixo, ou abra <b>Personalizado…</b>: lá ficam <b>Últimos 3 meses</b>, <b>Últimos 6 meses</b>, <b>Este ano</b>, cada ano e a escolha de um mês até outro ou de dias exatos. O período escolhido aqui vale também no Dashboard e em Despesas.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><div><h3><span class="sr-only">2. </span>Entrou, Saiu e Para revisar</h3>
+            <p>Os três números do topo são os totais do período (os mesmos do Dashboard). Clique em um deles para ver só aqueles lançamentos; clique de novo para voltar a todos. <b>Para revisar</b> são as saídas que ficaram em "Outros (revisar)".</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><div><h3><span class="sr-only">3. </span>Encontrar e ordenar</h3>
             <ul><li>A busca procura pela descrição do extrato (o trecho encontrado fica marcado); o filtro de categoria mostra só uma categoria; <b>Saídas</b>, <b>Entradas</b> ou <b>Todos</b> escolhem o que aparece.</li>
             <li>Clique em <b>Data</b> ou <b>Valor</b> no título da tabela para ordenar; clique de novo para inverter. Valor ordena pelo tamanho: o maior primeiro.</li>
-            <li>Aparecem 50 por vez; <b>Mostrar por vez</b> e Anterior/Próxima passam as páginas. O rodapé mostra quantos são e a soma.</li></ul>
-          </div>
-          <div>
-            <h3>4. Corrigir uma categoria</h3>
+            <li>Aparecem 50 por vez; <b>Mostrar por vez</b> e Anterior/Próxima passam as páginas. O rodapé mostra quantos são e a soma.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">4</span><div><h3><span class="sr-only">4. </span>Corrigir uma categoria</h3>
             <p>Clique na categoria da linha e escolha a certa. O site pergunta se a mudança vale também nos próximos extratos:</p>
-            <ul><li><b>Sim</b>: cria uma regra para aquela origem, que aparece em Organizar › Regras.</li><li><b>Não, só neste extrato</b>: muda só aqui.</li></ul>
-          </div>
-          <div>
-            <h3>5. Etiquetas</h3>
-            <ul><li><b>estorno</b>: dinheiro de volta de uma despesa; desconta do total da categoria.</li><li>Investimentos e transferências entre as suas contas são <b>movimento interno</b>: não contam como entrada nem saída.</li></ul>
-          </div>
-          <div>
-            <h3>Comparar dois períodos</h3>
-            <p>Com <b>Comparar…</b>, a lista mostra os lançamentos dos dois períodos juntos, cada um com uma etiqueta da cor do período. Os botões "Os dois", Período 1 e Período 2 filtram a lista, e o rodapé mostra a soma de cada período e a diferença por mês. "Sair da comparação" volta ao normal.</p>
-          </div>
+            <ul><li><b>Sim</b>: cria uma regra para aquela origem, que aparece em Organizar › Regras.</li><li><b>Não, só neste extrato</b>: muda só aqui.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">5</span><div><h3><span class="sr-only">5. </span>Etiquetas</h3>
+            <ul><li><b>estorno</b>: dinheiro de volta de uma despesa; desconta do total da categoria.</li><li>Investimentos e transferências entre as suas contas são <b>movimento interno</b>: não contam como entrada nem saída.</li></ul></div></li>
+        </ol>
+        <div class="ajuda-extras">
+          <div class="ajuda-passo"><span class="ajuda-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg></span><div><h3>Comparar dois períodos</h3>
+            <p>Com <b>Comparar…</b>, a lista mostra os lançamentos dos dois períodos juntos, cada um com uma etiqueta da cor do período. Os botões "Os dois", Período 1 e Período 2 filtram a lista, e o rodapé mostra a soma de cada período e a diferença por mês. "Sair da comparação" volta ao normal.</p></div></div>
         </div>
       </section>
     </div>
@@ -705,23 +667,17 @@ try { var t = localStorage.getItem('sobrou-tema'); if (t==='claro') document.doc
         <div class="ajuda-head"><h2 class="faixa-t" id="oAjudaT" tabindex="-1">Como funciona a página Organizar</h2>
           <button type="button" class="ajuda-x" data-ajuda-fechar aria-label="Fechar">×</button></div>
         <p class="ajuda-lead">Aqui você arruma as categorias de todo o extrato: o que ficou sem categoria, para onde vai cada origem, as suas categorias e as regras.</p>
-        <div class="ajuda-grade">
-          <div>
-            <h3>1. Para revisar</h3>
-            <p>Fica no topo da lista. Mostra as saídas que o site não soube classificar, agrupadas por origem (a descrição do extrato). Use <b>Mover todos para</b> para mandar uma origem inteira para a categoria certa; o site pergunta se vale também nos próximos extratos.</p>
-          </div>
-          <div>
-            <h3>2. Uma categoria</h3>
+        <ol class="ajuda-passos">
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">1</span><div><h3><span class="sr-only">1. </span>Para revisar</h3>
+            <p>Fica no topo da lista. Mostra as saídas que o site não soube classificar, agrupadas por origem (a descrição do extrato). Use <b>Mover todos para</b> para mandar uma origem inteira para a categoria certa; o site pergunta se vale também nos próximos extratos.</p></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">2</span><div><h3><span class="sr-only">2. </span>Uma categoria</h3>
             <ul><li>Clique numa categoria da lista para ver o total, as origens e as regras dela.</li>
             <li><b>Editar</b>: nome, tipo (fixa ou variável) e palavras-chave. Fixas entram em "Contas fixas" no Dashboard e em Despesas.</li>
             <li><b>Excluir</b> só aparece nas categorias criadas por você; as do site têm <b>Restaurar padrão</b> depois de editadas.</li>
-            <li>As categorias sem gastos neste extrato ficam no fim da lista.</li></ul>
-          </div>
-          <div>
-            <h3>3. Nova categoria e regras</h3>
-            <p><b>+ Nova categoria</b> cria uma categoria sua, que vale em todos os extratos. <b>Todas as regras</b> lista as regras "vale para os próximos extratos" (inclusive as de entradas e de dinheiro guardado), com o botão de excluir.</p>
-          </div>
-        </div>
+            <li>As categorias sem gastos neste extrato ficam no fim da lista.</li></ul></div></li>
+          <li class="ajuda-passo"><span class="ajuda-num" aria-hidden="true">3</span><div><h3><span class="sr-only">3. </span>Nova categoria e regras</h3>
+            <p><b>+ Nova categoria</b> cria uma categoria sua, que vale em todos os extratos. <b>Todas as regras</b> lista as regras "vale para os próximos extratos" (inclusive as de entradas e de dinheiro guardado), com o botão de excluir.</p></div></li>
+        </ol>
       </section>
     </div>
     <div class="cat-layout">
