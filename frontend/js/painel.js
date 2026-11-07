@@ -709,6 +709,11 @@ function renderSaved(){
       '</div></li>';
   }).join('');
 
+  /* a lista foi redesenhada: a linha sob o mouse não repete as transições do hover
+     (a seta do Abrir crescendo empurrava a engrenagem depois de o menu já estar posicionado) */
+  var sl = $('savedList');
+  sl.classList.add('sem-trans');
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ sl.classList.remove('sem-trans'); }); });
   posicionarMenu();
   posicionarPilula(false);
   desenharResumo();
@@ -726,7 +731,9 @@ function posicionarMenu(){
   if (!m) return;
   var b = m.parentNode.querySelector('[data-menu]').getBoundingClientRect();
   m.style.position = 'fixed';
-  m.style.right = (document.documentElement.clientWidth - b.right)+'px';
+  /* alinhado pela direita ao botão, mas sem sair da tela (no celular a engrenagem fica no meio) */
+  var vw = document.documentElement.clientWidth;
+  m.style.right = Math.max(8, Math.min(vw - b.right, vw - 8 - m.offsetWidth))+'px';
   var h = m.offsetHeight;
   m.style.top = (b.bottom + 6 + h > window.innerHeight && b.top - 6 - h > 0 ? b.top - 6 - h : b.bottom + 6)+'px';
 }
